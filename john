@@ -1,5 +1,3 @@
-print("Appleware Script Started - Loading...")
-
 -- Auto-load Anti-Fling
 pcall(function()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/Toolboxhubbot/antifling/refs/heads/main/antifling"))()
@@ -137,7 +135,21 @@ local state = {
     espPlayers = false,
     espGunDrop = false,
     quickTogglesVisible = true,
-    -- Main Features
+    showCircle_speedEnabled = true,
+    showCircle_jumpEnabled = true,
+    showCircle_flyEnabled = true,
+    showCircle_infJumpEnabled = true,
+    showCircle_antiVoidEnabled = true,
+    showCircle_notifyRoles = true,
+    showCircle_showRoundTimer = true,
+    showCircle_showMurdererChance = true,
+    showCircle_cameraNoclip = true,
+    showCircle_headless = true,
+    showCircle_xrayEnabled = true,
+    showCircle_floatEnabled = true,
+    showCircle_swimEnabled = true,
+    showCircle_invisibleEnabled = true,
+    showCircle_cflyBindable = true,
     speedEnabled = false,
     speedValue = 16,
     jumpEnabled = false,
@@ -150,7 +162,6 @@ local state = {
     showRoundTimer = false,
     showMurdererChance = false,
     cameraNoclip = false,
-    -- Character & Visual Features
     korblox = false,
     headless = false,
     xrayEnabled = false,
@@ -437,6 +448,7 @@ local bindableButtons = {}
 local floatBP = nil
 local flyBV = nil
 local flyBG = nil
+local cflyBV = nil
 local floatPlatform = nil
 local mobileFloatUpBtn = nil
 local mobileFloatDownBtn = nil
@@ -474,17 +486,14 @@ local function updateAllToggleVisuals(key)
         local on = state[key]
         local btn = circleToggleButtons[key]
         TweenService:Create(btn, TweenInfo.new(0.2), {
-            BackgroundColor3 = on and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(0, 0, 0),
-            TextColor3 = on and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(255, 255, 255)
+            BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+            TextColor3 = Color3.fromRGB(255, 255, 255)
         }):Play()
         for _, child in ipairs(btn:GetChildren()) do
             if child:IsA("UIStroke") then
-                child.Color = on and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(255, 255, 255)
+                child.Color = on and Color3.fromRGB(147, 51, 234) or Color3.fromRGB(255, 255, 255)
             end
         end
-    end
-    if bindableButtons[key] then
-        bindableButtons[key].Visible = state[key] and state[bindableButtons[key].Name:gsub("Bindable", "")] or false
     end
 end
 
@@ -507,7 +516,13 @@ local function setToggleState(key, value)
     end
     updateAllToggleVisuals(key)
     
-    -- Notifications for toggles
+    if string.sub(key, 1, 11) == "showCircle_" then
+        local featureKey = string.sub(key, 12)
+        if circleToggleButtons[featureKey] then
+            circleToggleButtons[featureKey].Visible = value
+        end
+    end
+
     if value then
         if key == "cframeFly" then showNotification("Appleware Says:", "CFrame Fly enabled", Color3.fromRGB(0, 200, 255))
         elseif key == "korblox" then showNotification("Appleware Says:", "Korblox applied", Color3.fromRGB(255, 100, 0))
@@ -1546,7 +1561,7 @@ local function resetX4(index)
     end)
 end
 
--- ==================== UI (heavily upgraded visuals, same names) ====================
+-- ==================== UI ====================
 buildUI = function(rebuilding)
     mainToggleButtons = {}
     quickToggleButtons = {}
@@ -1559,7 +1574,6 @@ buildUI = function(rebuilding)
         if old then old:Destroy() end
     end)
 
-    -- Design tokens
     local BG        = Color3.fromRGB(6, 6, 6)
     local SIDEBAR   = Color3.fromRGB(10, 10, 10)
     local CARD      = Color3.fromRGB(14, 14, 14)
@@ -1608,7 +1622,6 @@ buildUI = function(rebuilding)
     mainStroke.Thickness = 1
     mainStroke.Transparency = 0.3
 
-    -- Sidebar
     local sidebar = Instance.new("Frame")
     sidebar.Size = UDim2.new(0, sidebarW, 1, 0)
     sidebar.BackgroundColor3 = SIDEBAR
@@ -1672,6 +1685,24 @@ buildUI = function(rebuilding)
     local pages, pageGroups, btns = {}, {}, {}
     local currentTabName = "Main"
     local switching = false
+
+    local toggleOptions = {
+        {name = "Speed", key = "speedEnabled"},
+        {name = "Jump", key = "jumpEnabled"},
+        {name = "Fly", key = "flyEnabled"},
+        {name = "Inf Jump", key = "infJumpEnabled"},
+        {name = "Anti-Void", key = "antiVoidEnabled"},
+        {name = "Notify Roles", key = "notifyRoles"},
+        {name = "Round Timer", key = "showRoundTimer"},
+        {name = "Murder Chance", key = "showMurdererChance"},
+        {name = "Cam Noclip", key = "cameraNoclip"},
+        {name = "Headless", key = "headless"},
+        {name = "X-Ray", key = "xrayEnabled"},
+        {name = "Float", key = "floatEnabled"},
+        {name = "Swim", key = "swimEnabled"},
+        {name = "Invisible", key = "invisibleEnabled"},
+        {name = "CFly Bind", key = "cflyBindable"}
+    }
 
     local function makePage(name)
         local group = Instance.new("Frame")
@@ -1768,8 +1799,8 @@ buildUI = function(rebuilding)
         btn.BackgroundTransparency = (i == 1) and 0 or 1
         btn.Text = "  " .. name
         btn.TextColor3 = (i == 1) and TEXT or TEXT_DIM
-        btn.Font = Enum.Font.GothamMedium
-        btn.TextSize = 12.5 * fontSizeMult
+        btn.Font = Enum.Font.Gotham
+        btn.TextSize = 11 * fontSizeMult
         btn.TextXAlignment = Enum.TextXAlignment.Left
         btn.BorderSizePixel = 0
         btn.AutoButtonColor = false
@@ -1813,7 +1844,6 @@ buildUI = function(rebuilding)
         end)
     end
 
-    -- Status bar
     st = Instance.new("TextLabel")
     st.Name = "StatusLabel"
     st.Size = UDim2.new(1, -sidebarW - 20 * selectedScale, 0, 30 * selectedScale)
@@ -1821,8 +1851,8 @@ buildUI = function(rebuilding)
     st.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
     st.Text = "  Ready"
     st.TextColor3 = TEXT
-    st.Font = Enum.Font.GothamMedium
-    st.TextSize = 11.5 * fontSizeMult
+    st.Font = Enum.Font.Gotham
+    st.TextSize = 11 * fontSizeMult
     st.TextXAlignment = Enum.TextXAlignment.Left
     st.TextTruncate = Enum.TextTruncate.AtEnd
     st.BorderSizePixel = 0
@@ -1860,8 +1890,8 @@ buildUI = function(rebuilding)
         label.BackgroundTransparency = 1
         label.Text = name
         label.TextColor3 = TEXT
-        label.Font = Enum.Font.GothamMedium
-        label.TextSize = 12.5 * fontSizeMult
+        label.Font = Enum.Font.Gotham
+        label.TextSize = 11 * fontSizeMult
         label.TextXAlignment = Enum.TextXAlignment.Left
         label.Parent = row
 
@@ -1916,8 +1946,8 @@ buildUI = function(rebuilding)
         btn.BackgroundColor3 = CARD
         btn.Text = "  " .. name
         btn.TextColor3 = TEXT
-        btn.Font = Enum.Font.GothamMedium
-        btn.TextSize = 12.5 * fontSizeMult
+        btn.Font = Enum.Font.Gotham
+        btn.TextSize = 11 * fontSizeMult
         btn.TextXAlignment = Enum.TextXAlignment.Left
         btn.BorderSizePixel = 0
         btn.AutoButtonColor = false
@@ -1956,7 +1986,7 @@ buildUI = function(rebuilding)
         lbl.Text = text
         lbl.TextColor3 = TEXT_DIM
         lbl.Font = Enum.Font.GothamBold
-        lbl.TextSize = 11 * fontSizeMult
+        lbl.TextSize = 10 * fontSizeMult
         lbl.TextXAlignment = Enum.TextXAlignment.Left
         lbl.Parent = page
     end
@@ -1968,8 +1998,8 @@ buildUI = function(rebuilding)
         b.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
         b.Text = label
         b.TextColor3 = TEXT
-        b.Font = Enum.Font.GothamBold
-        b.TextSize = 14 * fontSizeMult
+        b.Font = Enum.Font.Gotham
+        b.TextSize = 12 * fontSizeMult
         b.BorderSizePixel = 0
         b.AutoButtonColor = false
         b.Parent = parent
@@ -1983,7 +2013,6 @@ buildUI = function(rebuilding)
         return b
     end
 
-    -- ==================== NEW SLIDER COMPONENT ====================
     local function makeSliderRow(page, label, order, initialValue, minVal, maxVal, stateKey)
         local row = Instance.new("Frame")
         row.Size = UDim2.new(1, 0, 0, 56 * selectedScale)
@@ -2003,12 +2032,11 @@ buildUI = function(rebuilding)
         lbl.BackgroundTransparency = 1
         lbl.Text = label
         lbl.TextColor3 = TEXT
-        lbl.Font = Enum.Font.GothamMedium
-        lbl.TextSize = 12.5 * fontSizeMult
+        lbl.Font = Enum.Font.Gotham
+        lbl.TextSize = 11 * fontSizeMult
         lbl.TextXAlignment = Enum.TextXAlignment.Left
         lbl.Parent = row
 
-        -- TextBox for exact input
         local inputBox = Instance.new("TextBox")
         inputBox.Size = UDim2.new(0, 50 * selectedScale, 0, 24 * selectedScale)
         inputBox.Position = UDim2.new(1, -64 * selectedScale, 0, 4 * selectedScale)
@@ -2016,8 +2044,8 @@ buildUI = function(rebuilding)
         inputBox.BackgroundTransparency = 0.5
         inputBox.Text = tostring(initialValue)
         inputBox.TextColor3 = Color3.fromRGB(150, 200, 255)
-        inputBox.Font = Enum.Font.GothamBold
-        inputBox.TextSize = 12 * fontSizeMult
+        inputBox.Font = Enum.Font.Gotham
+        inputBox.TextSize = 11 * fontSizeMult
         inputBox.BorderSizePixel = 0
         inputBox.ClearTextOnFocus = false
         inputBox.Parent = row
@@ -2026,7 +2054,6 @@ buildUI = function(rebuilding)
         ibStroke.Color = Color3.fromRGB(0, 120, 255)
         ibStroke.Thickness = 1
 
-        -- Slider Track
         local track = Instance.new("Frame")
         track.Size = UDim2.new(1, -28 * selectedScale, 0, 8 * selectedScale)
         track.Position = UDim2.new(0, 14 * selectedScale, 1, -18 * selectedScale)
@@ -2050,7 +2077,6 @@ buildUI = function(rebuilding)
         knob.Parent = track
         Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
 
-        -- Logic for dragging the slider
         local dragging = false
         local function updateFromInput(input)
             local mouseX = input.Position.X
@@ -2110,7 +2136,7 @@ buildUI = function(rebuilding)
     makeSliderRow(pages["Main"], "Fly Speed", 3, state.flySpeed, 10, 200, "flySpeed")
     tgg(pages["Main"], "Noclip", 4, "noclip")
     tgg(pages["Main"], "Infinite Jump", 5, "infJumpEnabled")
-    
+
     addSection(pages["Main"], "Attributes", 6)
     tgg(pages["Main"], "Speed Changer", 7, "speedEnabled")
     makeSliderRow(pages["Main"], "Walk Speed", 8, state.speedValue, 16, 200, "speedValue")
@@ -2128,25 +2154,20 @@ buildUI = function(rebuilding)
     addSection(pages["Main"], "Float & Swim", 17)
     tgg(pages["Main"], "Float", 18, "floatEnabled")
     makeSliderRow(pages["Main"], "Float Height", 19, state.floatHeight, 1, 20, "floatHeight")
-    tgg(pages["Main"], "Enable Float Bindable Button", 20, "floatBindable")
-    tgg(pages["Main"], "Swim", 21, "swimEnabled")
-    tgg(pages["Main"], "Enable Swim Bindable Button", 22, "swimBindable")
+    tgg(pages["Main"], "Swim", 20, "swimEnabled")
 
-    addSection(pages["Main"], "CFrame Fly", 23)
-    tgg(pages["Main"], "CFrame Fly", 24, "cframeFly")
-    tgg(pages["Main"], "Enable CFly Bindable Button", 25, "cflyBindable")
+    addSection(pages["Main"], "CFrame Fly", 21)
+    tgg(pages["Main"], "CFrame Fly", 22, "cframeFly")
 
-    addSection(pages["Main"], "Visuals", 26)
-    tgg(pages["Main"], "X-Ray", 27, "xrayEnabled")
-    tgg(pages["Main"], "Enable X-Ray Bindable Button", 28, "xrayBindable")
-    tgg(pages["Main"], "Invisible", 29, "invisibleEnabled")
-    tgg(pages["Main"], "Enable Invisible Bindable Button", 30, "invisibleBindable")
+    addSection(pages["Main"], "Visuals", 23)
+    tgg(pages["Main"], "X-Ray", 24, "xrayEnabled")
+    tgg(pages["Main"], "Invisible", 25, "invisibleEnabled")
 
-    addSection(pages["Main"], "Game Info", 31)
-    tgg(pages["Main"], "Notify Roles (Chat)", 32, "notifyRoles")
-    tgg(pages["Main"], "Show Round Timer", 33, "showRoundTimer")
-    tgg(pages["Main"], "Show Murderer Chance", 34, "showMurdererChance")
-    addActionButton(pages["Main"], "Notify Murderer's Perk", 35, function()
+    addSection(pages["Main"], "Game Info", 26)
+    tgg(pages["Main"], "Notify Roles (Chat)", 27, "notifyRoles")
+    tgg(pages["Main"], "Show Round Timer", 28, "showRoundTimer")
+    tgg(pages["Main"], "Show Murderer Chance", 29, "showMurdererChance")
+    addActionButton(pages["Main"], "Notify Murderer's Perk", 30, function()
         local mur = getMurd()
         if mur then 
             local perk = getPlayerPerk(mur)
@@ -2184,8 +2205,8 @@ buildUI = function(rebuilding)
     speedLbl.BackgroundTransparency = 1
     speedLbl.Text = "Tween Speed"
     speedLbl.TextColor3 = TEXT
-    speedLbl.Font = Enum.Font.GothamMedium
-    speedLbl.TextSize = 12.5 * fontSizeMult
+    speedLbl.Font = Enum.Font.Gotham
+    speedLbl.TextSize = 11 * fontSizeMult
     speedLbl.TextXAlignment = Enum.TextXAlignment.Left
     speedLbl.Parent = speedRow
 
@@ -2197,7 +2218,7 @@ buildUI = function(rebuilding)
     speedVal.Text = tostring(math.floor(TWEEN_SPEED))
     speedVal.TextColor3 = TEXT
     speedVal.Font = Enum.Font.GothamBold
-    speedVal.TextSize = 12.5 * fontSizeMult
+    speedVal.TextSize = 11 * fontSizeMult
     speedVal.Parent = speedRow
     local speedPlus = makeStepper(speedRow, -30 * selectedScale, "+")
 
@@ -2235,7 +2256,7 @@ buildUI = function(rebuilding)
     targetBox.Text = settingsConfig.customTargetUsername or ""
     targetBox.TextColor3 = TEXT
     targetBox.Font = Enum.Font.Gotham
-    targetBox.TextSize = 12.5 * fontSizeMult
+    targetBox.TextSize = 11 * fontSizeMult
     targetBox.BorderSizePixel = 0
     targetBox.ClearTextOnFocus = false
     targetBox.Parent = pages["Combat"]
@@ -2282,7 +2303,7 @@ buildUI = function(rebuilding)
     tpNote.Text = "Custom uses the username from the Combat tab"
     tpNote.TextColor3 = TEXT_DIM
     tpNote.Font = Enum.Font.Gotham
-    tpNote.TextSize = 11 * fontSizeMult
+    tpNote.TextSize = 10 * fontSizeMult
     tpNote.TextXAlignment = Enum.TextXAlignment.Left
     tpNote.TextWrapped = true
     tpNote.Parent = pages["Teleport"]
@@ -2307,8 +2328,8 @@ buildUI = function(rebuilding)
     timerBtn.BackgroundColor3 = CARD
     timerBtn.Text = "  Timer Interval: " .. intervals[currentIntervalIndex].text
     timerBtn.TextColor3 = TEXT
-    timerBtn.Font = Enum.Font.GothamMedium
-    timerBtn.TextSize = 12.5 * fontSizeMult
+    timerBtn.Font = Enum.Font.Gotham
+    timerBtn.TextSize = 11 * fontSizeMult
     timerBtn.TextXAlignment = Enum.TextXAlignment.Left
     timerBtn.BorderSizePixel = 0
     timerBtn.AutoButtonColor = false
@@ -2342,7 +2363,7 @@ buildUI = function(rebuilding)
         box.Text = value or ""
         box.TextColor3 = TEXT
         box.Font = Enum.Font.Gotham
-        box.TextSize = 12 * fontSizeMult
+        box.TextSize = 11 * fontSizeMult
         box.BorderSizePixel = 0
         box.ClearTextOnFocus = false
         box.Parent = page
@@ -2374,72 +2395,32 @@ buildUI = function(rebuilding)
     tgg(pages["Misc"], "Auto Prestige (Level 100)", 5, "autoPrestige")
 
     -- UI
-    tgg(pages["UI"], "Show Quick Toggles Menu", 1, "quickTogglesVisible")
+    local uiOrder = 1
+    tgg(pages["UI"], "Show Quick Toggles Menu", uiOrder, "quickTogglesVisible")
+    uiOrder = uiOrder + 1
 
-    local scaleRow = Instance.new("Frame")
-    scaleRow.Size = UDim2.new(1, 0, 0, 40 * selectedScale)
-    scaleRow.LayoutOrder = 2
-    scaleRow.BackgroundColor3 = CARD
-    scaleRow.BorderSizePixel = 0
-    scaleRow.Parent = pages["UI"]
-    Instance.new("UICorner", scaleRow).CornerRadius = r(10)
-    local scaleStroke = Instance.new("UIStroke", scaleRow)
-    scaleStroke.Color = BORDER
-    scaleStroke.Thickness = 1
-    scaleStroke.Transparency = 0.55
+    addSection(pages["UI"], "Circular Buttons Visibility", uiOrder)
+    uiOrder = uiOrder + 1
 
-    local scaleLbl = Instance.new("TextLabel")
-    scaleLbl.Size = UDim2.new(0.5, 0, 1, 0)
-    scaleLbl.Position = UDim2.new(0, 14 * selectedScale, 0, 0)
-    scaleLbl.BackgroundTransparency = 1
-    scaleLbl.Text = "UI Scale"
-    scaleLbl.TextColor3 = TEXT
-    scaleLbl.Font = Enum.Font.GothamMedium
-    scaleLbl.TextSize = 12.5 * fontSizeMult
-    scaleLbl.TextXAlignment = Enum.TextXAlignment.Left
-    scaleLbl.Parent = scaleRow
+    for _, opt in ipairs(toggleOptions) do
+        tgg(pages["UI"], "Show " .. opt.name, uiOrder, "showCircle_" .. opt.key)
+        uiOrder = uiOrder + 1
+    end
 
-    local scaleMinus = makeStepper(scaleRow, -100 * selectedScale, "-")
-    local scaleVal = Instance.new("TextLabel")
-    scaleVal.Size = UDim2.new(0, 34 * selectedScale, 0, 26 * selectedScale)
-    scaleVal.Position = UDim2.new(1, -66 * selectedScale, 0.5, -13 * selectedScale)
-    scaleVal.BackgroundTransparency = 1
-    scaleVal.Text = string.format("%.1fx", selectedScale)
-    scaleVal.TextColor3 = TEXT
-    scaleVal.Font = Enum.Font.GothamBold
-    scaleVal.TextSize = 11.5 * fontSizeMult
-    scaleVal.Parent = scaleRow
-    local scalePlus = makeStepper(scaleRow, -30 * selectedScale, "+")
-
-    scaleMinus.MouseButton1Click:Connect(function()
-        if selectedScale > 0.7 then
-            selectedScale = math.floor((selectedScale - 0.1) * 10 + 0.5) / 10
-            settingsConfig.selectedScale = selectedScale
-            saveSettings()
-            buildUI(true)
-        end
-    end)
-    scalePlus.MouseButton1Click:Connect(function()
-        if selectedScale < 1.5 then
-            selectedScale = math.floor((selectedScale + 0.1) * 10 + 0.5) / 10
-            settingsConfig.selectedScale = selectedScale
-            saveSettings()
-            buildUI(true)
-        end
-    end)
-
-    addSection(pages["UI"], "Manage Quick Toggles", 3)
+    addSection(pages["UI"], "Manage Quick Toggles", uiOrder)
+    uiOrder = uiOrder + 1
 
     local quickSearchBox = Instance.new("TextBox")
     quickSearchBox.Size = UDim2.new(1, 0, 0, 34 * selectedScale)
-    quickSearchBox.LayoutOrder = 4
+    quickSearchBox.LayoutOrder = uiOrder
+    uiOrder = uiOrder + 1
     quickSearchBox.BackgroundColor3 = CARD
     quickSearchBox.PlaceholderText = "Search feature..."
     quickSearchBox.PlaceholderColor3 = TEXT_DIM
     quickSearchBox.Text = ""
     quickSearchBox.TextColor3 = TEXT
     quickSearchBox.Font = Enum.Font.Gotham
-    quickSearchBox.TextSize = 12 * fontSizeMult
+    quickSearchBox.TextSize = 11 * fontSizeMult
     quickSearchBox.BorderSizePixel = 0
     quickSearchBox.ClearTextOnFocus = false
     quickSearchBox.Parent = pages["UI"]
@@ -2453,7 +2434,8 @@ buildUI = function(rebuilding)
 
     local quickManagerScroll = Instance.new("ScrollingFrame")
     quickManagerScroll.Size = UDim2.new(1, 0, 0, 140 * selectedScale)
-    quickManagerScroll.LayoutOrder = 5
+    quickManagerScroll.LayoutOrder = uiOrder
+    uiOrder = uiOrder + 1
     quickManagerScroll.BackgroundTransparency = 1
     quickManagerScroll.ScrollBarThickness = 3 * selectedScale
     quickManagerScroll.ScrollBarImageColor3 = Color3.fromRGB(60, 60, 60)
@@ -2509,8 +2491,8 @@ buildUI = function(rebuilding)
                 nameLbl.BackgroundTransparency = 1
                 nameLbl.Text = featName
                 nameLbl.TextColor3 = TEXT
-                nameLbl.Font = Enum.Font.GothamMedium
-                nameLbl.TextSize = 11.5 * fontSizeMult
+                nameLbl.Font = Enum.Font.Gotham
+                nameLbl.TextSize = 10 * fontSizeMult
                 nameLbl.TextXAlignment = Enum.TextXAlignment.Left
                 nameLbl.Parent = row
 
@@ -2520,8 +2502,8 @@ buildUI = function(rebuilding)
                 actionBtn.BackgroundColor3 = isAlreadyAdded and Color3.fromRGB(160, 40, 40) or Color3.fromRGB(35, 140, 65)
                 actionBtn.Text = isAlreadyAdded and "Remove" or "Add"
                 actionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-                actionBtn.Font = Enum.Font.GothamBold
-                actionBtn.TextSize = 10.5 * fontSizeMult
+                actionBtn.Font = Enum.Font.Gotham
+                actionBtn.TextSize = 10 * fontSizeMult
                 actionBtn.BorderSizePixel = 0
                 actionBtn.AutoButtonColor = false
                 actionBtn.Parent = row
@@ -2554,7 +2536,7 @@ buildUI = function(rebuilding)
         lbl.Text = text
         lbl.TextColor3 = TEXT
         lbl.Font = Enum.Font.GothamBold
-        lbl.TextSize = 12.5 * fontSizeMult
+        lbl.TextSize = 11 * fontSizeMult
         lbl.TextXAlignment = Enum.TextXAlignment.Left
         lbl.Parent = pages["Voting"]
         return lbl
@@ -2590,8 +2572,8 @@ buildUI = function(rebuilding)
     fb.BackgroundColor3 = BG
     fb.Text = "Open"
     fb.TextColor3 = TEXT
-    fb.Font = Enum.Font.GothamBold
-    fb.TextSize = 12.5 * fontSizeMult
+    fb.Font = Enum.Font.Gotham
+    fb.TextSize = 11 * fontSizeMult
     fb.BorderSizePixel = 0
     fb.AutoButtonColor = false
     fb.Parent = sg
@@ -2656,7 +2638,7 @@ buildUI = function(rebuilding)
     qTitle.Text = "Quick Toggles"
     qTitle.TextColor3 = TEXT
     qTitle.Font = Enum.Font.GothamBold
-    qTitle.TextSize = 13 * selectedScale
+    qTitle.TextSize = 12 * selectedScale
     qTitle.Parent = quickFrame
 
     local qLine = Instance.new("Frame")
@@ -2707,8 +2689,8 @@ buildUI = function(rebuilding)
         btn.BackgroundColor3 = isToggle and (state[stateKey] and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(18, 18, 18)) or Color3.fromRGB(18, 18, 18)
         btn.Text = name
         btn.TextColor3 = isToggle and (state[stateKey] and Color3.fromRGB(0, 0, 0) or TEXT) or TEXT
-        btn.Font = Enum.Font.GothamMedium
-        btn.TextSize = 10.5 * selectedScale
+        btn.Font = Enum.Font.Gotham
+        btn.TextSize = 9 * selectedScale
         btn.BorderSizePixel = 0
         btn.AutoButtonColor = false
         btn.Parent = quickScroll
@@ -2738,61 +2720,68 @@ buildUI = function(rebuilding)
         end
     end
 
-    -- ==================== INDIVIDUAL CIRCULAR QUICK BUTTONS ====================
-    local function createIndividualCircleButton(name, callback, stateKey, defaultX, defaultY)
+    -- ==================== INDIVIDUAL CIRCULAR TOGGLE BUTTONS ====================
+    local circleButtonsContainer = Instance.new("Frame")
+    circleButtonsContainer.Name = "CircleButtonsContainer"
+    circleButtonsContainer.Size = UDim2.new(0, 250, 0, 400)
+    circleButtonsContainer.Position = UDim2.new(0, 20, 0, 150)
+    circleButtonsContainer.BackgroundTransparency = 1
+    circleButtonsContainer.Parent = sg
+
+    for _, btn in pairs(circleToggleButtons) do
+        if btn and btn.Parent then btn:Destroy() end
+    end
+    circleToggleButtons = {}
+
+    local function createIndividualCircleButton(name, stateKey, visKey, defaultX, defaultY)
         local btn = Instance.new("TextButton")
         btn.Name = name .. "CircleBtn"
-        btn.Size = UDim2.new(0, 50, 0, 50)
+        btn.Size = UDim2.new(0, 60, 0, 60)
         btn.Position = UDim2.new(0, defaultX, 0, defaultY)
-        btn.BackgroundColor3 = stateKey and (state[stateKey] and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(0, 0, 0)) or Color3.fromRGB(0, 0, 0)
+        btn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
         btn.Text = name
-        btn.TextColor3 = stateKey and (state[stateKey] and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(255, 255, 255)) or Color3.fromRGB(255, 255, 255)
-        btn.Font = Enum.Font.GothamMedium
-        btn.TextSize = 10
+        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btn.Font = Enum.Font.GothamMedium -- non-bold, cleaner, readable
+        btn.TextSize = 11
         btn.TextWrapped = true
-        btn.TextStrokeTransparency = 0
+        btn.TextStrokeTransparency = 1
         btn.BorderSizePixel = 0
         btn.AutoButtonColor = false
         btn.Draggable = true
-        btn.Parent = sg
+        btn.Visible = state[visKey] ~= false
+        btn.Parent = circleButtonsContainer
         Instance.new("UICorner", btn).CornerRadius = UDim.new(1, 0)
         
         local stroke = Instance.new("UIStroke", btn)
-        stroke.Color = stateKey and (state[stateKey] and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(255, 255, 255)) or Color3.fromRGB(255, 255, 255)
-        stroke.Thickness = 1.5
-
-        if stateKey then
-            circleToggleButtons[stateKey] = btn
-        end
-
-        btn.MouseEnter:Connect(function()
-            TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = stateKey and state[stateKey] and Color3.fromRGB(200, 200, 200) or Color3.fromRGB(40, 40, 40)}):Play()
-        end)
-        btn.MouseLeave:Connect(function()
-            TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = stateKey and state[stateKey] and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(0, 0, 0)}):Play()
-        end)
-        btn.MouseButton1Click:Connect(function()
-            if stateKey then
-                setToggleState(stateKey, not state[stateKey])
+        stroke.Thickness = 2
+        
+        local function updateVisual()
+            if state[stateKey] then
+                stroke.Color = Color3.fromRGB(147, 51, 234)
             else
-                callback()
+                stroke.Color = Color3.fromRGB(255, 255, 255)
             end
+        end
+        updateVisual()
+
+        btn.MouseButton1Click:Connect(function()
+            setToggleState(stateKey, not state[stateKey])
+            updateVisual()
         end)
-        return btn
+        
+        circleToggleButtons[stateKey] = btn
     end
 
-    -- Create the buttons with offset positions so they don't overlap
-    createIndividualCircleButton("Noclip", function() end, "noclip", 20, 200)
-    createIndividualCircleButton("Fly", function() end, "flyEnabled", 80, 200)
-    createIndividualCircleButton("Grab Gun", function() grabGunNow() end, nil, 140, 200)
-    createIndividualCircleButton("Touch Fling", function() flingAllNow() end, nil, 200, 200)
-    createIndividualCircleButton("Fling Murderer", function() flingMurdererNow() end, nil, 260, 200)
-    
-    createIndividualCircleButton("Fling Sheriff", function() flingSheriffNow() end, nil, 20, 260)
-    createIndividualCircleButton("Glitch Murderer", function() end, "loopFlingMur", 80, 260)
-    createIndividualCircleButton("Glitch Sheriff", function() end, "loopFlingSheriff", 140, 260)
-    createIndividualCircleButton("Desync", function() end, "invisibleEnabled", 200, 260)
-    createIndividualCircleButton("Teleport", function() teleportToMap() end, nil, 260, 260)
+    local startX = 0
+    local startY = 0
+    local spacing = 70
+    for i, opt in ipairs(toggleOptions) do
+        local col = (i - 1) % 3
+        local row = math.floor((i - 1) / 3)
+        local x = startX + col * spacing
+        local y = startY + row * spacing
+        createIndividualCircleButton(opt.name, opt.key, "showCircle_" .. opt.key, x, y)
+    end
 end
 
 local success, err = pcall(buildUI)
@@ -3081,7 +3070,6 @@ end)
 
 -- ==================== MAIN FEATURES LOGIC ====================
 
--- Speed & Jump Power
 task.spawn(function()
     while true do
         task.wait(0.1)
@@ -3104,7 +3092,6 @@ task.spawn(function()
     end
 end)
 
--- Standalone Noclip
 task.spawn(function()
     while true do
         task.wait(0.1)
@@ -3120,7 +3107,6 @@ end)
 local mobileFlyUpBtn, mobileFlyDownBtn = nil, nil
 local flyUp, flyDown = false, false
 
--- Create Mobile Fly Buttons
 task.spawn(function()
     local sg = getGuiParent():FindFirstChild("Appleware")
     if sg then
@@ -3130,7 +3116,8 @@ task.spawn(function()
         btnUp.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
         btnUp.Text = "Fly +"
         btnUp.TextColor3 = Color3.fromRGB(255, 255, 255)
-        btnUp.Font = Enum.Font.GothamBold
+        btnUp.Font = Enum.Font.Gotham
+        btnUp.TextSize = 10
         btnUp.Visible = false
         btnUp.Parent = sg
         Instance.new("UICorner", btnUp).CornerRadius = UDim.new(1, 0)
@@ -3141,7 +3128,8 @@ task.spawn(function()
         btnDown.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
         btnDown.Text = "Fly -"
         btnDown.TextColor3 = Color3.fromRGB(255, 255, 255)
-        btnDown.Font = Enum.Font.GothamBold
+        btnDown.Font = Enum.Font.Gotham
+        btnDown.TextSize = 10
         btnDown.Visible = false
         btnDown.Parent = sg
         Instance.new("UICorner", btnDown).CornerRadius = UDim.new(1, 0)
@@ -3167,14 +3155,17 @@ task.spawn(function()
             local hum = LP.Character:FindFirstChildOfClass("Humanoid")
             if root and hum then
                 hum.PlatformStand = true
-                if not flyBV then
-                    flyBV = Instance.new("BodyVelocity", root)
+                if not flyBV or flyBV.Parent ~= root then
+                    if flyBV then pcall(function() flyBV:Destroy() end) end
+                    if flyBG then pcall(function() flyBG:Destroy() end) end
+                    flyBV = Instance.new("BodyVelocity")
                     flyBV.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
                     flyBV.Velocity = Vector3.zero
-
-                    flyBG = Instance.new("BodyGyro", root)
+                    flyBV.Parent = root
+                    flyBG = Instance.new("BodyGyro")
                     flyBG.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
                     flyBG.P = 9e4
+                    flyBG.Parent = root
                 end
 
                 if mobileFlyUpBtn then mobileFlyUpBtn.Visible = true end
@@ -3211,16 +3202,16 @@ task.spawn(function()
         else
             if mobileFlyUpBtn then mobileFlyUpBtn.Visible = false end
             if mobileFlyDownBtn then mobileFlyDownBtn.Visible = false end
-            if flyBV then flyBV:Destroy() flyBV = nil end
-            if flyBG then flyBG:Destroy() flyBG = nil end
-            if LP.Character and LP.Character:FindFirstChildOfClass("Humanoid") then
-                LP.Character.Humanoid.PlatformStand = false
+            if flyBV then pcall(function() flyBV:Destroy() end) flyBV = nil end
+            if flyBG then pcall(function() flyBG:Destroy() end) flyBG = nil end
+            if not state.cframeFly and LP.Character then
+                local hum = LP.Character:FindFirstChildOfClass("Humanoid")
+                if hum then hum.PlatformStand = false end
             end
         end
     end
 end)
 
--- Infinite Jump
 UserInputService.JumpRequest:Connect(function()
     if state.infJumpEnabled and LP.Character then
         local hum = LP.Character:FindFirstChildOfClass("Humanoid")
@@ -3230,7 +3221,6 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
--- Anti-Void
 task.spawn(function()
     while true do
         task.wait(0.2)
@@ -3248,7 +3238,6 @@ end)
 
 -- ==================== UNIVERSAL FEATURES LOGIC ====================
 
--- Korblox & Headless
 task.spawn(function()
     while true do
         task.wait(0.5)
@@ -3290,7 +3279,6 @@ task.spawn(function()
     end
 end)
 
--- CFrame Fly Logic (Smooth BodyVelocity)
 task.spawn(function()
     while true do
         task.wait(0.05)
@@ -3299,9 +3287,11 @@ task.spawn(function()
             local hum = LP.Character:FindFirstChildOfClass("Humanoid")
             if root and hum then
                 hum.PlatformStand = true
-                if not flyBV then
-                    flyBV = Instance.new("BodyVelocity", root)
-                    flyBV.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+                if not cflyBV or cflyBV.Parent ~= root then
+                    if cflyBV then pcall(function() cflyBV:Destroy() end) end
+                    cflyBV = Instance.new("BodyVelocity")
+                    cflyBV.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+                    cflyBV.Parent = root
                 end
                 local moveDir = Vector3.zero
                 local camCF = Workspace.CurrentCamera.CFrame
@@ -3313,18 +3303,18 @@ task.spawn(function()
                     if UserInputService:IsKeyDown(Enum.KeyCode.Space) then moveDir = moveDir + Vector3.new(0,1,0) end
                     if UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then moveDir = moveDir - Vector3.new(0,1,0) end
                 end
-                flyBV.Velocity = moveDir * state.flySpeed
+                cflyBV.Velocity = moveDir * state.flySpeed
             end
         else
-            if flyBV then flyBV:Destroy() flyBV = nil end
-            if LP.Character and LP.Character:FindFirstChildOfClass("Humanoid") then
-                LP.Character.Humanoid.PlatformStand = false
+            if cflyBV then pcall(function() cflyBV:Destroy() end) cflyBV = nil end
+            if not state.flyEnabled and LP.Character then
+                local hum = LP.Character:FindFirstChildOfClass("Humanoid")
+                if hum then hum.PlatformStand = false end
             end
         end
     end
 end)
 
--- X-Ray Logic
 task.spawn(function()
     while true do
         task.wait(1)
@@ -3344,7 +3334,6 @@ task.spawn(function()
     end
 end)
 
--- Float Logic (Invisible Platform)
 task.spawn(function()
     while true do
         task.wait(0.1)
@@ -3367,7 +3356,6 @@ task.spawn(function()
     end
 end)
 
--- Swim Logic (Zero Gravity + Swim Animation)
 local swimBP = nil
 task.spawn(function()
     while true do
@@ -3398,7 +3386,6 @@ task.spawn(function()
     end
 end)
 
--- Invisible Logic
 task.spawn(function()
     while true do
         task.wait(0.2)
@@ -3412,7 +3399,6 @@ task.spawn(function()
     end
 end)
 
--- Camera Noclip Logic
 task.spawn(function()
     while true do
         task.wait(0.1)
@@ -3424,7 +3410,6 @@ task.spawn(function()
     end
 end)
 
--- Notify Roles Logic
 local notifiedThisRound = false
 task.spawn(function()
     while true do
@@ -3467,14 +3452,14 @@ local bindableLayout = Instance.new("UIListLayout")
 bindableLayout.Parent = bindableContainer
 bindableLayout.Padding = UDim.new(0, 5)
 
--- Float Up/Down Buttons
 mobileFloatUpBtn = Instance.new("TextButton")
 mobileFloatUpBtn.Size = UDim2.new(1, 0, 0, 30)
 mobileFloatUpBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 mobileFloatUpBtn.Text = "Float ▲"
 mobileFloatUpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-mobileFloatUpBtn.Font = Enum.Font.GothamBold
-mobileFloatUpBtn.TextSize = 12
+mobileFloatUpBtn.Font = Enum.Font.Gotham
+mobileFloatUpBtn.TextSize = 10
+mobileFloatUpBtn.TextStrokeTransparency = 1
 mobileFloatUpBtn.Visible = false
 mobileFloatUpBtn.Parent = bindableContainer
 Instance.new("UICorner", mobileFloatUpBtn).CornerRadius = UDim.new(0, 6)
@@ -3487,8 +3472,9 @@ mobileFloatDownBtn.Size = UDim2.new(1, 0, 0, 30)
 mobileFloatDownBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 mobileFloatDownBtn.Text = "Float ▼"
 mobileFloatDownBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-mobileFloatDownBtn.Font = Enum.Font.GothamBold
-mobileFloatDownBtn.TextSize = 12
+mobileFloatDownBtn.Font = Enum.Font.Gotham
+mobileFloatDownBtn.TextSize = 10
+mobileFloatDownBtn.TextStrokeTransparency = 1
 mobileFloatDownBtn.Visible = false
 mobileFloatDownBtn.Parent = bindableContainer
 Instance.new("UICorner", mobileFloatDownBtn).CornerRadius = UDim.new(0, 6)
@@ -3544,24 +3530,34 @@ task.spawn(function()
     end
 end)
 
--- Bindable Buttons for CFly, XRay, Swim, Invisible
-local function createBindableButtonUI(name, stateKey, textSizeKey)
+local bindableDefs = {
+    {name = "Float",     featureKey = "floatEnabled",     bindKey = "floatBindable",     sizeKey = "floatTextSize"},
+    {name = "Swim",      featureKey = "swimEnabled",      bindKey = "swimBindable",      sizeKey = "swimTextSize"},
+    {name = "CFly",      featureKey = "cframeFly",        bindKey = "cflyBindable",      sizeKey = "cflyTextSize"},
+    {name = "X-Ray",     featureKey = "xrayEnabled",      bindKey = "xrayBindable",      sizeKey = "xrayTextSize"},
+    {name = "Invisible", featureKey = "invisibleEnabled", bindKey = "invisibleBindable", sizeKey = "invisibleTextSize"},
+}
+
+local bindableUIRefs = {}
+
+local function createBindableButtonUI(def)
     local btn = Instance.new("TextButton")
-    btn.Name = name .. "Bindable"
+    btn.Name = def.name .. "Bindable"
     btn.Size = UDim2.new(1, 0, 0, 30)
     btn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    btn.Text = name
+    btn.Text = def.name
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.Font = Enum.Font.GothamBold
-    btn.TextSize = state[textSizeKey] or 10
+    btn.Font = Enum.Font.Gotham -- non-bold
+    btn.TextSize = math.max(10, state[def.sizeKey] or 10)
+    btn.TextStrokeTransparency = 1 -- no bold-looking stroke
     btn.Parent = bindableContainer
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
     local stroke = Instance.new("UIStroke", btn)
     stroke.Color = Color3.fromRGB(255, 255, 255)
     stroke.Thickness = 1
-    
+
     local function updateVisual()
-        if state[stateKey] then
+        if state[def.featureKey] then
             btn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
             btn.TextColor3 = Color3.fromRGB(0, 0, 0)
             stroke.Color = Color3.fromRGB(0, 0, 0)
@@ -3574,40 +3570,28 @@ local function createBindableButtonUI(name, stateKey, textSizeKey)
     updateVisual()
 
     btn.MouseButton1Click:Connect(function()
-        setToggleState(stateKey, not state[stateKey])
+        setToggleState(def.featureKey, not state[def.featureKey])
         updateVisual()
     end)
+
+    bindableUIRefs[def.name] = {button = btn, def = def, update = updateVisual}
     return btn
 end
 
 task.spawn(function()
+    for _, def in ipairs(bindableDefs) do
+        createBindableButtonUI(def)
+    end
     while true do
         task.wait(0.1)
-        if not bindableButtons["CFly"] then
-            bindableButtons["CFly"] = createBindableButtonUI("CFly", "cframeFly", "cflyTextSize")
-        end
-        if not bindableButtons["XRay"] then
-            bindableButtons["XRay"] = createBindableButtonUI("XRay", "xrayEnabled", "xrayTextSize")
-        end
-        if not bindableButtons["Swim"] then
-            bindableButtons["Swim"] = createBindableButtonUI("Swim", "swimEnabled", "swimTextSize")
-        end
-        if not bindableButtons["Invisible"] then
-            bindableButtons["Invisible"] = createBindableButtonUI("Invisible", "invisibleEnabled", "invisibleTextSize")
-        end
-
-        for name, btn in pairs(bindableButtons) do
-            local stateKey = btn.Name:gsub("Bindable", "")
-            local bindKey = stateKey .. "Bindable"
-            btn.Visible = state[stateKey] and state[bindKey] or false
-            if btn.Visible then
-                btn.TextSize = state[stateKey:lower() .. "TextSize"] or 10
-            end
+        for _, ref in pairs(bindableUIRefs) do
+            ref.button.Visible = state[ref.def.bindKey] and true or false
+            ref.button.TextSize = math.max(10, state[ref.def.sizeKey] or 10)
+            ref.update()
         end
     end
 end)
 
--- Round Timer
 task.spawn(function()
     while true do
         task.wait(1)
@@ -3812,3 +3796,152 @@ RunService.RenderStepped:Connect(function()
 end)
 
 print("Appleware loaded - enjoy my script, love you though (made by p04j on discord)")
+
+-- ==================== FLOATING ACTION PANEL (TOP-LEFT CORNER) ====================
+-- Works on PC, phone, and iPad (ScreenGui with IgnoreGuiInset = true snaps to true screen corner).
+-- Contains teleport, aimbot, kill, and fling action buttons.
+task.spawn(function()
+    task.wait(0.8) -- wait for main UI to build
+    local parent = getGuiParent()
+    local sg = parent:FindFirstChild("Appleware")
+    if not sg then return end
+
+    local panel = Instance.new("Frame")
+    panel.Name = "ActionPanel"
+    panel.Size = UDim2.new(0, 128, 0, 440)
+    panel.Position = UDim2.new(0, 6, 0, 6) -- top-left corner of the screen
+    panel.BackgroundColor3 = Color3.fromRGB(6, 6, 6)
+    panel.BackgroundTransparency = 0.1
+    panel.BorderSizePixel = 0
+    panel.Active = true
+    panel.Draggable = true -- user can drag it out of the way if needed
+    panel.Parent = sg
+    Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 10)
+
+    local pStroke = Instance.new("UIStroke", panel)
+    pStroke.Color = Color3.fromRGB(40, 40, 40)
+    pStroke.Thickness = 1
+    pStroke.Transparency = 0.3
+
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 22)
+    title.BackgroundTransparency = 1
+    title.Text = "Actions"
+    title.TextColor3 = Color3.fromRGB(255, 255, 255)
+    title.Font = Enum.Font.Gotham -- non-bold, easy to read
+    title.TextSize = 11
+    title.TextStrokeTransparency = 1
+    title.Parent = panel
+
+    local line = Instance.new("Frame")
+    line.Size = UDim2.new(1, -12, 0, 1)
+    line.Position = UDim2.new(0, 6, 0, 22)
+    line.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    line.BorderSizePixel = 0
+    line.Parent = panel
+
+    local scroll = Instance.new("ScrollingFrame")
+    scroll.Size = UDim2.new(1, -6, 1, -28)
+    scroll.Position = UDim2.new(0, 3, 0, 26)
+    scroll.BackgroundTransparency = 1
+    scroll.ScrollBarThickness = 2
+    scroll.ScrollBarImageColor3 = Color3.fromRGB(60, 60, 60)
+    scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+    scroll.BorderSizePixel = 0
+    scroll.Parent = panel
+
+    local layout = Instance.new("UIListLayout")
+    layout.Padding = UDim.new(0, 3)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Parent = scroll
+    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        scroll.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 6)
+    end)
+
+    local function addSection(text)
+        local lbl = Instance.new("TextLabel")
+        lbl.Size = UDim2.new(1, 0, 0, 16)
+        lbl.BackgroundTransparency = 1
+        lbl.Text = text
+        lbl.TextColor3 = Color3.fromRGB(140, 140, 140)
+        lbl.Font = Enum.Font.Gotham -- non-bold
+        lbl.TextSize = 9
+        lbl.TextStrokeTransparency = 1
+        lbl.TextXAlignment = Enum.TextXAlignment.Left
+        lbl.Parent = scroll
+    end
+
+    local function addBtn(text, callback, isToggle, stateKey)
+        local btn = Instance.new("TextButton")
+        btn.Size = UDim2.new(1, 0, 0, 26)
+        btn.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+        btn.Text = text
+        btn.TextColor3 = Color3.fromRGB(235, 235, 235)
+        btn.Font = Enum.Font.Gotham -- non-bold, cleaner/readable
+        btn.TextSize = 10
+        btn.TextStrokeTransparency = 1 -- removes the bold-looking stroke
+        btn.BorderSizePixel = 0
+        btn.AutoButtonColor = false
+        btn.Parent = scroll
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+
+        local s = Instance.new("UIStroke", btn)
+        s.Color = Color3.fromRGB(55, 55, 55)
+        s.Thickness = 1
+        s.Transparency = 0.4
+
+        if isToggle then
+            local function updateVis()
+                if state[stateKey] then
+                    btn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                    btn.TextColor3 = Color3.fromRGB(0, 0, 0)
+                    s.Color = Color3.fromRGB(255, 255, 255)
+                else
+                    btn.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+                    btn.TextColor3 = Color3.fromRGB(235, 235, 235)
+                    s.Color = Color3.fromRGB(55, 55, 55)
+                end
+            end
+            updateVis()
+            btn.MouseButton1Click:Connect(function()
+                setToggleState(stateKey, not state[stateKey])
+                updateVis()
+            end)
+        else
+            btn.MouseButton1Click:Connect(callback)
+        end
+        return btn
+    end
+
+    -- ===== Teleport =====
+    addSection("Teleport")
+    addBtn("To Map", teleportToMap)
+    addBtn("To Murderer", teleportToMurderer)
+    addBtn("To Sheriff", teleportToSheriff)
+    addBtn("To Custom", teleportToCustom)
+    addBtn("To Lobby", teleportToLobby)
+
+    -- ===== Kill =====
+    addSection("Kill")
+    addBtn("Kill All", killAllNow)
+    addBtn("Kill Sheriff", killSheriffNow)
+    addBtn("Kill Custom", killCustomNow)
+
+    -- ===== Aimbot =====
+    addSection("Aimbot")
+    addBtn("Aimbot: Murderer", nil, true, "aimbotMurderer")
+    addBtn("Aimbot: Sheriff", nil, true, "aimbotSheriff")
+
+    -- ===== Fling =====
+    addSection("Fling")
+    addBtn("Fling All", flingAllNow)
+    addBtn("Fling Murderer", flingMurdererNow)
+    addBtn("Fling Sheriff", flingSheriffNow)
+    addBtn("Fling Custom", flingCustomNow)
+    addBtn("Loop Fling All", nil, true, "loopFlingAll")
+    addBtn("Loop Fling Murderer", nil, true, "loopFlingMur")
+    addBtn("Loop Fling Sheriff", nil, true, "loopFlingSheriff")
+    addBtn("Loop Fling Custom", nil, true, "loopFlingCustom")
+end)
+
+print(“Enjoy using AppleWare love you and fuck you (made by p04j on discord)”)
