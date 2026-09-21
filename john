@@ -2961,14 +2961,13 @@ task.spawn(function()
         if not state.farm then cancelFarmTween() continue end
         if isLobby() or bagFull or isExecutingAction or next(activeResets) then
             cancelFarmTween()
-            if not isExecutingAction, and not next(activeResets) then
-                humanoid.PlatformStand root = true
+            if not isExecutingAction and not next(activeResets) then
+                humanoid.PlatformStand = true
                 root.Anchored = true
-                root.P.CFrame = HIDE_POS
-               osition root.AssemblyLinearVelocity = Vector3.zero.Z
+                root.CFrame = HIDE_POS
+                root.AssemblyLinearVelocity = Vector3.zero
             end
-            lastCoin)
-FoundTime = tick()
+            lastCoinFoundTime = tick()
             continue
         end
         root.Anchored = false
@@ -3238,7 +3237,8 @@ task.spawn(function()
         if state.antiVoidEnabled and LP.Character then
             local root = LP.Character:FindFirstChild("HumanoidRootPart")
             if root and root.Position.Y < -80 then
-                root.CFrame = CFrame.new(root.Position.X, 50                root.AssemblyLinearVelocity = Vector3.zero
+                root.CFrame = CFrame.new(root.Position.X, 50, root.Position.Z)
+                root.AssemblyLinearVelocity = Vector3.zero
                 root.AssemblyAngularVelocity = Vector3.zero
                 setStatus("Anti-Void saved you!")
             end
