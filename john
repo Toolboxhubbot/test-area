@@ -137,7 +137,6 @@ local state = {
     espPlayers = false,
     espGunDrop = false,
     quickTogglesVisible = true,
-    quickButtonsVisible = true,
     -- Main Features
     speedEnabled = false,
     speedValue = 16,
@@ -180,8 +179,7 @@ local settingsConfig = {
     tweenSpeed = 25,
     selectedScale = 1,
     customTargetUsername = "",
-    quickTogglesList = {"Grab Gun Now", "Kill All Now", "Kill Sheriff Now", "Fling Murderer Now", "Teleport to Map"},
-    quickButtonsList = {"Grab Gun", "Kill All", "Kill Sheriff", "Fling Murderer", "Fling Sheriff", "Fling All", "Kill Custom", "Fling Custom", "Teleport Map", "Teleport Lobby"}
+    quickTogglesList = {"Grab Gun Now", "Kill All Now", "Kill Sheriff Now", "Fling Murderer Now", "Teleport to Map"}
 }
 
 local TWEEN_SPEED = settingsConfig.tweenSpeed or 25
@@ -433,6 +431,7 @@ task.spawn(enableWaterImmunity)
 local selectedScale = settingsConfig.selectedScale or 1
 local mainToggleButtons = {}
 local quickToggleButtons = {}
+local circleToggleButtons = {}
 local quickFrameReference = nil
 local bindableButtons = {}
 local floatBP = nil
@@ -443,7 +442,6 @@ local mobileFloatUpBtn = nil
 local mobileFloatDownBtn = nil
 local floatUpPressed = false
 local floatDownPressed = false
-local quickButtonsFrame = nil
 
 local function applyLowDeviceOptimizations(enabled) end
 local function applyFpsBoost(enabled) end
@@ -471,6 +469,19 @@ local function updateAllToggleVisuals(key)
             BackgroundColor3 = on and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(18, 18, 18),
             TextColor3 = on and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(220, 220, 220)
         }):Play()
+    end
+    if circleToggleButtons[key] then
+        local on = state[key]
+        local btn = circleToggleButtons[key]
+        TweenService:Create(btn, TweenInfo.new(0.2), {
+            BackgroundColor3 = on and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(0, 0, 0),
+            TextColor3 = on and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(255, 255, 255)
+        }):Play()
+        for _, child in ipairs(btn:GetChildren()) do
+            if child:IsA("UIStroke") then
+                child.Color = on and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(255, 255, 255)
+            end
+        end
     end
     if bindableButtons[key] then
         bindableButtons[key].Visible = state[key] and state[bindableButtons[key].Name:gsub("Bindable", "")] or false
@@ -525,8 +536,6 @@ local function setToggleState(key, value)
     elseif key == "fpsBoost" then applyFpsBoost(state.fpsBoost)
     elseif key == "quickTogglesVisible" and quickFrameReference then
         quickFrameReference.Visible = state.quickTogglesVisible
-    elseif key == "quickButtonsVisible" and quickButtonsFrame then
-        quickButtonsFrame.Visible = state.quickButtonsVisible
     end
     saveSettings()
 end
@@ -1537,101 +1546,11 @@ local function resetX4(index)
     end)
 end
 
--- ==================== QUICK BUTTONS SYSTEM ====================
-local function buildQuickButtons()
-    if quickButtonsFrame then quickButtonsFrame:Destroy() end
-    
-    quickButtonsFrame = Instance.new("Frame")
-    quickButtonsFrame.Name = "ApplewareQuickButtons"
-    quickButtonsFrame.Size = UDim2.new(0, 220, 0, 220)
-    quickButtonsFrame.Position = UDim2.new(0.5, -110, 0.5, -110)
-    quickButtonsFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
-    quickButtonsFrame.BackgroundTransparency = 0.4
-    quickButtonsFrame.BorderSizePixel = 0
-    quickButtonsFrame.Active = true
-    quickButtonsFrame.Draggable = true
-    quickButtonsFrame.Visible = state.quickButtonsVisible
-    quickButtonsFrame.Parent = getGuiParent()
-    Instance.new("UICorner", quickButtonsFrame).CornerRadius = UDim.new(0, 10)
-    local stroke = Instance.new("UIStroke", quickButtonsFrame)
-    stroke.Color = Color3.fromRGB(255, 255, 255)
-    stroke.Thickness = 1
-    stroke.Transparency = 0.7
-
-    -- Drag Handle
-    local handle = Instance.new("TextLabel")
-    handle.Size = UDim2.new(1, 0, 0, 24)
-    handle.BackgroundTransparency = 1
-    handle.Text = "Quick Actions"
-    handle.TextColor3 = Color3.fromRGB(255, 255, 255)
-    handle.Font = Enum.Font.GothamBold
-    handle.TextSize = 12
-    handle.Parent = quickButtonsFrame
-
-    local grid = Instance.new("UIGridLayout")
-    grid.CellSize = UDim2.new(0, 60, 0, 60)
-    grid.CellPadding = UDim2.new(0, 5, 0, 5)
-    grid.SortOrder = Enum.SortOrder.LayoutOrder
-    grid.Parent = quickButtonsFrame
-    
-    local padding = Instance.new("UIPadding")
-    padding.PaddingTop = UDim.new(0, 28)
-    padding.PaddingLeft = UDim.new(0, 8)
-    padding.Parent = quickButtonsFrame
-
-    local function createQuickButton(name, callback, order)
-        local btn = Instance.new("TextButton")
-        btn.Size = UDim2.new(0, 60, 0, 60)
-        btn.LayoutOrder = order
-        btn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-        btn.Text = name
-        btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-        btn.Font = Enum.Font.GothamBold
-        btn.TextSize = 10
-        btn.TextWrapped = true
-        btn.BorderSizePixel = 0
-        btn.AutoButtonColor = false
-        btn.Parent = quickButtonsFrame
-        Instance.new("UICorner", btn).CornerRadius = UDim.new(1, 0)
-        
-        local bStroke = Instance.new("UIStroke", btn)
-        bStroke.Color = Color3.fromRGB(100, 100, 100)
-        bStroke.Thickness = 1
-
-        btn.MouseEnter:Connect(function()
-            TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}):Play()
-            TweenService:Create(bStroke, TweenInfo.new(0.15), {Color = Color3.fromRGB(0, 200, 255)}):Play()
-        end)
-        btn.MouseLeave:Connect(function()
-            TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(15, 15, 15)}):Play()
-            TweenService:Create(bStroke, TweenInfo.new(0.15), {Color = Color3.fromRGB(100, 100, 100)}):Play()
-        end)
-        btn.MouseButton1Click:Connect(callback)
-    end
-
-    local order = 1
-    for _, btnName in ipairs(settingsConfig.quickButtonsList) do
-        if btnName == "Grab Gun" then createQuickButton("Grab Gun", grabGunNow, order)
-        elseif btnName == "Kill All" then createQuickButton("Kill All", killAllNow, order)
-        elseif btnName == "Kill Sheriff" then createQuickButton("Kill Sheriff", killSheriffNow, order)
-        elseif btnName == "Fling Murderer" then createQuickButton("Fling Murderer", flingMurdererNow, order)
-        elseif btnName == "Fling Sheriff" then createQuickButton("Fling Sheriff", flingSheriffNow, order)
-        elseif btnName == "Fling All" then createQuickButton("Fling All", flingAllNow, order)
-        elseif btnName == "Kill Custom" then createQuickButton("Kill Custom", killCustomNow, order)
-        elseif btnName == "Fling Custom" then createQuickButton("Fling Custom", flingCustomNow, order)
-        elseif btnName == "Teleport Map" then createQuickButton("Teleport Map", teleportToMap, order)
-        elseif btnName == "Teleport Lobby" then createQuickButton("Teleport Lobby", teleportToLobby, order)
-        elseif btnName == "Fly" then createQuickButton("Fly", function() setToggleState("flyEnabled", not state.flyEnabled) end, order)
-        elseif btnName == "Noclip" then createQuickButton("Noclip", function() setToggleState("noclip", not state.noclip) end, order)
-        end
-        order = order + 1
-    end
-end
-
 -- ==================== UI (heavily upgraded visuals, same names) ====================
 buildUI = function(rebuilding)
     mainToggleButtons = {}
     quickToggleButtons = {}
+    circleToggleButtons = {}
     bindableButtons = {}
 
     local parent = getGuiParent()
@@ -2456,11 +2375,10 @@ buildUI = function(rebuilding)
 
     -- UI
     tgg(pages["UI"], "Show Quick Toggles Menu", 1, "quickTogglesVisible")
-    tgg(pages["UI"], "Show Quick Buttons Panel", 2, "quickButtonsVisible")
 
     local scaleRow = Instance.new("Frame")
     scaleRow.Size = UDim2.new(1, 0, 0, 40 * selectedScale)
-    scaleRow.LayoutOrder = 3
+    scaleRow.LayoutOrder = 2
     scaleRow.BackgroundColor3 = CARD
     scaleRow.BorderSizePixel = 0
     scaleRow.Parent = pages["UI"]
@@ -2510,12 +2428,11 @@ buildUI = function(rebuilding)
         end
     end)
 
-    -- Quick Toggles Manager
-    addSection(pages["UI"], "Manage Quick Toggles", 4)
+    addSection(pages["UI"], "Manage Quick Toggles", 3)
 
     local quickSearchBox = Instance.new("TextBox")
     quickSearchBox.Size = UDim2.new(1, 0, 0, 34 * selectedScale)
-    quickSearchBox.LayoutOrder = 5
+    quickSearchBox.LayoutOrder = 4
     quickSearchBox.BackgroundColor3 = CARD
     quickSearchBox.PlaceholderText = "Search feature..."
     quickSearchBox.PlaceholderColor3 = TEXT_DIM
@@ -2535,8 +2452,8 @@ buildUI = function(rebuilding)
     qsPad.PaddingLeft = UDim.new(0, 12 * selectedScale)
 
     local quickManagerScroll = Instance.new("ScrollingFrame")
-    quickManagerScroll.Size = UDim2.new(1, 0, 0, 120 * selectedScale)
-    quickManagerScroll.LayoutOrder = 6
+    quickManagerScroll.Size = UDim2.new(1, 0, 0, 140 * selectedScale)
+    quickManagerScroll.LayoutOrder = 5
     quickManagerScroll.BackgroundTransparency = 1
     quickManagerScroll.ScrollBarThickness = 3 * selectedScale
     quickManagerScroll.ScrollBarImageColor3 = Color3.fromRGB(60, 60, 60)
@@ -2576,7 +2493,7 @@ buildUI = function(rebuilding)
                     if addedName == featName then isAlreadyAdded = true break end
                 end
                 local row = Instance.new("Frame")
-                row.Size = UDim2.new(1, 0, 0, 30 * selectedScale)
+                row.Size = UDim2.new(1, 0, 0, 32 * selectedScale)
                 row.BackgroundColor3 = CARD
                 row.BorderSizePixel = 0
                 row.Parent = quickManagerScroll
@@ -2593,18 +2510,18 @@ buildUI = function(rebuilding)
                 nameLbl.Text = featName
                 nameLbl.TextColor3 = TEXT
                 nameLbl.Font = Enum.Font.GothamMedium
-                nameLbl.TextSize = 11 * fontSizeMult
+                nameLbl.TextSize = 11.5 * fontSizeMult
                 nameLbl.TextXAlignment = Enum.TextXAlignment.Left
                 nameLbl.Parent = row
 
                 local actionBtn = Instance.new("TextButton")
-                actionBtn.Size = UDim2.new(0, 58 * selectedScale, 0, 22 * selectedScale)
-                actionBtn.Position = UDim2.new(1, -66 * selectedScale, 0.5, -11 * selectedScale)
+                actionBtn.Size = UDim2.new(0, 62 * selectedScale, 0, 24 * selectedScale)
+                actionBtn.Position = UDim2.new(1, -70 * selectedScale, 0.5, -12 * selectedScale)
                 actionBtn.BackgroundColor3 = isAlreadyAdded and Color3.fromRGB(160, 40, 40) or Color3.fromRGB(35, 140, 65)
                 actionBtn.Text = isAlreadyAdded and "Remove" or "Add"
                 actionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
                 actionBtn.Font = Enum.Font.GothamBold
-                actionBtn.TextSize = 10 * fontSizeMult
+                actionBtn.TextSize = 10.5 * fontSizeMult
                 actionBtn.BorderSizePixel = 0
                 actionBtn.AutoButtonColor = false
                 actionBtn.Parent = row
@@ -2627,91 +2544,6 @@ buildUI = function(rebuilding)
         refreshQuickManager(quickSearchBox.Text)
     end)
     refreshQuickManager("")
-
-    -- Quick Buttons Manager
-    addSection(pages["UI"], "Manage Quick Buttons", 7)
-
-    local buttonManagerScroll = Instance.new("ScrollingFrame")
-    buttonManagerScroll.Size = UDim2.new(1, 0, 0, 120 * selectedScale)
-    buttonManagerScroll.LayoutOrder = 8
-    buttonManagerScroll.BackgroundTransparency = 1
-    buttonManagerScroll.ScrollBarThickness = 3 * selectedScale
-    buttonManagerScroll.ScrollBarImageColor3 = Color3.fromRGB(60, 60, 60)
-    buttonManagerScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-    buttonManagerScroll.Parent = pages["UI"]
-
-    local bmLayout = Instance.new("UIListLayout")
-    bmLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    bmLayout.Padding = UDim.new(0, 5 * selectedScale)
-    bmLayout.Parent = buttonManagerScroll
-    bmLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        buttonManagerScroll.CanvasSize = UDim2.new(0, 0, 0, bmLayout.AbsoluteContentSize.Y + 8)
-    end)
-
-    local allButtonFeatures = {
-        "Grab Gun", "Kill All", "Kill Sheriff", "Fling Murderer", "Fling Sheriff",
-        "Fling All", "Kill Custom", "Fling Custom", "Teleport Map", "Teleport Lobby",
-        "Fly", "Noclip"
-    }
-
-    local function refreshButtonManager()
-        for _, child in ipairs(buttonManagerScroll:GetChildren()) do
-            if child:IsA("GuiObject") and child ~= bmLayout then child:Destroy() end
-        end
-        for _, featName in ipairs(allButtonFeatures) do
-            local isAlreadyAdded = false
-            for _, addedName in ipairs(settingsConfig.quickButtonsList) do
-                if addedName == featName then isAlreadyAdded = true break end
-            end
-            local row = Instance.new("Frame")
-            row.Size = UDim2.new(1, 0, 0, 30 * selectedScale)
-            row.BackgroundColor3 = CARD
-            row.BorderSizePixel = 0
-            row.Parent = buttonManagerScroll
-            Instance.new("UICorner", row).CornerRadius = r(8)
-            local rs = Instance.new("UIStroke", row)
-            rs.Color = BORDER
-            rs.Thickness = 1
-            rs.Transparency = 0.55
-
-            local nameLbl = Instance.new("TextLabel")
-            nameLbl.Size = UDim2.new(0.62, 0, 1, 0)
-            nameLbl.Position = UDim2.new(0, 10 * selectedScale, 0, 0)
-            nameLbl.BackgroundTransparency = 1
-            nameLbl.Text = featName
-            nameLbl.TextColor3 = TEXT
-            nameLbl.Font = Enum.Font.GothamMedium
-            nameLbl.TextSize = 11 * fontSizeMult
-            nameLbl.TextXAlignment = Enum.TextXAlignment.Left
-            nameLbl.Parent = row
-
-            local actionBtn = Instance.new("TextButton")
-            actionBtn.Size = UDim2.new(0, 58 * selectedScale, 0, 22 * selectedScale)
-            actionBtn.Position = UDim2.new(1, -66 * selectedScale, 0.5, -11 * selectedScale)
-            actionBtn.BackgroundColor3 = isAlreadyAdded and Color3.fromRGB(160, 40, 40) or Color3.fromRGB(35, 140, 65)
-            actionBtn.Text = isAlreadyAdded and "Remove" or "Add"
-            actionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            actionBtn.Font = Enum.Font.GothamBold
-            actionBtn.TextSize = 10 * fontSizeMult
-            actionBtn.BorderSizePixel = 0
-            actionBtn.AutoButtonColor = false
-            actionBtn.Parent = row
-            Instance.new("UICorner", actionBtn).CornerRadius = r(6)
-            actionBtn.MouseButton1Click:Connect(function()
-                if isAlreadyAdded then
-                    for idx, addedName in ipairs(settingsConfig.quickButtonsList) do
-                        if addedName == featName then table.remove(settingsConfig.quickButtonsList, idx) break end
-                    end
-                else
-                    table.insert(settingsConfig.quickButtonsList, featName)
-                end
-                saveSettings()
-                buildQuickButtons()
-                refreshButtonManager()
-            end)
-        end
-    end
-    refreshButtonManager()
 
     -- VOTING
     local function makeSpotLabel(order, text)
@@ -2905,6 +2737,62 @@ buildUI = function(rebuilding)
             createQuickItem(featName, idx)
         end
     end
+
+    -- ==================== INDIVIDUAL CIRCULAR QUICK BUTTONS ====================
+    local function createIndividualCircleButton(name, callback, stateKey, defaultX, defaultY)
+        local btn = Instance.new("TextButton")
+        btn.Name = name .. "CircleBtn"
+        btn.Size = UDim2.new(0, 50, 0, 50)
+        btn.Position = UDim2.new(0, defaultX, 0, defaultY)
+        btn.BackgroundColor3 = stateKey and (state[stateKey] and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(0, 0, 0)) or Color3.fromRGB(0, 0, 0)
+        btn.Text = name
+        btn.TextColor3 = stateKey and (state[stateKey] and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(255, 255, 255)) or Color3.fromRGB(255, 255, 255)
+        btn.Font = Enum.Font.GothamMedium
+        btn.TextSize = 10
+        btn.TextWrapped = true
+        btn.TextStrokeTransparency = 0
+        btn.BorderSizePixel = 0
+        btn.AutoButtonColor = false
+        btn.Draggable = true
+        btn.Parent = sg
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(1, 0)
+        
+        local stroke = Instance.new("UIStroke", btn)
+        stroke.Color = stateKey and (state[stateKey] and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(255, 255, 255)) or Color3.fromRGB(255, 255, 255)
+        stroke.Thickness = 1.5
+
+        if stateKey then
+            circleToggleButtons[stateKey] = btn
+        end
+
+        btn.MouseEnter:Connect(function()
+            TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = stateKey and state[stateKey] and Color3.fromRGB(200, 200, 200) or Color3.fromRGB(40, 40, 40)}):Play()
+        end)
+        btn.MouseLeave:Connect(function()
+            TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = stateKey and state[stateKey] and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(0, 0, 0)}):Play()
+        end)
+        btn.MouseButton1Click:Connect(function()
+            if stateKey then
+                setToggleState(stateKey, not state[stateKey])
+            else
+                callback()
+            end
+        end)
+        return btn
+    end
+
+    -- Create the buttons with offset positions so they don't overlap
+    createIndividualCircleButton("Noclip", function() end, "noclip", 20, 200)
+    createIndividualCircleButton("Fly", function() end, "flyEnabled", 80, 200)
+    createIndividualCircleButton("Grab Gun", function() grabGunNow() end, nil, 140, 200)
+    createIndividualCircleButton("Touch Fling", function() flingAllNow() end, nil, 200, 200)
+    createIndividualCircleButton("Fling Murderer", function() flingMurdererNow() end, nil, 260, 200)
+    
+    createIndividualCircleButton("Fling Sheriff", function() flingSheriffNow() end, nil, 20, 260)
+    createIndividualCircleButton("Glitch Murderer", function() end, "loopFlingMur", 80, 260)
+    createIndividualCircleButton("Glitch Sheriff", function() end, "loopFlingSheriff", 140, 260)
+    createIndividualCircleButton("Desync", function() end, "invisibleEnabled", 200, 260)
+    createIndividualCircleButton("Teleport", function() teleportToMap() end, nil, 260, 260)
 end
 
 local success, err = pcall(buildUI)
@@ -2915,9 +2803,6 @@ end
 
 if state.disable3d then applyLowDeviceOptimizations(true) end
 if state.fpsBoost then applyFpsBoost(true) end
-
--- Build quick buttons on load
-buildQuickButtons()
 
 -- ==================== FARM LOOPS ====================
 local function getCoins()
@@ -3076,13 +2961,14 @@ task.spawn(function()
         if not state.farm then cancelFarmTween() continue end
         if isLobby() or bagFull or isExecutingAction or next(activeResets) then
             cancelFarmTween()
-            if not isExecutingAction and not next(activeResets) then
-                humanoid.PlatformStand = true
+            if not isExecutingAction, and not next(activeResets) then
+                humanoid.PlatformStand root = true
                 root.Anchored = true
-                root.CFrame = HIDE_POS
-                root.AssemblyLinearVelocity = Vector3.zero
+                root.P.CFrame = HIDE_POS
+               osition root.AssemblyLinearVelocity = Vector3.zero.Z
             end
-            lastCoinFoundTime = tick()
+            lastCoin)
+FoundTime = tick()
             continue
         end
         root.Anchored = false
@@ -3352,8 +3238,7 @@ task.spawn(function()
         if state.antiVoidEnabled and LP.Character then
             local root = LP.Character:FindFirstChild("HumanoidRootPart")
             if root and root.Position.Y < -80 then
-                root.CFrame = CFrame.new(root.Position.X, 50, root.Position.Z)
-                root.AssemblyLinearVelocity = Vector3.zero
+                root.CFrame = CFrame.new(root.Position.X, 50                root.AssemblyLinearVelocity = Vector3.zero
                 root.AssemblyAngularVelocity = Vector3.zero
                 setStatus("Anti-Void saved you!")
             end
@@ -3482,19 +3367,33 @@ task.spawn(function()
     end
 end)
 
--- Swim Logic (Zero Gravity)
+-- Swim Logic (Zero Gravity + Swim Animation)
+local swimBP = nil
 task.spawn(function()
     while true do
         task.wait(0.1)
         if state.swimEnabled and LP.Character then
             local hum = LP.Character:FindFirstChildOfClass("Humanoid")
-            if hum then
+            local root = LP.Character:FindFirstChild("HumanoidRootPart")
+            if hum and root then
                 hum:SetStateEnabled(Enum.HumanoidStateType.Swimming, true)
                 hum.PlatformStand = false
                 Workspace.Gravity = 0
+                if not swimBP then
+                    swimBP = Instance.new("BodyPosition", root)
+                    swimBP.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+                    swimBP.Position = root.Position
+                    swimBP.D = 10
+                    swimBP.P = 1000
+                end
+                swimBP.Position = root.Position
+                if hum:GetState() ~= Enum.HumanoidStateType.Swimming then
+                    hum:ChangeState(Enum.HumanoidStateType.Swimming)
+                end
             end
         else
             Workspace.Gravity = 196.2
+            if swimBP then swimBP:Destroy() swimBP = nil end
         end
     end
 end)
@@ -3571,7 +3470,7 @@ bindableLayout.Padding = UDim.new(0, 5)
 -- Float Up/Down Buttons
 mobileFloatUpBtn = Instance.new("TextButton")
 mobileFloatUpBtn.Size = UDim2.new(1, 0, 0, 30)
-mobileFloatUpBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+mobileFloatUpBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 mobileFloatUpBtn.Text = "Float ▲"
 mobileFloatUpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 mobileFloatUpBtn.Font = Enum.Font.GothamBold
@@ -3579,10 +3478,13 @@ mobileFloatUpBtn.TextSize = 12
 mobileFloatUpBtn.Visible = false
 mobileFloatUpBtn.Parent = bindableContainer
 Instance.new("UICorner", mobileFloatUpBtn).CornerRadius = UDim.new(0, 6)
+local upStroke = Instance.new("UIStroke", mobileFloatUpBtn)
+upStroke.Color = Color3.fromRGB(255, 255, 255)
+upStroke.Thickness = 1
 
 mobileFloatDownBtn = Instance.new("TextButton")
 mobileFloatDownBtn.Size = UDim2.new(1, 0, 0, 30)
-mobileFloatDownBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+mobileFloatDownBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 mobileFloatDownBtn.Text = "Float ▼"
 mobileFloatDownBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 mobileFloatDownBtn.Font = Enum.Font.GothamBold
@@ -3590,14 +3492,41 @@ mobileFloatDownBtn.TextSize = 12
 mobileFloatDownBtn.Visible = false
 mobileFloatDownBtn.Parent = bindableContainer
 Instance.new("UICorner", mobileFloatDownBtn).CornerRadius = UDim.new(0, 6)
+local downStroke = Instance.new("UIStroke", mobileFloatDownBtn)
+downStroke.Color = Color3.fromRGB(255, 255, 255)
+downStroke.Thickness = 1
 
-mobileFloatUpBtn.MouseButton1Down:Connect(function() floatUpPressed = true end)
-mobileFloatUpBtn.MouseButton1Up:Connect(function() floatUpPressed = false end)
-mobileFloatUpBtn.MouseLeave:Connect(function() floatUpPressed = false end)
+mobileFloatUpBtn.MouseButton1Down:Connect(function()
+    floatUpPressed = true
+    mobileFloatUpBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    mobileFloatUpBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+end)
+mobileFloatUpBtn.MouseButton1Up:Connect(function()
+    floatUpPressed = false
+    mobileFloatUpBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    mobileFloatUpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+end)
+mobileFloatUpBtn.MouseLeave:Connect(function()
+    floatUpPressed = false
+    mobileFloatUpBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    mobileFloatUpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+end)
 
-mobileFloatDownBtn.MouseButton1Down:Connect(function() floatDownPressed = true end)
-mobileFloatDownBtn.MouseButton1Up:Connect(function() floatDownPressed = false end)
-mobileFloatDownBtn.MouseLeave:Connect(function() floatDownPressed = false end)
+mobileFloatDownBtn.MouseButton1Down:Connect(function()
+    floatDownPressed = true
+    mobileFloatDownBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    mobileFloatDownBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+end)
+mobileFloatDownBtn.MouseButton1Up:Connect(function()
+    floatDownPressed = false
+    mobileFloatDownBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    mobileFloatDownBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+end)
+mobileFloatDownBtn.MouseLeave:Connect(function()
+    floatDownPressed = false
+    mobileFloatDownBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    mobileFloatDownBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+end)
 
 task.spawn(function()
     while true do
@@ -3620,15 +3549,33 @@ local function createBindableButtonUI(name, stateKey, textSizeKey)
     local btn = Instance.new("TextButton")
     btn.Name = name .. "Bindable"
     btn.Size = UDim2.new(1, 0, 0, 30)
-    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    btn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     btn.Text = name
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Font = Enum.Font.GothamBold
     btn.TextSize = state[textSizeKey] or 10
     btn.Parent = bindableContainer
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    local stroke = Instance.new("UIStroke", btn)
+    stroke.Color = Color3.fromRGB(255, 255, 255)
+    stroke.Thickness = 1
+    
+    local function updateVisual()
+        if state[stateKey] then
+            btn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            btn.TextColor3 = Color3.fromRGB(0, 0, 0)
+            stroke.Color = Color3.fromRGB(0, 0, 0)
+        else
+            btn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+            btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+            stroke.Color = Color3.fromRGB(255, 255, 255)
+        end
+    end
+    updateVisual()
+
     btn.MouseButton1Click:Connect(function()
         setToggleState(stateKey, not state[stateKey])
+        updateVisual()
     end)
     return btn
 end
