@@ -104,8 +104,7 @@ local state = {
     jumpEnabled = false, jumpValue = 50,
     infJumpEnabled = false,
     invisibleEnabled = false,
-    antiFling = false,
-    antiRagdoll = false,
+    antiRagdoll = true,
     freeze = false,
     fullbright = false,
     fovEnabled = false, fovValue = 70,
@@ -145,7 +144,6 @@ local toggleDisplayNames = {
     quickTogglesVisible = "Quick Toggles Menu",
     flyEnabled = "Fly", infJumpEnabled = "Infinite Jump", invisibleEnabled = "Invisible",
     speedEnabled = "Speed Changer", jumpEnabled = "Jump Power",
-    antiFling = "Anti-Fling", antiRagdoll = "Anti-Ragdoll",
     freeze = "Freeze (Anchor)", fullbright = "Fullbright",
     fovEnabled = "FOV Changer", clickTP = "Click / Tap Teleport",
 }
@@ -177,6 +175,7 @@ local function loadSettings()
             if type(settingsConfig.whitelist) ~= "table" then settingsConfig.whitelist = {} end
         end
     end)
+    state.antiRagdoll = true
 end
 loadSettings()
 
@@ -511,6 +510,7 @@ local function updateAllToggleVisuals(key)
 end
 
 local function setToggleState(key, value)
+    if key == "antiRagdoll" then value = true end
     local prev = state[key]
     state[key] = value
     if prev ~= value and not notifyExcluded[key] then
@@ -1950,27 +1950,25 @@ buildUI = function(rebuilding)
     addSection(pages["Secret"], "Physics", 4)
     tgg(pages["Secret"], "Noclip", 5, "noclip")
     tgg(pages["Secret"], "Infinite Jump", 6, "infJumpEnabled")
-    tgg(pages["Secret"], "Anti-Fling", 7, "antiFling")
-    tgg(pages["Secret"], "Anti-Ragdoll (Auto Get Up)", 8, "antiRagdoll")
-    tgg(pages["Secret"], "Freeze (Anchor)", 9, "freeze")
+    tgg(pages["Secret"], "Freeze (Anchor)", 7, "freeze")
 
-    addSection(pages["Secret"], "Attributes", 10)
-    tgg(pages["Secret"], "Speed Changer", 11, "speedEnabled")
-    makeSliderRow(pages["Secret"], "Walk Speed", 12, state.speedValue or 16, 16, 500, "speedValue")
-    tgg(pages["Secret"], "Jump Power", 13, "jumpEnabled")
-    makeSliderRow(pages["Secret"], "Jump Power", 14, state.jumpValue or 50, 50, 500, "jumpValue")
+    addSection(pages["Secret"], "Attributes", 8)
+    tgg(pages["Secret"], "Speed Changer", 9, "speedEnabled")
+    makeSliderRow(pages["Secret"], "Walk Speed", 10, state.speedValue or 16, 16, 500, "speedValue")
+    tgg(pages["Secret"], "Jump Power", 11, "jumpEnabled")
+    makeSliderRow(pages["Secret"], "Jump Power", 12, state.jumpValue or 50, 50, 500, "jumpValue")
 
-    addSection(pages["Secret"], "Visuals", 15)
-    tgg(pages["Secret"], "Invisible (with local ghost)", 16, "invisibleEnabled")
-    tgg(pages["Secret"], "Fullbright", 17, "fullbright")
-    tgg(pages["Secret"], "FOV Changer", 18, "fovEnabled")
-    makeSliderRow(pages["Secret"], "Field of View", 19, state.fovValue or 70, 30, 120, "fovValue")
+    addSection(pages["Secret"], "Visuals", 13)
+    tgg(pages["Secret"], "Invisible (hide mode)", 14, "invisibleEnabled")
+    tgg(pages["Secret"], "Fullbright", 15, "fullbright")
+    tgg(pages["Secret"], "FOV Changer", 16, "fovEnabled")
+    makeSliderRow(pages["Secret"], "Field of View", 17, state.fovValue or 70, 30, 120, "fovValue")
 
-    addSection(pages["Secret"], "Teleportation", 20)
-    tgg(pages["Secret"], "Click / Tap Teleport", 21, "clickTP")
+    addSection(pages["Secret"], "Teleportation", 18)
+    tgg(pages["Secret"], "Click / Tap Teleport", 19, "clickTP")
     local tpHint = Instance.new("TextLabel")
     tpHint.Size = UDim2.new(1, 0, 0, 30 * selectedScale)
-    tpHint.LayoutOrder = 22
+    tpHint.LayoutOrder = 20
     tpHint.BackgroundTransparency = 1
     tpHint.Text = "PC: click anywhere | Mobile: tap anywhere. Disable before using the fly buttons."
     tpHint.TextColor3 = TEXT_DIM
@@ -1980,11 +1978,11 @@ buildUI = function(rebuilding)
     tpHint.TextWrapped = true
     tpHint.Parent = pages["Secret"]
 
-    addSection(pages["Secret"], "Saved Positions", 23)
+    addSection(pages["Secret"], "Saved Positions", 21)
     for i = 1, 3 do
         local row = Instance.new("Frame")
         row.Size = UDim2.new(1, 0, 0, 36 * selectedScale)
-        row.LayoutOrder = 23 + i
+        row.LayoutOrder = 21 + i
         row.BackgroundColor3 = CARD
         row.Parent = pages["Secret"]
         Instance.new("UICorner", row).CornerRadius = r(10)
@@ -2031,8 +2029,8 @@ buildUI = function(rebuilding)
         tpBtn.MouseButton1Click:Connect(function() loadPosition(i) end)
     end
 
-    addSection(pages["Secret"], "Quick Actions", 27)
-    addActionButton(pages["Secret"], "Reset Character", 28, function()
+    addSection(pages["Secret"], "Quick Actions", 25)
+    addActionButton(pages["Secret"], "Reset Character", 26, function()
         local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
         if hum then hum.Health = 0 end
     end)
@@ -2640,7 +2638,7 @@ buildUI = function(rebuilding)
         "Auto Grab Gun", "Auto Rejoin", "Auto Serverhop", "Auto Prestige",
         "Show Quick Toggles Menu", "Fly", "Noclip", "Infinite Jump",
         "Speed Changer", "Jump Power", "Invisible",
-        "Anti-Fling", "Anti-Ragdoll", "Freeze (Anchor)",
+        "Freeze (Anchor)",
         "Fullbright", "FOV Changer", "Click / Tap Teleport"
     }
 
@@ -2841,7 +2839,6 @@ buildUI = function(rebuilding)
             ["Notify Map Name"] = "notifyMapName", ["Round Timer"] = "showRoundTimerCountdown",
             ["Fly"] = "flyEnabled", ["Noclip"] = "noclip", ["Infinite Jump"] = "infJumpEnabled",
             ["Speed Changer"] = "speedEnabled", ["Jump Power"] = "jumpEnabled", ["Invisible"] = "invisibleEnabled",
-            ["Anti-Fling"] = "antiFling", ["Anti-Ragdoll"] = "antiRagdoll",
             ["Freeze (Anchor)"] = "freeze", ["Fullbright"] = "fullbright",
             ["FOV Changer"] = "fovEnabled", ["Click / Tap Teleport"] = "clickTP",
         }
@@ -3070,7 +3067,7 @@ end)
 
 -- ==================== INFINITE JUMP ====================
 UIS.JumpRequest:Connect(function()
-    if state.infJumpEnabled and LP.Character then
+    if state.infJumpEnabled and LP.Character and not state.invisibleEnabled then
         local hum = LP.Character:FindFirstChildOfClass("Humanoid")
         if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
     end
@@ -3096,10 +3093,15 @@ task.spawn(function()
     end
 end)
 
--- ==================== INVISIBLE + LOCAL GHOST ====================
+-- ==================== INVISIBLE + LOCAL GHOST (hide-position stealth) ====================
 local ghostFolder = nil
+local ghostModel = nil
 local ghostHighlight = nil
-local ghostMarker = nil
+local invisActive = false
+local invisSavedCFrame = nil
+local invisVirtualPos = nil
+local invisVirtualVel = Vector3.zero
+local invisSavedAnchored = false
 
 local function ensureGhostFolder()
     if ghostFolder and ghostFolder.Parent then return end
@@ -3109,8 +3111,8 @@ local function ensureGhostFolder()
 end
 
 local function destroyGhost()
+    if ghostModel then pcall(function() ghostModel:Destroy() end) ghostModel = nil end
     if ghostHighlight then pcall(function() ghostHighlight:Destroy() end) ghostHighlight = nil end
-    if ghostMarker then pcall(function() ghostMarker:Destroy() end) ghostMarker = nil end
 end
 
 local function createGhost()
@@ -3118,113 +3120,239 @@ local function createGhost()
     if not LP.Character then return end
     ensureGhostFolder()
 
+    local clone = LP.Character:Clone()
+    clone.Name = "AW_GhostCharacter"
+
+    for _, d in ipairs(clone:GetDescendants()) do
+        if d:IsA("Script") or d:IsA("LocalScript") or d:IsA("ModuleScript") then
+            d:Destroy()
+        elseif d:IsA("BasePart") then
+            d.CanCollide = false
+            d.CanTouch = false
+            d.CanQuery = false
+            d.Anchored = true
+            d.Massless = true
+            d.Transparency = 0.55
+            d.Color = Color3.fromRGB(80, 180, 255)
+            d.Material = Enum.Material.ForceField
+        elseif d:IsA("Decal") or d:IsA("Texture") then
+            d.Transparency = 1
+        elseif d:IsA("Accessory") then
+            for _, p in ipairs(d:GetDescendants()) do
+                if p:IsA("BasePart") then
+                    p.Transparency = 0.55
+                    p.Color = Color3.fromRGB(80, 180, 255)
+                    p.Material = Enum.Material.ForceField
+                    p.CanCollide = false
+                    p.CanTouch = false
+                    p.CanQuery = false
+                    p.Anchored = true
+                end
+            end
+        end
+    end
+
+    local hum = clone:FindFirstChildOfClass("Humanoid")
+    if hum then hum:Destroy() end
+
+    local ghostRoot = clone:FindFirstChild("HumanoidRootPart")
+    if ghostRoot then
+        clone.PrimaryPart = ghostRoot
+    else
+        local firstPart = clone:FindFirstChildWhichIsA("BasePart")
+        if firstPart then clone.PrimaryPart = firstPart end
+    end
+
+    clone.Parent = ghostFolder
+    ghostModel = clone
+
     ghostHighlight = Instance.new("Highlight")
     ghostHighlight.Name = "AW_GhostHighlight"
-    ghostHighlight.Adornee = LP.Character
+    ghostHighlight.Adornee = clone
     ghostHighlight.FillColor = Color3.fromRGB(80, 180, 255)
     ghostHighlight.FillTransparency = 0.75
-    ghostHighlight.OutlineColor = Color3.fromRGB(80, 180, 255)
+    ghostHighlight.OutlineColor = Color3.fromRGB(120, 200, 255)
     ghostHighlight.OutlineTransparency = 0.1
     ghostHighlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
     ghostHighlight.Parent = ghostFolder
+end
 
-    ghostMarker = Instance.new("Part")
-    ghostMarker.Name = "AW_GhostMarker"
-    ghostMarker.Size = Vector3.new(1.2, 1.2, 1.2)
-    ghostMarker.Shape = Enum.PartType.Ball
-    ghostMarker.Material = Enum.Material.Neon
-    ghostMarker.Color = Color3.fromRGB(80, 180, 255)
-    ghostMarker.Transparency = 0.3
-    ghostMarker.CanCollide = false
-    ghostMarker.CanTouch = false
-    ghostMarker.CanQuery = false
-    ghostMarker.Anchored = true
-    ghostMarker.Parent = ghostFolder
+local function startInvisible()
+    if invisActive then return end
+    if not LP.Character then return end
+    local hrp = LP.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
 
-    local bb = Instance.new("BillboardGui")
-    bb.Name = "AW_GhostLabel"
-    bb.Size = UDim2.new(0, 100, 0, 24)
-    bb.StudsOffset = Vector3.new(0, 1.5, 0)
-    bb.AlwaysOnTop = true
-    bb.Adornee = ghostMarker
-    bb.Parent = ghostFolder
+    invisSavedCFrame = hrp.CFrame
+    invisSavedAnchored = hrp.Anchored
+    invisVirtualPos = hrp.Position
+    invisVirtualVel = Vector3.zero
 
-    local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(1, 0, 1, 0)
-    lbl.BackgroundTransparency = 1
-    lbl.Text = "YOU"
-    lbl.TextColor3 = Color3.fromRGB(80, 180, 255)
-    lbl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-    lbl.TextStrokeTransparency = 0
-    lbl.Font = Enum.Font.GothamBold
-    lbl.TextSize = 13
-    lbl.Parent = bb
+    createGhost()
+
+    local cam = Workspace.CurrentCamera
+    if cam and ghostModel then
+        local ghostRoot = ghostModel:FindFirstChild("HumanoidRootPart") or ghostModel.PrimaryPart
+        if ghostRoot then
+            cam.CameraSubject = ghostRoot
+        end
+    end
+
+    hrp.Anchored = true
+    hrp.CFrame = HIDE_POS
+
+    invisActive = true
+    setStatus("Invisible (hide mode) ON")
+end
+
+local function stopInvisible()
+    if not invisActive then return end
+    invisActive = false
+
+    if LP.Character then
+        local hrp = LP.Character:FindFirstChild("HumanoidRootPart")
+        local hum = LP.Character:FindFirstChildOfClass("Humanoid")
+        if hrp then
+            hrp.Anchored = invisSavedAnchored
+            if invisSavedCFrame then hrp.CFrame = invisSavedCFrame end
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+        end
+        if hum then
+            hum.PlatformStand = false
+            hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+        end
+        local cam = Workspace.CurrentCamera
+        if cam and hum then cam.CameraSubject = hum end
+    end
+
+    destroyGhost()
+    invisSavedCFrame = nil
+    invisVirtualPos = nil
+    invisVirtualVel = Vector3.zero
+    setStatus("Invisible OFF")
 end
 
 task.spawn(function()
+    local last = false
     while true do
-        task.wait(0.2)
-        if state.invisibleEnabled and LP.Character then
-            for _, part in ipairs(LP.Character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.LocalTransparencyModifier = 1
-                    if part.Transparency < 1 then
-                        pcall(function() part.Transparency = 1 end)
-                    end
-                elseif part:IsA("Decal") or part:IsA("Texture") then
-                    part.LocalTransparencyModifier = 1
-                end
-            end
-
-            if not ghostHighlight or not ghostHighlight.Parent or ghostHighlight.Adornee ~= LP.Character then
-                createGhost()
-            end
-            if ghostMarker and LP.Character then
-                local hrp = LP.Character:FindFirstChild("HumanoidRootPart")
-                if hrp then
-                    ghostMarker.CFrame = hrp.CFrame + Vector3.new(0, 3.5, 0)
-                end
-            end
-        else
-            if ghostHighlight or ghostMarker then destroyGhost() end
+        task.wait(0.05)
+        local now = state.invisibleEnabled == true
+        if now ~= last then
+            if now then startInvisible() else stopInvisible() end
+            last = now
         end
     end
 end)
 
-LP.CharacterAdded:Connect(function(char)
-    task.wait(0.5)
+LP.CharacterAdded:Connect(function()
     if state.invisibleEnabled then
-        for _ = 1, 10 do
-            if char:FindFirstChild("HumanoidRootPart") then break end
-            task.wait(0.2)
+        invisActive = false
+        invisSavedCFrame = nil
+        invisVirtualPos = nil
+        invisVirtualVel = Vector3.zero
+        destroyGhost()
+        task.wait(1)
+        if state.invisibleEnabled then startInvisible() end
+    end
+end)
+
+-- ==================== VIRTUAL MOVEMENT (invisible mode) ====================
+RunService.RenderStepped:Connect(function(dt)
+    if not invisActive then return end
+    if not invisVirtualPos then return end
+
+    local cam = Workspace.CurrentCamera
+    if not cam then return end
+
+    local moveVec = Vector3.zero
+
+    local playerModule = LP.PlayerScripts:FindFirstChild("PlayerModule")
+    if playerModule then
+        pcall(function()
+            local controls = require(playerModule):GetControls()
+            local mv = controls:GetMoveVector()
+            if mv and mv.Magnitude > 0.05 then
+                moveVec = moveVec + mv
+            end
+        end)
+    end
+
+    if UIS.KeyboardEnabled then
+        if UIS:IsKeyDown(Enum.KeyCode.W) then moveVec = moveVec + Vector3.new(0, 0, -1) end
+        if UIS:IsKeyDown(Enum.KeyCode.S) then moveVec = moveVec + Vector3.new(0, 0, 1) end
+        if UIS:IsKeyDown(Enum.KeyCode.A) then moveVec = moveVec + Vector3.new(-1, 0, 0) end
+        if UIS:IsKeyDown(Enum.KeyCode.D) then moveVec = moveVec + Vector3.new(1, 0, 0) end
+    end
+
+    local camLook = cam.CFrame.LookVector
+    local camRight = cam.CFrame.RightVector
+    camLook = Vector3.new(camLook.X, 0, camLook.Z)
+    camRight = Vector3.new(camRight.X, 0, camRight.Z)
+    if camLook.Magnitude > 0 then camLook = camLook.Unit end
+    if camRight.Magnitude > 0 then camRight = camRight.Unit end
+
+    local worldMove = camRight * moveVec.X + camLook * -moveVec.Z
+    if worldMove.Magnitude > 1 then worldMove = worldMove.Unit end
+
+    local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+    local speed = hum and hum.WalkSpeed or 16
+
+    invisVirtualVel = Vector3.new(worldMove.X * speed, invisVirtualVel.Y, worldMove.Z * speed)
+
+    local GRAVITY = 196.2
+    invisVirtualVel = invisVirtualVel + Vector3.new(0, -GRAVITY * dt, 0)
+
+    local wantJump = false
+    if UIS.KeyboardEnabled and UIS:IsKeyDown(Enum.KeyCode.Space) then wantJump = true end
+
+    local rayParams = RaycastParams.new()
+    rayParams.FilterType = Enum.RaycastFilterType.Exclude
+    local exclude = {}
+    if LP.Character then table.insert(exclude, LP.Character) end
+    if ghostFolder then table.insert(exclude, ghostFolder) end
+    rayParams.FilterDescendantsInstances = exclude
+
+    local origin = invisVirtualPos + Vector3.new(0, 2, 0)
+    local groundHit = Workspace:Raycast(origin, Vector3.new(0, -50, 0), rayParams)
+    local groundY = groundHit and groundHit.Position.Y or nil
+
+    local halfHeight = 2.5
+    local newPos = invisVirtualPos + invisVirtualVel * dt
+
+    if groundY and newPos.Y - halfHeight <= groundY then
+        newPos = Vector3.new(newPos.X, groundY + halfHeight, newPos.Z)
+        if wantJump then
+            invisVirtualVel = Vector3.new(invisVirtualVel.X, 45, invisVirtualVel.Z)
+        else
+            invisVirtualVel = Vector3.new(invisVirtualVel.X, 0, invisVirtualVel.Z)
         end
-        createGhost()
+    end
+
+    invisVirtualPos = newPos
+
+    if ghostModel and ghostModel.PrimaryPart then
+        local facing = camLook
+        if facing.Magnitude < 0.01 then facing = Vector3.new(0, 0, -1) end
+        local ghostCF = CFrame.lookAt(invisVirtualPos, invisVirtualPos + facing)
+        pcall(function() ghostModel:PivotTo(ghostCF) end)
+    end
+
+    if LP.Character then
+        local hrp = LP.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            hrp.CFrame = HIDE_POS
+            hrp.AssemblyLinearVelocity = Vector3.zero
+            hrp.AssemblyAngularVelocity = Vector3.zero
+        end
     end
 end)
 
 -- ==================== SECRET FEATURES ====================
 task.spawn(function()
     while true do
-        task.wait(0.1)
-        if state.antiFling and LP.Character then
-            local root = LP.Character:FindFirstChild("HumanoidRootPart")
-            if root then
-                if root.AssemblyAngularVelocity.Magnitude > 300 then
-                    root.AssemblyAngularVelocity = Vector3.zero
-                end
-                local vel = root.AssemblyLinearVelocity
-                if vel.Magnitude > 300 then
-                    root.AssemblyLinearVelocity = Vector3.new(0, math.min(vel.Y, 0), 0)
-                end
-            end
-        end
-    end
-end)
-
-task.spawn(function()
-    while true do
         task.wait(0.15)
-        if state.antiRagdoll and LP.Character and not state.flyEnabled then
+        if LP.Character and not state.flyEnabled then
             local hum = LP.Character:FindFirstChildOfClass("Humanoid")
             if hum and hum.Health > 0 and hum.PlatformStand and not next(activeResets) then
                 hum.PlatformStand = false
@@ -3248,7 +3376,7 @@ task.spawn(function()
                     end
                 else
                     if freezeApplied then
-                        if not (state.xpFarm or (state.farm and (isLobby() or isExecutingAction))) then
+                        if not (state.xpFarm or (state.farm and (isLobby() or isExecutingAction))) and not invisActive then
                             root.Anchored = false
                         end
                         freezeApplied = false
@@ -3261,35 +3389,33 @@ task.spawn(function()
     end
 end)
 
+-- FOV changer (applies every frame for reliability)
 local savedOriginalFOV = nil
 task.spawn(function()
     task.wait(1)
-    if Camera then savedOriginalFOV = Camera.FieldOfView end
+    local cam = Workspace.CurrentCamera
+    if cam then savedOriginalFOV = cam.FieldOfView end
 end)
 
-task.spawn(function()
-    local lastFov = nil
-    while true do
-        task.wait(0.2)
-        if Camera then
-            if state.fovEnabled then
-                local fov = state.fovValue or 70
-                if lastFov ~= fov then
-                    pcall(function() Camera.FieldOfView = fov end)
-                    lastFov = fov
-                end
-            else
-                if lastFov ~= nil then
-                    pcall(function() Camera.FieldOfView = savedOriginalFOV or 70 end)
-                    lastFov = nil
-                end
-            end
+RunService.RenderStepped:Connect(function()
+    local cam = Workspace.CurrentCamera
+    if not cam then return end
+    if state.fovEnabled then
+        local target = state.fovValue or 70
+        if math.abs(cam.FieldOfView - target) > 0.5 then
+            cam.FieldOfView = target
+        end
+    else
+        if savedOriginalFOV and math.abs(cam.FieldOfView - savedOriginalFOV) > 0.5 then
+            cam.FieldOfView = savedOriginalFOV
         end
     end
 end)
 
 local function getTeleportTargetFromScreen(x, y)
-    local ray = Camera:ViewportPointToRay(x, y)
+    local cam = Workspace.CurrentCamera
+    if not cam then return nil end
+    local ray = cam:ViewportPointToRay(x, y)
     local params = RaycastParams.new()
     if LP.Character then
         params.FilterDescendantsInstances = {LP.Character}
@@ -3302,6 +3428,7 @@ end
 
 local function doClickTeleport(x, y)
     if not state.clickTP then return end
+    if invisActive then return end
     local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if not root then return end
     local pos = getTeleportTargetFromScreen(x, y)
@@ -3658,6 +3785,7 @@ end)
 local lastFarmNoclip = false
 RunService.Stepped:Connect(function()
     if not LP.Character then lastFarmNoclip = false; return end
+    if invisActive then return end
     local shouldNoclip = state.farm and not bagFull and not isExecutingAction and not isLobby() and not state.xpFarm and not next(activeResets)
     if shouldNoclip then
         for _, val in ipairs(LP.Character:GetDescendants()) do
@@ -3796,7 +3924,7 @@ RunService.RenderStepped:Connect(function()
     if not hum or hum.Health <= 0 then return end
     local targetPart = char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
     if not targetPart then return end
-    Workspace.CurrentCamera.CFrame = CFrame up.lookAt(Workspace.CurrentCamera.CFrame.Position, targetPart.Position)
+    Workspace.CurrentCamera.CFrame = CFrame.lookAt(Workspace.CurrentCamera.CFrame.Position, targetPart.Position)
 end)
 
 print("Appleware loaded - enjoy my script, love you though (made by p04j on discord)")
