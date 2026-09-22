@@ -99,12 +99,17 @@ local state = {
     disable3d = false, fpsBoost = false, sendOnFull = false, autoRejoin = false,
     autoServerHop = false, autoPrestige = false, espPlayers = false, espGunDrop = false,
     quickTogglesVisible = true,
-    -- Secret tab features (already in state)
     flyEnabled = false, flySpeed = 50,
     speedEnabled = false, speedValue = 16,
     jumpEnabled = false, jumpValue = 50,
     infJumpEnabled = false,
     invisibleEnabled = false,
+    antiFling = false,
+    antiRagdoll = false,
+    freeze = false,
+    fullbright = false,
+    fovEnabled = false, fovValue = 70,
+    clickTP = false,
 }
 
 local settingsConfig = {
@@ -140,6 +145,9 @@ local toggleDisplayNames = {
     quickTogglesVisible = "Quick Toggles Menu",
     flyEnabled = "Fly", infJumpEnabled = "Infinite Jump", invisibleEnabled = "Invisible",
     speedEnabled = "Speed Changer", jumpEnabled = "Jump Power",
+    antiFling = "Anti-Fling", antiRagdoll = "Anti-Ragdoll",
+    freeze = "Freeze (Anchor)", fullbright = "Fullbright",
+    fovEnabled = "FOV Changer", clickTP = "Click / Tap Teleport",
 }
 local notifyExcluded = {}
 
@@ -519,6 +527,19 @@ local function setToggleState(key, value)
     end
     updateAllToggleVisuals(key)
     if key == "disable3d" then applyLowDeviceOptimizations(state.disable3d)
+    elseif key == "fullbright" then
+        pcall(function()
+            if state.fullbright then
+                Lighting.Brightness = 3
+                Lighting.Ambient = Color3.fromRGB(178, 178, 178)
+                Lighting.OutdoorAmbient = Color3.fromRGB(178, 178, 178)
+                Lighting.FogEnd = 100000
+            else
+                Lighting.Brightness = 1
+                Lighting.Ambient = Color3.fromRGB(70, 70, 70)
+                Lighting.OutdoorAmbient = Color3.fromRGB(128, 128, 128)
+            end
+        end)
     elseif key == "fpsBoost" then applyFpsBoost(state.fpsBoost)
     elseif key == "quickTogglesVisible" and quickFrameReference then quickFrameReference.Visible = state.quickTogglesVisible
     elseif key == "showRoundTimerCountdown" then if not value then roundTimerFrame.Visible = false end end
@@ -1497,7 +1518,6 @@ buildUI = function(rebuilding)
     content.BackgroundTransparency = 1; content.ClipsDescendants = true
     content.Parent = main
 
-    -- SECRET ADDED HERE
     local tabs = {"Farm", "Combat", "Teleport", "ESP", "Webhook", "Misc", "UI", "Voting", "Secret"}
     local pages, pageGroups, btns = {}, {}, {}
     local currentTabName = "Farm"
@@ -1628,7 +1648,6 @@ buildUI = function(rebuilding)
         indicator.Visible = (i == 1); indicator.Parent = btn
         Instance.new("UICorner", indicator).CornerRadius = UDim.new(1, 0)
 
-        -- Skip hover effects for Secret so its text stays invisible
         if not isSecret then
             btn.MouseEnter:Connect(function()
                 if currentTabName ~= name then
@@ -1931,15 +1950,92 @@ buildUI = function(rebuilding)
     addSection(pages["Secret"], "Physics", 4)
     tgg(pages["Secret"], "Noclip", 5, "noclip")
     tgg(pages["Secret"], "Infinite Jump", 6, "infJumpEnabled")
+    tgg(pages["Secret"], "Anti-Fling", 7, "antiFling")
+    tgg(pages["Secret"], "Anti-Ragdoll (Auto Get Up)", 8, "antiRagdoll")
+    tgg(pages["Secret"], "Freeze (Anchor)", 9, "freeze")
 
-    addSection(pages["Secret"], "Attributes", 7)
-    tgg(pages["Secret"], "Speed Changer", 8, "speedEnabled")
-    makeSliderRow(pages["Secret"], "Walk Speed", 9, state.speedValue or 16, 16, 500, "speedValue")
-    tgg(pages["Secret"], "Jump Power", 10, "jumpEnabled")
-    makeSliderRow(pages["Secret"], "Jump Power", 11, state.jumpValue or 50, 50, 500, "jumpValue")
+    addSection(pages["Secret"], "Attributes", 10)
+    tgg(pages["Secret"], "Speed Changer", 11, "speedEnabled")
+    makeSliderRow(pages["Secret"], "Walk Speed", 12, state.speedValue or 16, 16, 500, "speedValue")
+    tgg(pages["Secret"], "Jump Power", 13, "jumpEnabled")
+    makeSliderRow(pages["Secret"], "Jump Power", 14, state.jumpValue or 50, 50, 500, "jumpValue")
 
-    addSection(pages["Secret"], "Visuals", 12)
-    tgg(pages["Secret"], "Invisible", 13, "invisibleEnabled")
+    addSection(pages["Secret"], "Visuals", 15)
+    tgg(pages["Secret"], "Invisible (with local ghost)", 16, "invisibleEnabled")
+    tgg(pages["Secret"], "Fullbright", 17, "fullbright")
+    tgg(pages["Secret"], "FOV Changer", 18, "fovEnabled")
+    makeSliderRow(pages["Secret"], "Field of View", 19, state.fovValue or 70, 30, 120, "fovValue")
+
+    addSection(pages["Secret"], "Teleportation", 20)
+    tgg(pages["Secret"], "Click / Tap Teleport", 21, "clickTP")
+    local tpHint = Instance.new("TextLabel")
+    tpHint.Size = UDim2.new(1, 0, 0, 30 * selectedScale)
+    tpHint.LayoutOrder = 22
+    tpHint.BackgroundTransparency = 1
+    tpHint.Text = "PC: click anywhere | Mobile: tap anywhere. Disable before using the fly buttons."
+    tpHint.TextColor3 = TEXT_DIM
+    tpHint.Font = Enum.Font.Gotham
+    tpHint.TextSize = 10.5 * fontSizeMult
+    tpHint.TextXAlignment = Enum.TextXAlignment.Left
+    tpHint.TextWrapped = true
+    tpHint.Parent = pages["Secret"]
+
+    addSection(pages["Secret"], "Saved Positions", 23)
+    for i = 1, 3 do
+        local row = Instance.new("Frame")
+        row.Size = UDim2.new(1, 0, 0, 36 * selectedScale)
+        row.LayoutOrder = 23 + i
+        row.BackgroundColor3 = CARD
+        row.Parent = pages["Secret"]
+        Instance.new("UICorner", row).CornerRadius = r(10)
+        local rs = Instance.new("UIStroke", row)
+        rs.Color = BORDER; rs.Transparency = 0.55
+
+        local lbl = Instance.new("TextLabel")
+        lbl.Size = UDim2.new(0.5, 0, 1, 0)
+        lbl.Position = UDim2.new(0, 14 * selectedScale, 0, 0)
+        lbl.BackgroundTransparency = 1
+        lbl.Text = "Slot " .. i
+        lbl.TextColor3 = TEXT
+        lbl.Font = Enum.Font.GothamMedium
+        lbl.TextSize = 12 * fontSizeMult
+        lbl.TextXAlignment = Enum.TextXAlignment.Left
+        lbl.Parent = row
+
+        local saveBtn = Instance.new("TextButton")
+        saveBtn.Size = UDim2.new(0, 60 * selectedScale, 0, 26 * selectedScale)
+        saveBtn.Position = UDim2.new(1, -132 * selectedScale, 0.5, -13 * selectedScale)
+        saveBtn.BackgroundColor3 = Color3.fromRGB(35, 140, 65)
+        saveBtn.Text = "Save"
+        saveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        saveBtn.Font = Enum.Font.GothamBold
+        saveBtn.TextSize = 10.5 * fontSizeMult
+        saveBtn.ClipsDescendants = true
+        saveBtn.Parent = row
+        Instance.new("UICorner", saveBtn).CornerRadius = r(6)
+        attachClickBounce(saveBtn)
+        saveBtn.MouseButton1Click:Connect(function() saveCurrentPosition(i) end)
+
+        local tpBtn = Instance.new("TextButton")
+        tpBtn.Size = UDim2.new(0, 60 * selectedScale, 0, 26 * selectedScale)
+        tpBtn.Position = UDim2.new(1, -68 * selectedScale, 0.5, -13 * selectedScale)
+        tpBtn.BackgroundColor3 = Color3.fromRGB(35, 100, 200)
+        tpBtn.Text = "Teleport"
+        tpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        tpBtn.Font = Enum.Font.GothamBold
+        tpBtn.TextSize = 10.5 * fontSizeMult
+        tpBtn.ClipsDescendants = true
+        tpBtn.Parent = row
+        Instance.new("UICorner", tpBtn).CornerRadius = r(6)
+        attachClickBounce(tpBtn)
+        tpBtn.MouseButton1Click:Connect(function() loadPosition(i) end)
+    end
+
+    addSection(pages["Secret"], "Quick Actions", 27)
+    addActionButton(pages["Secret"], "Reset Character", 28, function()
+        local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+        if hum then hum.Health = 0 end
+    end)
 
     -- ==================== FARM ====================
     tgg(pages["Farm"], "Farm (Safe)", 1, "farm")
@@ -2543,7 +2639,9 @@ buildUI = function(rebuilding)
         "Anti AFK", "Anti-Void", "Notify Map Name", "Round Timer",
         "Auto Grab Gun", "Auto Rejoin", "Auto Serverhop", "Auto Prestige",
         "Show Quick Toggles Menu", "Fly", "Noclip", "Infinite Jump",
-        "Speed Changer", "Jump Power", "Invisible"
+        "Speed Changer", "Jump Power", "Invisible",
+        "Anti-Fling", "Anti-Ragdoll", "Freeze (Anchor)",
+        "Fullbright", "FOV Changer", "Click / Tap Teleport"
     }
 
     local function refreshQuickManager(filterText)
@@ -2743,6 +2841,9 @@ buildUI = function(rebuilding)
             ["Notify Map Name"] = "notifyMapName", ["Round Timer"] = "showRoundTimerCountdown",
             ["Fly"] = "flyEnabled", ["Noclip"] = "noclip", ["Infinite Jump"] = "infJumpEnabled",
             ["Speed Changer"] = "speedEnabled", ["Jump Power"] = "jumpEnabled", ["Invisible"] = "invisibleEnabled",
+            ["Anti-Fling"] = "antiFling", ["Anti-Ragdoll"] = "antiRagdoll",
+            ["Freeze (Anchor)"] = "freeze", ["Fullbright"] = "fullbright",
+            ["FOV Changer"] = "fovEnabled", ["Click / Tap Teleport"] = "clickTP",
         }
         local stateKey = stateKeyMap[name]
         local isToggle = stateKey ~= nil
@@ -2848,16 +2949,59 @@ task.spawn(function()
     end
 end)
 
--- ==================== FLY LOOP (PC + Mobile with joystick) ====================
+-- ==================== FLY LOOP (with proper cleanup fix) ====================
 local flyBV, flyBG = nil, nil
+local wasFlying = false
+
+local function cleanupFly()
+    if mobileFlyUpBtn then mobileFlyUpBtn.Visible = false end
+    if mobileFlyDownBtn then mobileFlyDownBtn.Visible = false end
+    flyUp = false
+    flyDown = false
+    if flyBV then pcall(function() flyBV:Destroy() end) flyBV = nil end
+    if flyBG then pcall(function() flyBG:Destroy() end) flyBG = nil end
+    if wasFlying and LP.Character then
+        local hum = LP.Character:FindFirstChildOfClass("Humanoid")
+        local root = LP.Character:FindFirstChild("HumanoidRootPart")
+        if hum and hum.Health > 0 then
+            hum.PlatformStand = false
+            hum.Sit = false
+            hum.AutoRotate = true
+            hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+            task.wait(0.1)
+            if hum and hum.Health > 0 then
+                hum:ChangeState(Enum.HumanoidStateType.Running)
+            end
+        end
+        if root then
+            root.AssemblyLinearVelocity = Vector3.zero
+            root.AssemblyAngularVelocity = Vector3.zero
+        end
+    end
+    wasFlying = false
+end
+
+LP.CharacterAdded:Connect(function()
+    task.wait(0.5)
+    if not state.flyEnabled then
+        wasFlying = false
+        flyBV = nil
+        flyBG = nil
+        flyUp = false
+        flyDown = false
+    end
+end)
+
 task.spawn(function()
     while true do
         task.wait(0.05)
         if state.flyEnabled and LP.Character then
             local root = LP.Character:FindFirstChild("HumanoidRootPart")
             local hum = LP.Character:FindFirstChildOfClass("Humanoid")
-            if root and hum then
+            if root and hum and hum.Health > 0 then
+                wasFlying = true
                 hum.PlatformStand = true
+
                 if not flyBV or flyBV.Parent ~= root then
                     if flyBV then pcall(function() flyBV:Destroy() end) end
                     if flyBG then pcall(function() flyBG:Destroy() end) end
@@ -2903,12 +3047,11 @@ task.spawn(function()
 
                 flyBV.Velocity = moveDir * (state.flySpeed or 50)
                 flyBG.CFrame = camCF
+            else
+                cleanupFly()
             end
         else
-            if mobileFlyUpBtn then mobileFlyUpBtn.Visible = false end
-            if mobileFlyDownBtn then mobileFlyDownBtn.Visible = false end
-            if flyBV then pcall(function() flyBV:Destroy() end) flyBV = nil end
-            if flyBG then pcall(function() flyBG:Destroy() end) flyBG = nil end
+            cleanupFly()
         end
     end
 end)
@@ -2953,19 +3096,260 @@ task.spawn(function()
     end
 end)
 
--- ==================== INVISIBLE ====================
+-- ==================== INVISIBLE + LOCAL GHOST ====================
+local ghostFolder = nil
+local ghostHighlight = nil
+local ghostMarker = nil
+
+local function ensureGhostFolder()
+    if ghostFolder and ghostFolder.Parent then return end
+    ghostFolder = Instance.new("Folder")
+    ghostFolder.Name = "AW_GhostContainer"
+    ghostFolder.Parent = workspace
+end
+
+local function destroyGhost()
+    if ghostHighlight then pcall(function() ghostHighlight:Destroy() end) ghostHighlight = nil end
+    if ghostMarker then pcall(function() ghostMarker:Destroy() end) ghostMarker = nil end
+end
+
+local function createGhost()
+    destroyGhost()
+    if not LP.Character then return end
+    ensureGhostFolder()
+
+    ghostHighlight = Instance.new("Highlight")
+    ghostHighlight.Name = "AW_GhostHighlight"
+    ghostHighlight.Adornee = LP.Character
+    ghostHighlight.FillColor = Color3.fromRGB(80, 180, 255)
+    ghostHighlight.FillTransparency = 0.75
+    ghostHighlight.OutlineColor = Color3.fromRGB(80, 180, 255)
+    ghostHighlight.OutlineTransparency = 0.1
+    ghostHighlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    ghostHighlight.Parent = ghostFolder
+
+    ghostMarker = Instance.new("Part")
+    ghostMarker.Name = "AW_GhostMarker"
+    ghostMarker.Size = Vector3.new(1.2, 1.2, 1.2)
+    ghostMarker.Shape = Enum.PartType.Ball
+    ghostMarker.Material = Enum.Material.Neon
+    ghostMarker.Color = Color3.fromRGB(80, 180, 255)
+    ghostMarker.Transparency = 0.3
+    ghostMarker.CanCollide = false
+    ghostMarker.CanTouch = false
+    ghostMarker.CanQuery = false
+    ghostMarker.Anchored = true
+    ghostMarker.Parent = ghostFolder
+
+    local bb = Instance.new("BillboardGui")
+    bb.Name = "AW_GhostLabel"
+    bb.Size = UDim2.new(0, 100, 0, 24)
+    bb.StudsOffset = Vector3.new(0, 1.5, 0)
+    bb.AlwaysOnTop = true
+    bb.Adornee = ghostMarker
+    bb.Parent = ghostFolder
+
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1, 0, 1, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = "YOU"
+    lbl.TextColor3 = Color3.fromRGB(80, 180, 255)
+    lbl.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    lbl.TextStrokeTransparency = 0
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 13
+    lbl.Parent = bb
+end
+
 task.spawn(function()
     while true do
         task.wait(0.2)
         if state.invisibleEnabled and LP.Character then
             for _, part in ipairs(LP.Character:GetDescendants()) do
-                if part:IsA("BasePart") or part:IsA("Decal") then
+                if part:IsA("BasePart") then
                     part.LocalTransparencyModifier = 1
+                    if part.Transparency < 1 then
+                        pcall(function() part.Transparency = 1 end)
+                    end
+                elseif part:IsA("Decal") or part:IsA("Texture") then
+                    part.LocalTransparencyModifier = 1
+                end
+            end
+
+            if not ghostHighlight or not ghostHighlight.Parent or ghostHighlight.Adornee ~= LP.Character then
+                createGhost()
+            end
+            if ghostMarker and LP.Character then
+                local hrp = LP.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    ghostMarker.CFrame = hrp.CFrame + Vector3.new(0, 3.5, 0)
+                end
+            end
+        else
+            if ghostHighlight or ghostMarker then destroyGhost() end
+        end
+    end
+end)
+
+LP.CharacterAdded:Connect(function(char)
+    task.wait(0.5)
+    if state.invisibleEnabled then
+        for _ = 1, 10 do
+            if char:FindFirstChild("HumanoidRootPart") then break end
+            task.wait(0.2)
+        end
+        createGhost()
+    end
+end)
+
+-- ==================== SECRET FEATURES ====================
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        if state.antiFling and LP.Character then
+            local root = LP.Character:FindFirstChild("HumanoidRootPart")
+            if root then
+                if root.AssemblyAngularVelocity.Magnitude > 300 then
+                    root.AssemblyAngularVelocity = Vector3.zero
+                end
+                local vel = root.AssemblyLinearVelocity
+                if vel.Magnitude > 300 then
+                    root.AssemblyLinearVelocity = Vector3.new(0, math.min(vel.Y, 0), 0)
                 end
             end
         end
     end
 end)
+
+task.spawn(function()
+    while true do
+        task.wait(0.15)
+        if state.antiRagdoll and LP.Character and not state.flyEnabled then
+            local hum = LP.Character:FindFirstChildOfClass("Humanoid")
+            if hum and hum.Health > 0 and hum.PlatformStand and not next(activeResets) then
+                hum.PlatformStand = false
+                hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+            end
+        end
+    end
+end)
+
+local freezeApplied = false
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        if LP.Character then
+            local root = LP.Character:FindFirstChild("HumanoidRootPart")
+            if root then
+                if state.freeze then
+                    if not freezeApplied then
+                        root.Anchored = true
+                        freezeApplied = true
+                    end
+                else
+                    if freezeApplied then
+                        if not (state.xpFarm or (state.farm and (isLobby() or isExecutingAction))) then
+                            root.Anchored = false
+                        end
+                        freezeApplied = false
+                    end
+                end
+            end
+        else
+            freezeApplied = false
+        end
+    end
+end)
+
+local savedOriginalFOV = nil
+task.spawn(function()
+    task.wait(1)
+    if Camera then savedOriginalFOV = Camera.FieldOfView end
+end)
+
+task.spawn(function()
+    local lastFov = nil
+    while true do
+        task.wait(0.2)
+        if Camera then
+            if state.fovEnabled then
+                local fov = state.fovValue or 70
+                if lastFov ~= fov then
+                    pcall(function() Camera.FieldOfView = fov end)
+                    lastFov = fov
+                end
+            else
+                if lastFov ~= nil then
+                    pcall(function() Camera.FieldOfView = savedOriginalFOV or 70 end)
+                    lastFov = nil
+                end
+            end
+        end
+    end
+end)
+
+local function getTeleportTargetFromScreen(x, y)
+    local ray = Camera:ViewportPointToRay(x, y)
+    local params = RaycastParams.new()
+    if LP.Character then
+        params.FilterDescendantsInstances = {LP.Character}
+    end
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    local result = Workspace:Raycast(ray.Origin, ray.Direction * 2000, params)
+    if result then return result.Position end
+    return ray.Origin + ray.Direction * 60
+end
+
+local function doClickTeleport(x, y)
+    if not state.clickTP then return end
+    local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    local pos = getTeleportTargetFromScreen(x, y)
+    if pos then
+        root.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
+        root.AssemblyLinearVelocity = Vector3.zero
+        root.AssemblyAngularVelocity = Vector3.zero
+    end
+end
+
+UIS.InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+    if not state.clickTP then return end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        local m = UIS:GetMouseLocation()
+        doClickTeleport(m.X, m.Y)
+    end
+end)
+
+UIS.TouchTap:Connect(function(positions, gpe)
+    if gpe then return end
+    if not state.clickTP then return end
+    if positions and positions[1] then
+        doClickTeleport(positions[1].X, positions[1].Y)
+    end
+end)
+
+local savedPositions = {nil, nil, nil}
+
+local function saveCurrentPosition(slot)
+    local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    if root then
+        savedPositions[slot] = root.CFrame
+        setStatus("Position saved to slot " .. slot)
+    end
+end
+
+local function loadPosition(slot)
+    local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    if root and savedPositions[slot] then
+        root.CFrame = savedPositions[slot]
+        root.AssemblyLinearVelocity = Vector3.zero
+        root.AssemblyAngularVelocity = Vector3.zero
+        setStatus("Teleported to saved slot " .. slot)
+    else
+        setStatus("No saved position in slot " .. slot)
+    end
+end
 
 -- ==================== ROLE NOTIFICATIONS ====================
 local notifiedMurderer = false
@@ -3412,7 +3796,7 @@ RunService.RenderStepped:Connect(function()
     if not hum or hum.Health <= 0 then return end
     local targetPart = char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
     if not targetPart then return end
-    Workspace.CurrentCamera.CFrame = CFrame.lookAt(Workspace.CurrentCamera.CFrame.Position, targetPart.Position)
+    Workspace.CurrentCamera.CFrame = CFrame up.lookAt(Workspace.CurrentCamera.CFrame.Position, targetPart.Position)
 end)
 
 print("Appleware loaded - enjoy my script, love you though (made by p04j on discord)")
