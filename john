@@ -625,21 +625,27 @@ local applyFpsBoost = function() end
 local function updateViz(key)
     if mainTgls[key] then
         local d = mainTgls[key]; local on = state[key]
-        TweenService:Create(d.pill, TweenInfo.new(0.35), {BackgroundColor3 = on and Color3.new(1,1,1) or c3(settingsConfig.cardColor)}):Play()
-        TweenService:Create(d.dot, TweenInfo.new(0.7, Enum.EasingStyle.Elastic), {
-            Position = on and UDim2.new(1, -20*selectedScale, 0.5, -8*selectedScale) or UDim2.new(0, 4*selectedScale, 0.5, -8*selectedScale),
-            BackgroundColor3 = on and c3(settingsConfig.cardColor) or c3(settingsConfig.textColor)
+        TweenService:Create(d.pill, TweenInfo.new(0.28, Enum.EasingStyle.Quint), {
+            BackgroundColor3 = on and Color3.new(1,1,1) or Color3.fromRGB(32,32,32)
+        }):Play()
+        if d.inner then
+            TweenService:Create(d.inner, TweenInfo.new(0.28, Enum.EasingStyle.Quint), {
+                BackgroundColor3 = on and Color3.new(1,1,1) or Color3.fromRGB(22,22,22)
+            }):Play()
+        end
+        TweenService:Create(d.dot, TweenInfo.new(0.42, Enum.EasingStyle.Back), {
+            Position = on and UDim2.new(1, -20*selectedScale, 0.5, -8*selectedScale)
+                            or UDim2.new(0, 4*selectedScale, 0.5, -8*selectedScale),
+            BackgroundColor3 = on and Color3.new(0,0,0) or Color3.fromRGB(200,200,200)
         }):Play()
     end
     if quickTgls[key] then
-        local d = quickTgls[key]
-        local on = state[key]
-        -- entire row changes color when on
-        TweenService:Create(d.row, TweenInfo.new(0.25), {
-            BackgroundColor3 = on and Color3.new(1,1,1) or c3(settingsConfig.cardColor)
+        local d = quickTgls[key]; local on = state[key]
+        TweenService:Create(d.row, TweenInfo.new(0.25, Enum.EasingStyle.Quint), {
+            BackgroundColor3 = on and Color3.new(1,1,1) or Color3.fromRGB(18,18,18)
         }):Play()
         TweenService:Create(d.txt, TweenInfo.new(0.25), {
-            TextColor3 = on and Color3.new(0,0,0) or c3(settingsConfig.textColor)
+            TextColor3 = on and Color3.new(0,0,0) or Color3.fromRGB(220,220,220)
         }):Play()
         if d.dot then
             TweenService:Create(d.dot, TweenInfo.new(0.25), {
@@ -821,20 +827,26 @@ local function getRoundTimeRemaining()
     return nil
 end
 
+-- ==================== ROLE DETECTION (FIXED: checks data before tools) ====================
 local cachedRoleModule = nil
 local cachedRoleModuleAt = 0
 local function getCachedRoleData()
     local now = tick()
-    if cachedRoleModule and (now - cachedRoleModuleAt) < 3 then
+    if cachedRoleModule and (now - cachedRoleModuleAt) < 2 then
         return cachedRoleModule
     end
     local ok, data = pcall(function()
         local mods = ReplicatedStorage:FindFirstChild("Modules")
         if mods then
-            local pd = mods:FindFirstChild("PlayerData") or mods:FindFirstChild("Roles") or mods:FindFirstChild("RoleData")
+            local pd = mods:FindFirstChild("PlayerData")
+                or mods:FindFirstChild("Roles")
+                or mods:FindFirstChild("RoleData")
+                or mods:FindFirstChild("RoundData")
             if pd then return require(pd) end
         end
-        local direct = ReplicatedStorage:FindFirstChild("PlayerData") or ReplicatedStorage:FindFirstChild("Roles")
+        local direct = ReplicatedStorage:FindFirstChild("PlayerData")
+            or ReplicatedStorage:FindFirstChild("Roles")
+            or ReplicatedStorage:FindFirstChild("RoleData")
         if direct then return require(direct) end
     end)
     if ok and type(data) == "table" then
@@ -842,45 +854,47 @@ local function getCachedRoleData()
         cachedRoleModuleAt = now
         return data
     end
+    local rf = ReplicatedStorage:FindFirstChild("GetPlayerData", true)
+    if rf and rf:IsA("RemoteFunction") then
+        local s, res = pcall(function() return rf:InvokeServer() end)
+        if s and type(res) == "table" then
+            cachedRoleModule = res
+            cachedRoleModuleAt = now
+            return res
+        end
+    end
     return nil
 end
 
--- Robust role detection
 local function getPlayerRole(plr)
     if not plr or not plr.Parent then return "Innocent" end
-
-    -- 1. Equipped / backpack tools (most reliable in this game)
-    local bp = plr:FindFirstChild("Backpack")
     local ch = plr.Character
-    if ch then
-        if ch:FindFirstChild("Knife") then return "Murderer" end
-        if ch:FindFirstChild("Gun") then return "Sheriff" end
-    end
-    if bp then
-        if bp:FindFirstChild("Knife") then return "Murderer" end
-        if bp:FindFirstChild("Gun") then return "Sheriff" end
+    local bp = plr:FindFirstChild("Backpack")
+
+    -- 1) Player attributes (set the instant roles are assigned)
+    for _, attrName in ipairs({"Role","role","RoleName","roleName","Team","team"}) do
+        local a = plr:GetAttribute(attrName)
+        if a and tostring(a) ~= "" then return tostring(a) end
     end
 
-    -- 2. Attributes on player
-    local attr = plr:GetAttribute("Role") or plr:GetAttribute("role") or plr:GetAttribute("RoleName")
-    if attr then
-        local s = tostring(attr)
-        if s ~= "" then return s end
+    -- 2) Team
+    if plr.Team and plr.Team.Name ~= "" then
+        local tn = plr.Team.Name
+        if tn ~= "Innocents" and tn ~= "Lobby" then return tn end
     end
 
-    -- 3. Attributes on character
+    -- 3) Character attributes / tags
     if ch then
-        local cattr = ch:GetAttribute("Role") or ch:GetAttribute("role") or ch:GetAttribute("RoleName")
-        if cattr then
-            local s = tostring(cattr)
-            if s ~= "" then return s end
+        for _, attrName in ipairs({"Role","role","RoleName","roleName"}) do
+            local a = ch:GetAttribute(attrName)
+            if a and tostring(a) ~= "" then return tostring(a) end
         end
-        -- Tags like "Murderer" or "Sheriff" as direct children
         if ch:FindFirstChild("Murderer") or ch:FindFirstChild("IsMurderer") then return "Murderer" end
-        if ch:FindFirstChild("Sheriff") or ch:FindFirstChild("IsSheriff") then return "Sheriff" end
+        if ch:FindFirstChild("Sheriff")  or ch:FindFirstChild("IsSheriff")  then return "Sheriff"  end
+        if ch:FindFirstChild("Hero")     or ch:FindFirstChild("IsHero")     then return "Hero"     end
     end
 
-    -- 4. Cached module data
+    -- 4) Role module data
     local rd = getCachedRoleData()
     if rd and type(rd) == "table" then
         local pd = rd[plr.Name] or rd[tostring(plr.UserId)] or rd[plr.UserId]
@@ -892,6 +906,10 @@ local function getPlayerRole(plr)
             end
         end
     end
+
+    -- 5) Tools (last resort)
+    if (ch and ch:FindFirstChild("Knife")) or (bp and bp:FindFirstChild("Knife")) then return "Murderer" end
+    if (ch and ch:FindFirstChild("Gun"))   or (bp and bp:FindFirstChild("Gun"))   then return "Sheriff"  end
 
     return "Innocent"
 end
@@ -915,8 +933,7 @@ local function getMurd()
     for _, p in ipairs(Players:GetPlayers()) do
         if p ~= LP and p.Character and p.Character:FindFirstChild("Humanoid")
             and p.Character.Humanoid.Health > 0 then
-            local role = getPlayerRole(p)
-            if role == "Murderer" then return p end
+            if getPlayerRole(p) == "Murderer" then return p end
         end
     end
     return nil
@@ -1756,18 +1773,18 @@ buildUI = function(reb)
         local pill = Instance.new("Frame", row)
         pill.Size = UDim2.new(0, 44 * selectedScale, 0, 24 * selectedScale)
         pill.Position = UDim2.new(1, -54 * selectedScale, 0.5, -12 * selectedScale)
-        pill.BackgroundColor3 = state[key] and ACC or CARD
+        pill.BackgroundColor3 = state[key] and ACC or Color3.fromRGB(32,32,32)
         Instance.new("UICorner", pill).CornerRadius = UDim.new(1, 0)
         local pI = Instance.new("Frame", pill)
         pI.Size = UDim2.new(1, -4 * selectedScale, 1, -4 * selectedScale)
         pI.Position = UDim2.new(0, 2 * selectedScale, 0, 2 * selectedScale)
-        pI.BackgroundColor3 = state[key] and ACC or CARD
+        pI.BackgroundColor3 = state[key] and ACC or Color3.fromRGB(22,22,22)
         Instance.new("UICorner", pI).CornerRadius = UDim.new(1, 0)
         local dot = Instance.new("Frame", pill)
         dot.Size = UDim2.new(0, 16 * selectedScale, 0, 16 * selectedScale)
         dot.Position = state[key] and UDim2.new(1, -20 * selectedScale, 0.5, -8 * selectedScale)
                         or UDim2.new(0, 4 * selectedScale, 0.5, -8 * selectedScale)
-        dot.BackgroundColor3 = state[key] and CARD or TXT
+        dot.BackgroundColor3 = state[key] and Color3.new(0,0,0) or Color3.fromRGB(200,200,200)
         Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
         mainTgls[key] = {pill = pill, dot = dot, inner = pI}
         local hit = Instance.new("TextButton", row)
@@ -2363,7 +2380,7 @@ buildUI = function(reb)
     if reb then openUI() end
     fb.MouseButton1Click:Connect(function() if isOpen then closeUI() else openUI() end end)
 
-    -- QUICK TOGGLES PANEL (rebuilt with Frame + hit overlay)
+    -- QUICK TOGGLES PANEL
     local qf = Instance.new("Frame", sg)
     qf.Size = UDim2.new(0, 158 * selectedScale, 0, 270 * selectedScale)
     qf.Position = UDim2.new(0.86, -168, 0.36, 0)
@@ -2407,7 +2424,6 @@ buildUI = function(reb)
         local sk = skm[name]
         local isT = sk ~= nil
 
-        -- Row is a Frame, click hit is a child TextButton covering the whole row
         local row = Instance.new("Frame", qsc)
         row.Size = UDim2.new(1, 0, 0, 28 * selectedScale)
         row.LayoutOrder = order
@@ -2751,7 +2767,7 @@ LP.CharacterRemoving:Connect(function()
     if invisActive then invisStop(); state.invisibleEnabled = false; updateViz("invisibleEnabled") end
 end)
 
--- Role notifications
+-- Role notifications (fires as soon as role data is available)
 local nM, nS = false, false
 task.spawn(function()
     while true do
@@ -3107,7 +3123,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- ============ ESP (fixed: parented to CoreGui directly) ============
+-- ============ ESP ============
 local espF = Instance.new("Folder")
 espF.Name = "AW_ESP"
 pcall(function()
