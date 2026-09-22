@@ -1,8 +1,3 @@
--- Auto-load Anti-Fling
-pcall(function()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/Toolboxhubbot/antifling/refs/heads/main/antifling"))()
-end)
-
 LocalTeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
 local TextChatService = game:GetService("TextChatService")
@@ -3847,8 +3842,8 @@ task.spawn(function()
         if state.invisibleEnabled then cancelFarmTween() continue end
         if not alive() then cancelFarmTween() continue end
         local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-        local humanoid = LP.Character ( and LProot.Character:FindFirstChildOfClass.P("Humanoid")
-osition        if not root or not humanoid - c then continue end
+        local humanoid = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+        if not root or not humanoid then continue end
         if state.xpFarm then
             cancelFarmTween(); humanoid.PlatformStand = true; root.Anchored = true
             root.CFrame = HIDE_POS; root.AssemblyLinearVelocity = Vector3.zero; root.AssemblyAngularVelocity = Vector3.zero
@@ -3878,7 +3873,7 @@ osition        if not root or not humanoid - c then continue end
         if #coins == 0 then cancelFarmTween() continue end
         local closestCoin, shortest = nil, math.huge
         for _, c in ipairs(coins) do
-            local dist =.Position).Magnitude
+            local dist = (root.Position - c.Position).Magnitude
             if dist < shortest then shortest = dist closestCoin = c end
         end
         if not closestCoin then cancelFarmTween() continue end
