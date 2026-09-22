@@ -3093,98 +3093,136 @@ task.spawn(function()
     end
 end)
 
--- ==================== INVISIBLE (IN-PLACE, AGGRESSIVE) ====================
--- Does NOT move or anchor the character. Moving/anchoring from a client does
--- not replicate to the server, which is why other players kept seeing you at
--- spawn. Instead we spam Transparency + LocalTransparencyModifier on every
--- BasePart / Decal / accessory / particle every frame. Those properties DO
--- replicate for the local player's own character parts.
+-- ==================== INVISIBLE (REplicated, anti-desync) ====================
+-- LocalTransparencyModifier = 1 is client-only. Transparency = 1 on your
+-- own character SHOULD replicate because you own the network. If others
+-- still see you, something is resetting Transparency server-side or
+-- another script (like the anti-fling loader) is interfering. This block:
+--   1) spams Transparency on RenderStepped + Heartbeat + Stepped
+--   2) re-forces Transparency on any PropertyChanged of the part
+--   3) hooks DescendantAdded (hats/tools/effects/new parts)
+--   4) hides sounds / effects / highlights / guis too
+
 local invisActive = false
 local invisSavedProps = {}
-local invisDescConn = nil
+local invisConnections = {}
 
-local function hideVisual(d)
+local function _saveProp(inst, prop)
+    local t = invisSavedProps[inst]
+    if not t then t = {} invisSavedProps[inst] = t end
+    if t[prop] == nil then t[prop] = inst[prop] end
+end
+
+local function _hideVisual(d)
     if not d or not d.Parent then return end
     if d:IsA("BasePart") then
-        if invisSavedProps[d] == nil then
-            invisSavedProps[d] = {
-                Transparency = d.Transparency,
-                LocalTransparencyModifier = d.LocalTransparencyModifier,
-                Reflectance = d.Reflectance,
-                CanCollide = d.CanCollide,
-                CastShadow = d.CastShadow,
-            }
-        end
+        _saveProp(d, "Transparency")
+        _saveProp(d, "LocalTransparencyModifier")
+        _saveProp(d, "Reflectance")
+        _saveProp(d, "CanCollide")
+        _saveProp(d, "CastShadow")
         d.Transparency = 1
         pcall(function() d.LocalTransparencyModifier = 1 end)
         d.Reflectance = 0
         d.CanCollide = false
         d.CastShadow = false
     elseif d:IsA("Decal") or d:IsA("Texture") then
-        if invisSavedProps[d] == nil then invisSavedProps[d] = { Transparency = d.Transparency } end
-        d.Transparency = 1
+        _saveProp(d, "Transparency"); d.Transparency = 1
     elseif d:IsA("SurfaceAppearance") then
-        if invisSavedProps[d] == nil then invisSavedProps[d] = { AlphaMode = d.AlphaMode } end
+        _saveProp(d, "AlphaMode")
         pcall(function() d.AlphaMode = Enum.SurfaceAppearanceAlphaMode.Overlay end)
     elseif d:IsA("ParticleEmitter") or d:IsA("Beam") or d:IsA("Trail")
         or d:IsA("Fire") or d:IsA("Smoke") or d:IsA("Sparkles") then
-        if invisSavedProps[d] == nil then invisSavedProps[d] = { Enabled = d.Enabled } end
-        pcall(function() d.Enabled = false end)
+        _saveProp(d, "Enabled"); pcall(function() d.Enabled = false end)
     elseif d:IsA("BillboardGui") or d:IsA("SurfaceGui") or d:IsA("Highlight")
         or d:IsA("SelectionBox") or d:IsA("PointLight") or d:IsA("SpotLight")
         or d:IsA("SurfaceLight") or d:IsA("BoxHandleAdornment")
         or d:IsA("SphereHandleAdornment") or d:IsA("LineHandleAdornment")
         or d:IsA("CylinderHandleAdornment") or d:IsA("SelectionSphere") then
-        if invisSavedProps[d] == nil then invisSavedProps[d] = { Enabled = d.Enabled, Visible = d.Visible } end
+        _saveProp(d, "Enabled"); _saveProp(d, "Visible")
         pcall(function() d.Enabled = false end)
         pcall(function() d.Visible = false end)
     elseif d:IsA("Sound") then
-        if invisSavedProps[d] == nil then invisSavedProps[d] = { Volume = d.Volume } end
-        pcall(function() d.Volume = 0 end)
+        _saveProp(d, "Volume"); pcall(function() d.Volume = 0 end)
     end
 end
 
-local function applyInvisNow()
+local function _applyInvis()
     local char = LP.Character
     if not char then return end
-    for _, d in ipairs(char:GetDescendants()) do
-        hideVisual(d)
+    for _, d in ipairs(char:GetDescendants()) do _hideVisual(d) end
+    for _, t in ipairs(char:GetChildren()) do
+        if t:IsA("Tool") then
+            for _, d in ipairs(t:GetDescendants()) do _hideVisual(d) end
+        end
     end
 end
 
-local function restoreInvis()
+local function _restoreInvis()
     for inst, props in pairs(invisSavedProps) do
         if inst and inst.Parent then
-            for k, v in pairs(props) do
-                pcall(function() inst[k] = v end)
-            end
+            for k, v in pairs(props) do pcall(function() inst[k] = v end) end
         end
     end
     invisSavedProps = {}
+end
+
+local function _disconnectInvis()
+    for _, c in ipairs(invisConnections) do pcall(function() c:Disconnect() end) end
+    invisConnections = {}
+end
+
+local function _hookPartReversion(part)
+    if not part:IsA("BasePart") then return end
+    table.insert(invisConnections, part:GetPropertyChangedSignal("Transparency"):Connect(function()
+        if invisActive and part.Transparency < 1 then part.Transparency = 1 end
+    end))
+    table.insert(invisConnections, part:GetPropertyChangedSignal("LocalTransparencyModifier"):Connect(function()
+        if invisActive then
+            pcall(function() if part.LocalTransparencyModifier < 1 then part.LocalTransparencyModifier = 1 end end)
+        end
+    end))
 end
 
 local function startInvisible()
     if invisActive then return end
     if not LP.Character then return end
-    invisSavedProps = {}
-    applyInvisNow()
-
-    if invisDescConn then invisDescConn:Disconnect() end
-    invisDescConn = LP.Character.DescendantAdded:Connect(function(d)
-        if invisActive then
-            task.defer(function() if invisActive and d and d.Parent then hideVisual(d) end end)
-        end
-    end)
-
     invisActive = true
+    invisSavedProps = {}
+    _disconnectInvis()
+
+    _applyInvis()
+    for _, d in ipairs(LP.Character:GetDescendants()) do _hookPartReversion(d) end
+
+    table.insert(invisConnections, LP.Character.DescendantAdded:Connect(function(d)
+        if not invisActive then return end
+        task.defer(function()
+            if invisActive and d and d.Parent then
+                _hideVisual(d)
+                _hookPartReversion(d)
+            end
+        end)
+    end))
+
+    -- triple-loop spam beats any single-thread reset
+    table.insert(invisConnections, RunService.RenderStepped:Connect(function()
+        if invisActive then _applyInvis() end
+    end))
+    table.insert(invisConnections, RunService.Heartbeat:Connect(function()
+        if invisActive then _applyInvis() end
+    end))
+    table.insert(invisConnections, RunService.Stepped:Connect(function()
+        if invisActive then _applyInvis() end
+    end))
+
     setStatus("Invisible ON")
 end
 
 local function stopInvisible()
     if not invisActive then return end
     invisActive = false
-    if invisDescConn then invisDescConn:Disconnect() invisDescConn = nil end
-    restoreInvis()
+    _disconnectInvis()
+    _restoreInvis()
     setStatus("Invisible OFF")
 end
 
@@ -3200,16 +3238,9 @@ task.spawn(function()
     end
 end)
 
--- Re-apply on every rendered frame (fastest possible)
-RunService.RenderStepped:Connect(function()
-    if invisActive then
-        applyInvisNow()
-    end
-end)
-
 LP.CharacterAdded:Connect(function()
+    _disconnectInvis()
     invisSavedProps = {}
-    if invisDescConn then invisDescConn:Disconnect() invisDescConn = nil end
     if state.invisibleEnabled then
         invisActive = false
         task.wait(0.5)
