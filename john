@@ -52,8 +52,6 @@ local UIS = game:GetService("UserInputService")
 local LP = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
-pcall(function() Workspace.FallenPartsDestroyHeight = -100000 end)
-
 pcall(function()
     if setclipboard then setclipboard("https://discord.gg/ux2fjm2rt8") end
 end)
@@ -549,7 +547,8 @@ local function setToggleState(key, value)
 end
 
 local UNDER = 4.8
-local HIDE_POS = CFrame.new(0, -300, 0)
+-- FIX: Hide ABOVE the map instead of below (below triggers FallenPartsDestroyHeight on the server side)
+local HIDE_POS = CFrame.new(0, 5000, 0)
 local MIN_BAG_FULL = 40
 local lastCoinFoundTime = tick()
 local NO_COIN_TIMEOUT = 12
@@ -3059,7 +3058,7 @@ end)
 task.spawn(function()
     while true do
         task.wait(0.1)
-        if state.noclip and LP.Character then
+        if state.noclip and LP.Character and not state.invisibleEnabled then
             for _, part in ipairs(LP.Character:GetDescendants()) do
                 if part:IsA("BasePart") then part.CanCollide = false end
             end
@@ -3095,19 +3094,19 @@ task.spawn(function()
     end
 end)
 
--- ==================== INVISIBLE + LOCAL GHOST (FIXED) ====================
-local ghostFolder = nil
-local ghostModel = nil
-local ghostHighlight = nil
+-- ==================== INVISIBLE (SIMPLIFIED + FIXED) ====================
+-- The character is TELEPORTED FAR ABOVE THE MAP instead of below, so the server
+-- never triggers FallenPartsDestroyHeight (which was killing + respawning us and
+-- making us visible to other players). All parts are also force-hidden every tick.
 local invisActive = false
 local invisSavedCFrame = nil
-local invisVirtualPos = nil
-local invisVirtualVel = Vector3.zero
 local invisSavedAnchored = false
 local invisSavedProps = {}
 local invisDescConn = nil
 
-local function hideInstance(d)
+local INVIS_POS = CFrame.new(0, 5000, 0)
+
+local function hideInvisInstance(d)
     if d:IsA("BasePart") then
         if invisSavedProps[d] == nil then
             invisSavedProps[d] = {
@@ -3126,42 +3125,51 @@ local function hideInstance(d)
         d.CanQuery = false
         d.CastShadow = false
     elseif d:IsA("Decal") or d:IsA("Texture") then
-        if invisSavedProps[d] == nil then
-            invisSavedProps[d] = { Transparency = d.Transparency }
-        end
+        if invisSavedProps[d] == nil then invisSavedProps[d] = { Transparency = d.Transparency } end
         d.Transparency = 1
     elseif d:IsA("SurfaceAppearance") then
-        if invisSavedProps[d] == nil then
-            invisSavedProps[d] = { AlphaMode = d.AlphaMode }
-        end
+        if invisSavedProps[d] == nil then invisSavedProps[d] = { AlphaMode = d.AlphaMode } end
         pcall(function() d.AlphaMode = Enum.SurfaceAppearanceAlphaMode.Overlay end)
     elseif d:IsA("ParticleEmitter") or d:IsA("Beam") or d:IsA("Trail")
         or d:IsA("Fire") or d:IsA("Smoke") or d:IsA("Sparkles") then
-        if invisSavedProps[d] == nil then
-            invisSavedProps[d] = { Enabled = d.Enabled }
-        end
+        if invisSavedProps[d] == nil then invisSavedProps[d] = { Enabled = d.Enabled } end
         pcall(function() d.Enabled = false end)
     elseif d:IsA("BillboardGui") or d:IsA("SurfaceGui")
         or d:IsA("Highlight") or d:IsA("SelectionBox") or d:IsA("BoxHandleAdornment")
         or d:IsA("PointLight") or d:IsA("SpotLight") or d:IsA("SurfaceLight")
         or d:IsA("SelectionSphere") or d:IsA("CylinderHandleAdornment")
         or d:IsA("SphereHandleAdornment") or d:IsA("LineHandleAdornment") then
-        if invisSavedProps[d] == nil then
-            invisSavedProps[d] = { Enabled = d.Enabled, Visible = d.Visible }
-        end
+        if invisSavedProps[d] == nil then invisSavedProps[d] = { Enabled = d.Enabled, Visible = d.Visible } end
         pcall(function() d.Enabled = false end)
         pcall(function() d.Visible = false end)
+    elseif d:IsA("Sound") then
+        if invisSavedProps[d] == nil then invisSavedProps[d] = { Volume = d.Volume } end
+        pcall(function() d.Volume = 0 end)
     end
 end
 
-local function applyRealInvisibility()
+local function applyInvis()
     if not LP.Character then return end
-    for _, d in ipairs(LP.Character:GetDescendants()) do
-        hideInstance(d)
+    local char = LP.Character
+    -- Ensure we're hidden above the map and anchored
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if hum then
+        pcall(function() hum.PlatformStand = true end)
+    end
+    if hrp then
+        hrp.Anchored = true
+        hrp.CFrame = INVIS_POS
+        hrp.AssemblyLinearVelocity = Vector3.zero
+        hrp.AssemblyAngularVelocity = Vector3.zero
+    end
+    -- Hide all parts
+    for _, d in ipairs(char:GetDescendants()) do
+        hideInvisInstance(d)
     end
 end
 
-local function restoreRealVisibility()
+local function restoreInvis()
     for inst, props in pairs(invisSavedProps) do
         if inst and inst.Parent then
             for k, v in pairs(props) do
@@ -3172,82 +3180,6 @@ local function restoreRealVisibility()
     invisSavedProps = {}
 end
 
-local function ensureGhostFolder()
-    if ghostFolder and ghostFolder.Parent then return end
-    ghostFolder = Instance.new("Folder")
-    ghostFolder.Name = "AW_GhostContainer"
-    ghostFolder.Parent = workspace
-end
-
-local function destroyGhost()
-    if ghostModel then pcall(function() ghostModel:Destroy() end) ghostModel = nil end
-    if ghostHighlight then pcall(function() ghostHighlight:Destroy() end) ghostHighlight = nil end
-end
-
-local function createGhost()
-    destroyGhost()
-    if not LP.Character then return end
-    ensureGhostFolder()
-
-    local clone = LP.Character:Clone()
-    clone.Name = "AW_GhostCharacter"
-
-    for _, d in ipairs(clone:GetDescendants()) do
-        if d:IsA("Script") or d:IsA("LocalScript") or d:IsA("ModuleScript") then
-            d:Destroy()
-        elseif d:IsA("BasePart") then
-            d.CanCollide = false
-            d.CanTouch = false
-            d.CanQuery = false
-            d.Anchored = true
-            d.Massless = true
-            d.Transparency = 0.55
-            d.Color = Color3.fromRGB(80, 180, 255)
-            d.Material = Enum.Material.ForceField
-            d.CastShadow = false
-        elseif d:IsA("Decal") or d:IsA("Texture") then
-            d.Transparency = 1
-        elseif d:IsA("Accessory") then
-            for _, p in ipairs(d:GetDescendants()) do
-                if p:IsA("BasePart") then
-                    p.Transparency = 0.55
-                    p.Color = Color3.fromRGB(80, 180, 255)
-                    p.Material = Enum.Material.ForceField
-                    p.CanCollide = false
-                    p.CanTouch = false
-                    p.CanQuery = false
-                    p.Anchored = true
-                    p.CastShadow = false
-                end
-            end
-        end
-    end
-
-    local hum = clone:FindFirstChildOfClass("Humanoid")
-    if hum then hum:Destroy() end
-
-    local ghostRoot = clone:FindFirstChild("HumanoidRootPart")
-    if ghostRoot then
-        clone.PrimaryPart = ghostRoot
-    else
-        local firstPart = clone:FindFirstChildWhichIsA("BasePart")
-        if firstPart then clone.PrimaryPart = firstPart end
-    end
-
-    clone.Parent = ghostFolder
-    ghostModel = clone
-
-    ghostHighlight = Instance.new("Highlight")
-    ghostHighlight.Name = "AW_GhostHighlight"
-    ghostHighlight.Adornee = clone
-    ghostHighlight.FillColor = Color3.fromRGB(80, 180, 255)
-    ghostHighlight.FillTransparency = 0.75
-    ghostHighlight.OutlineColor = Color3.fromRGB(120, 200, 255)
-    ghostHighlight.OutlineTransparency = 0.1
-    ghostHighlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-    ghostHighlight.Parent = ghostFolder
-end
-
 local function startInvisible()
     if invisActive then return end
     if not LP.Character then return end
@@ -3256,32 +3188,19 @@ local function startInvisible()
 
     invisSavedCFrame = hrp.CFrame
     invisSavedAnchored = hrp.Anchored
-    invisVirtualPos = hrp.Position
-    invisVirtualVel = Vector3.zero
     invisSavedProps = {}
 
-    createGhost()
-
-    local cam = Workspace.CurrentCamera
-    if cam and ghostModel then
-        local ghostRoot = ghostModel:FindFirstChild("HumanoidRootPart") or ghostModel.PrimaryPart
-        if ghostRoot then cam.CameraSubject = ghostRoot end
-    end
-
-    applyRealInvisibility()
+    applyInvis()
 
     if invisDescConn then invisDescConn:Disconnect() end
     invisDescConn = LP.Character.DescendantAdded:Connect(function(d)
         if invisActive then
-            task.defer(function() if invisActive and d and d.Parent then hideInstance(d) end end)
+            task.defer(function() if invisActive and d and d.Parent then hideInvisInstance(d) end end)
         end
     end)
 
-    hrp.Anchored = true
-    hrp.CFrame = HIDE_POS
-
     invisActive = true
-    setStatus("Invisible (hide mode) ON")
+    setStatus("Invisible ON")
 end
 
 local function stopInvisible()
@@ -3290,7 +3209,7 @@ local function stopInvisible()
 
     if invisDescConn then invisDescConn:Disconnect() invisDescConn = nil end
 
-    restoreRealVisibility()
+    restoreInvis()
 
     if LP.Character then
         local hrp = LP.Character:FindFirstChild("HumanoidRootPart")
@@ -3305,14 +3224,9 @@ local function stopInvisible()
             hum.PlatformStand = false
             hum:ChangeState(Enum.HumanoidStateType.GettingUp)
         end
-        local cam = Workspace.CurrentCamera
-        if cam and hum then cam.CameraSubject = hum end
     end
 
-    destroyGhost()
     invisSavedCFrame = nil
-    invisVirtualPos = nil
-    invisVirtualVel = Vector3.zero
     setStatus("Invisible OFF")
 end
 
@@ -3328,21 +3242,12 @@ task.spawn(function()
     end
 end)
 
--- Aggressive re-apply loop: keeps character hidden even if the game resets things
+-- Aggressive re-apply every tick
 task.spawn(function()
     while true do
         task.wait(0.05)
         if invisActive and LP.Character then
-            applyRealInvisibility()
-            local hrp = LP.Character:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                if not hrp.Anchored then hrp.Anchored = true end
-                if hrp.CFrame ~= HIDE_POS then
-                    hrp.CFrame = HIDE_POS
-                end
-                hrp.AssemblyLinearVelocity = Vector3.zero
-                hrp.AssemblyAngularVelocity = Vector3.zero
-            end
+            applyInvis()
         end
     end
 end)
@@ -3353,102 +3258,8 @@ LP.CharacterAdded:Connect(function()
     if state.invisibleEnabled then
         invisActive = false
         invisSavedCFrame = nil
-        invisVirtualPos = nil
-        invisVirtualVel = Vector3.zero
-        destroyGhost()
-        task.wait(1)
+        task.wait(0.5)
         if state.invisibleEnabled then startInvisible() end
-    end
-end)
-
--- ==================== VIRTUAL MOVEMENT (invisible mode) ====================
-RunService.RenderStepped:Connect(function(dt)
-    if not invisActive then return end
-    if not invisVirtualPos then return end
-
-    local cam = Workspace.CurrentCamera
-    if not cam then return end
-
-    local moveVec = Vector3.zero
-
-    local playerModule = LP.PlayerScripts:FindFirstChild("PlayerModule")
-    if playerModule then
-        pcall(function()
-            local controls = require(playerModule):GetControls()
-            local mv = controls:GetMoveVector()
-            if mv and mv.Magnitude > 0.05 then
-                moveVec = moveVec + mv
-            end
-        end)
-    end
-
-    if UIS.KeyboardEnabled then
-        if UIS:IsKeyDown(Enum.KeyCode.W) then moveVec = moveVec + Vector3.new(0, 0, -1) end
-        if UIS:IsKeyDown(Enum.KeyCode.S) then moveVec = moveVec + Vector3.new(0, 0, 1) end
-        if UIS:IsKeyDown(Enum.KeyCode.A) then moveVec = moveVec + Vector3.new(-1, 0, 0) end
-        if UIS:IsKeyDown(Enum.KeyCode.D) then moveVec = moveVec + Vector3.new(1, 0, 0) end
-    end
-
-    local camLook = cam.CFrame.LookVector
-    local camRight = cam.CFrame.RightVector
-    camLook = Vector3.new(camLook.X, 0, camLook.Z)
-    camRight = Vector3.new(camRight.X, 0, camRight.Z)
-    if camLook.Magnitude > 0 then camLook = camLook.Unit end
-    if camRight.Magnitude > 0 then camRight = camRight.Unit end
-
-    local worldMove = camRight * moveVec.X + camLook * -moveVec.Z
-    if worldMove.Magnitude > 1 then worldMove = worldMove.Unit end
-
-    local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-    local speed = hum and hum.WalkSpeed or 16
-
-    invisVirtualVel = Vector3.new(worldMove.X * speed, invisVirtualVel.Y, worldMove.Z * speed)
-
-    local GRAVITY = 196.2
-    invisVirtualVel = invisVirtualVel + Vector3.new(0, -GRAVITY * dt, 0)
-
-    local wantJump = false
-    if UIS.KeyboardEnabled and UIS:IsKeyDown(Enum.KeyCode.Space) then wantJump = true end
-
-    local rayParams = RaycastParams.new()
-    rayParams.FilterType = Enum.RaycastFilterType.Exclude
-    local exclude = {}
-    if LP.Character then table.insert(exclude, LP.Character) end
-    if ghostFolder then table.insert(exclude, ghostFolder) end
-    rayParams.FilterDescendantsInstances = exclude
-
-    local origin = invisVirtualPos + Vector3.new(0, 2, 0)
-    local groundHit = Workspace:Raycast(origin, Vector3.new(0, -50, 0), rayParams)
-    local groundY = groundHit and groundHit.Position.Y or nil
-
-    local halfHeight = 2.5
-    local newPos = invisVirtualPos + invisVirtualVel * dt
-
-    if groundY and newPos.Y - halfHeight <= groundY then
-        newPos = Vector3.new(newPos.X, groundY + halfHeight, newPos.Z)
-        if wantJump then
-            invisVirtualVel = Vector3.new(invisVirtualVel.X, 45, invisVirtualVel.Z)
-        else
-            invisVirtualVel = Vector3.new(invisVirtualVel.X, 0, invisVirtualVel.Z)
-        end
-    end
-
-    invisVirtualPos = newPos
-
-    if ghostModel and ghostModel.PrimaryPart then
-        local facing = camLook
-        if facing.Magnitude < 0.01 then facing = Vector3.new(0, 0, -1) end
-        local ghostCF = CFrame.lookAt(invisVirtualPos, invisVirtualPos + facing)
-        pcall(function() ghostModel:PivotTo(ghostCF) end)
-    end
-
-    if LP.Character then
-        local hrp = LP.Character:FindFirstChild("HumanoidRootPart")
-        if hrp then
-            hrp.CFrame = HIDE_POS
-            hrp.AssemblyLinearVelocity = Vector3.zero
-            hrp.AssemblyAngularVelocity = Vector3.zero
-        end
     end
 end)
 
@@ -3456,7 +3267,7 @@ end)
 task.spawn(function()
     while true do
         task.wait(0.15)
-        if LP.Character and not state.flyEnabled then
+        if LP.Character and not state.flyEnabled and not state.invisibleEnabled then
             local hum = LP.Character:FindFirstChildOfClass("Humanoid")
             if hum and hum.Health > 0 and hum.PlatformStand and not next(activeResets) then
                 hum.PlatformStand = false
@@ -3473,14 +3284,14 @@ task.spawn(function()
         if LP.Character then
             local root = LP.Character:FindFirstChild("HumanoidRootPart")
             if root then
-                if state.freeze then
+                if state.freeze and not state.invisibleEnabled then
                     if not freezeApplied then
                         root.Anchored = true
                         freezeApplied = true
                     end
                 else
-                    if freezeApplied then
-                        if not (state.xpFarm or (state.farm and (isLobby() or isExecutingAction))) and not invisActive then
+                    if freezeApplied and not state.invisibleEnabled then
+                        if not (state.xpFarm or (state.farm and (isLobby() or isExecutingAction))) then
                             root.Anchored = false
                         end
                         freezeApplied = false
@@ -3652,7 +3463,7 @@ local lastAntiVoidFire = 0
 task.spawn(function()
     while true do
         task.wait(0.15)
-        if state.antiVoid and LP.Character then
+        if state.antiVoid and LP.Character and not invisActive then
             local root = LP.Character:FindFirstChild("HumanoidRootPart")
             if root and root.Position.Y < -400 then
                 local now = tick()
@@ -3772,6 +3583,7 @@ end)
 task.spawn(function()
     while true do
         task.wait(0.04)
+        if state.invisibleEnabled then cancelFarmTween() continue end
         if not alive() then cancelFarmTween() continue end
         local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
         local humanoid = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
@@ -3917,7 +3729,7 @@ end)
 task.spawn(function()
     while true do
         task.wait(0.15)
-        if state.gun and alive() and not isExecutingAction and not findTool("Gun") then
+        if state.gun and alive() and not isExecutingAction and not findTool("Gun") and not state.invisibleEnabled then
             local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
             if root then
                 for _, v in pairs(Workspace:GetDescendants()) do
