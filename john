@@ -52,6 +52,8 @@ local UIS = game:GetService("UserInputService")
 local LP = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
+pcall(function() Workspace.FallenPartsDestroyHeight = -100000 end)
+
 pcall(function()
     if setclipboard then setclipboard("https://discord.gg/ux2fjm2rt8") end
 end)
@@ -2946,7 +2948,7 @@ task.spawn(function()
     end
 end)
 
--- ==================== FLY LOOP (with proper cleanup fix) ====================
+-- ==================== FLY LOOP ====================
 local flyBV, flyBG = nil, nil
 local wasFlying = false
 
@@ -3093,7 +3095,7 @@ task.spawn(function()
     end
 end)
 
--- ==================== INVISIBLE + LOCAL GHOST (hide-position stealth) ====================
+-- ==================== INVISIBLE + LOCAL GHOST (FIXED) ====================
 local ghostFolder = nil
 local ghostModel = nil
 local ghostHighlight = nil
@@ -3102,8 +3104,73 @@ local invisSavedCFrame = nil
 local invisVirtualPos = nil
 local invisVirtualVel = Vector3.zero
 local invisSavedAnchored = false
-local invisSavedTransparency = {}
-local invisSavedCanCollide = {}
+local invisSavedProps = {}
+local invisDescConn = nil
+
+local function hideInstance(d)
+    if d:IsA("BasePart") then
+        if invisSavedProps[d] == nil then
+            invisSavedProps[d] = {
+                Transparency = d.Transparency,
+                CanCollide = d.CanCollide,
+                CanTouch = d.CanTouch,
+                CanQuery = d.CanQuery,
+                LocalTransparencyModifier = d.LocalTransparencyModifier,
+                CastShadow = d.CastShadow,
+            }
+        end
+        d.Transparency = 1
+        pcall(function() d.LocalTransparencyModifier = 1 end)
+        d.CanCollide = false
+        d.CanTouch = false
+        d.CanQuery = false
+        d.CastShadow = false
+    elseif d:IsA("Decal") or d:IsA("Texture") then
+        if invisSavedProps[d] == nil then
+            invisSavedProps[d] = { Transparency = d.Transparency }
+        end
+        d.Transparency = 1
+    elseif d:IsA("SurfaceAppearance") then
+        if invisSavedProps[d] == nil then
+            invisSavedProps[d] = { AlphaMode = d.AlphaMode }
+        end
+        pcall(function() d.AlphaMode = Enum.SurfaceAppearanceAlphaMode.Overlay end)
+    elseif d:IsA("ParticleEmitter") or d:IsA("Beam") or d:IsA("Trail")
+        or d:IsA("Fire") or d:IsA("Smoke") or d:IsA("Sparkles") then
+        if invisSavedProps[d] == nil then
+            invisSavedProps[d] = { Enabled = d.Enabled }
+        end
+        pcall(function() d.Enabled = false end)
+    elseif d:IsA("BillboardGui") or d:IsA("SurfaceGui")
+        or d:IsA("Highlight") or d:IsA("SelectionBox") or d:IsA("BoxHandleAdornment")
+        or d:IsA("PointLight") or d:IsA("SpotLight") or d:IsA("SurfaceLight")
+        or d:IsA("SelectionSphere") or d:IsA("CylinderHandleAdornment")
+        or d:IsA("SphereHandleAdornment") or d:IsA("LineHandleAdornment") then
+        if invisSavedProps[d] == nil then
+            invisSavedProps[d] = { Enabled = d.Enabled, Visible = d.Visible }
+        end
+        pcall(function() d.Enabled = false end)
+        pcall(function() d.Visible = false end)
+    end
+end
+
+local function applyRealInvisibility()
+    if not LP.Character then return end
+    for _, d in ipairs(LP.Character:GetDescendants()) do
+        hideInstance(d)
+    end
+end
+
+local function restoreRealVisibility()
+    for inst, props in pairs(invisSavedProps) do
+        if inst and inst.Parent then
+            for k, v in pairs(props) do
+                pcall(function() inst[k] = v end)
+            end
+        end
+    end
+    invisSavedProps = {}
+end
 
 local function ensureGhostFolder()
     if ghostFolder and ghostFolder.Parent then return end
@@ -3126,7 +3193,7 @@ local function createGhost()
     clone.Name = "AW_GhostCharacter"
 
     for _, d in ipairs(clone:GetDescendants()) do
-        if d:IsPartA("Script") or d:IsA("LocalScript") or d:IsA("ModuleScript") then
+        if d:IsA("Script") or d:IsA("LocalScript") or d:IsA("ModuleScript") then
             d:Destroy()
         elseif d:IsA("BasePart") then
             d.CanCollide = false
@@ -3137,6 +3204,7 @@ local function createGhost()
             d.Transparency = 0.55
             d.Color = Color3.fromRGB(80, 180, 255)
             d.Material = Enum.Material.ForceField
+            d.CastShadow = false
         elseif d:IsA("Decal") or d:IsA("Texture") then
             d.Transparency = 1
         elseif d:IsA("Accessory") then
@@ -3149,6 +3217,7 @@ local function createGhost()
                     p.CanTouch = false
                     p.CanQuery = false
                     p.Anchored = true
+                    p.CastShadow = false
                 end
             end
         end
@@ -3162,7 +3231,7 @@ local function createGhost()
         clone.PrimaryPart = ghostRoot
     else
         local firstPart = clone:FindFirstChildWhichIsA("BasePart")
-        if first then clone.PrimaryPart = firstPart end
+        if firstPart then clone.PrimaryPart = firstPart end
     end
 
     clone.Parent = ghostFolder
@@ -3179,43 +3248,6 @@ local function createGhost()
     ghostHighlight.Parent = ghostFolder
 end
 
-local function applyRealInvisibility()
-    if not LP.Character then return end
-    for _, d in ipairs(LP.Character:GetDescendants()) do
-        if d:IsA("BasePart") then
-            if invisSavedTransparency[d] == nil then
-                invisSavedTransparency[d] = d.Transparency
-            end
-            if invisSavedCanCollide[d] == nil then
-                invisSavedCanCollide[d] = d.CanCollide
-            end
-            d.Transparency = 1
-            d.CanCollide = false
-            d.CanTouch = false
-        elseif d:IsA("Decal") or d:IsA("Texture") then
-            if invisSavedTransparency[d] == nil then
-                invisSavedTransparency[d] = d.Transparency
-            end
-            d.Transparency = 1
-        end
-    end
-end
-
-local function restoreRealVisibility()
-    for part, trans in pairs(invisSavedTransparency) do
-        if part and part.Parent then
-            pcall(function() part.Transparency = trans end)
-        end
-    end
-    for part, cc in pairs(invisSavedCanCollide) do
-        if part and part.Parent then
-            pcall(function() part.CanCollide = cc end)
-        end
-    end
-    invisSavedTransparency = {}
-    invisSavedCanCollide = {}
-end
-
 local function startInvisible()
     if invisActive then return end
     if not LP.Character then return end
@@ -3226,6 +3258,7 @@ local function startInvisible()
     invisSavedAnchored = hrp.Anchored
     invisVirtualPos = hrp.Position
     invisVirtualVel = Vector3.zero
+    invisSavedProps = {}
 
     createGhost()
 
@@ -3237,6 +3270,13 @@ local function startInvisible()
 
     applyRealInvisibility()
 
+    if invisDescConn then invisDescConn:Disconnect() end
+    invisDescConn = LP.Character.DescendantAdded:Connect(function(d)
+        if invisActive then
+            task.defer(function() if invisActive and d and d.Parent then hideInstance(d) end end)
+        end
+    end)
+
     hrp.Anchored = true
     hrp.CFrame = HIDE_POS
 
@@ -3247,6 +3287,8 @@ end
 local function stopInvisible()
     if not invisActive then return end
     invisActive = false
+
+    if invisDescConn then invisDescConn:Disconnect() invisDescConn = nil end
 
     restoreRealVisibility()
 
@@ -3286,14 +3328,18 @@ task.spawn(function()
     end
 end)
 
+-- Aggressive re-apply loop: keeps character hidden even if the game resets things
 task.spawn(function()
     while true do
-        task.wait(0.1)
+        task.wait(0.05)
         if invisActive and LP.Character then
             applyRealInvisibility()
             local hrp = LP.Character:FindFirstChild("HumanoidRootPart")
-            if hrp and hrp.CFrame ~= HIDE_POS then
-                hrp.CFrame = HIDE_POS
+            if hrp then
+                if not hrp.Anchored then hrp.Anchored = true end
+                if hrp.CFrame ~= HIDE_POS then
+                    hrp.CFrame = HIDE_POS
+                end
                 hrp.AssemblyLinearVelocity = Vector3.zero
                 hrp.AssemblyAngularVelocity = Vector3.zero
             end
@@ -3302,8 +3348,8 @@ task.spawn(function()
 end)
 
 LP.CharacterAdded:Connect(function()
-    invisSavedTransparency = {}
-    invisSavedCanCollide = {}
+    invisSavedProps = {}
+    if invisDescConn then invisDescConn:Disconnect() invisDescConn = nil end
     if state.invisibleEnabled then
         invisActive = false
         invisSavedCFrame = nil
@@ -3447,7 +3493,7 @@ task.spawn(function()
     end
 end)
 
--- FOV changer (applies every frame for reliability)
+-- FOV changer
 local savedOriginalFOV = nil
 task.spawn(function()
     task.wait(1)
