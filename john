@@ -1,31 +1,7 @@
--- ============ SAFE ANTI-FLING LOADER ============
-do
-    local url = "https://raw.githubusercontent.com/Toolboxhubbot/antifling/refs/heads/main/antifling"
-    local ok1, err1 = pcall(function()
-        local src
-        if game.HttpGet then
-            src = game:HttpGet(url)
-        elseif httpget then
-            src = httpget(url)
-        elseif request then
-            src = request({Url = url, Method = "GET"}).Body
-        elseif syn and syn.request then
-            src = syn.request({Url = url, Method = "GET"}).Body
-        end
-        if not src or src == "" then error("empty response") end
-        local fn
-        if loadstring then
-            fn = loadstring(src)
-        elseif load then
-            fn = load(src)
-        end
-        if not fn then error("loadstring unavailable") end
-        pcall(fn)
-    end)
-    if not ok1 then
-        warn("[Appleware] Anti-fling failed to load: " .. tostring(err1))
-    end
-end
+-- Auto-load Anti-Fling (your original)
+pcall(function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/Toolboxhubbot/antifling/refs/heads/main/antifling"))()
+end)
 
 LocalTeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
@@ -72,6 +48,7 @@ local Lighting = game:GetService("Lighting")
 local UserGameSettings = UserSettings():GetService("UserGameSettings")
 local GuiService = game:GetService("GuiService")
 local UIS = game:GetService("UserInputService")
+local StatsService = game:GetService("Stats")
 
 local LP = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
@@ -112,8 +89,6 @@ local function getFullPath()
 end
 
 local saveSettings, buildUI, st
-local saveCurrentPosition, loadPosition
-local savedPositions = {nil, nil, nil}
 
 local state = {
     farm = false, xpFarm = false, noclip = false, gun = false, afk = false,
@@ -130,8 +105,6 @@ local state = {
     jumpEnabled = false, jumpValue = 50,
     infJumpEnabled = false,
     invisibleEnabled = false,
-    proneEnabled = false,
-    smallHitboxEnabled = false,
     instantInteract = false,
     cameraZoomEnabled = false,
     cameraMaxZoom = 500,
@@ -178,8 +151,6 @@ local toggleDisplayNames = {
     speedEnabled = "Speed Changer", jumpEnabled = "Jump Power",
     freeze = "Freeze (Anchor)", fullbright = "Fullbright",
     fovEnabled = "FOV Changer", clickTP = "Click / Tap Teleport",
-    proneEnabled = "Prone (Low Hitbox)",
-    smallHitboxEnabled = "Small Hitbox",
     instantInteract = "Instant Interact",
     cameraZoomEnabled = "Camera Max Zoom",
     infoHudEnabled = "Info HUD",
@@ -213,7 +184,6 @@ local function loadSettings()
         end
     end)
     state.antiRagdoll = true
-    state.invisibleEnabled = false
 end
 loadSettings()
 
@@ -522,7 +492,7 @@ rtValue.TextColor3 = Color3.fromRGB(255, 255, 255)
 rtValue.Font = Enum.Font.GothamBold; rtValue.TextSize = 22
 rtValue.TextStrokeTransparency = 1; rtValue.Parent = roundTimerFrame
 
--- ==================== INFO HUD ====================
+-- ==================== INFO HUD (IMPROVED) ====================
 local infoHudGui = Instance.new("ScreenGui")
 infoHudGui.Name = "ApplewareInfoHud"
 infoHudGui.Parent = getGuiParent()
@@ -533,29 +503,94 @@ infoHudGui.IgnoreGuiInset = true
 local infoHudFrame = Instance.new("Frame")
 infoHudFrame.AnchorPoint = Vector2.new(1, 0)
 infoHudFrame.Position = UDim2.new(1, -14, 0, 14)
-infoHudFrame.Size = UDim2.new(0, 190, 0, 78)
-infoHudFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-infoHudFrame.BackgroundTransparency = 0.15
+infoHudFrame.Size = UDim2.new(0, 220, 0, 158)
+infoHudFrame.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
+infoHudFrame.BackgroundTransparency = 0.08
 infoHudFrame.Visible = false
 infoHudFrame.Parent = infoHudGui
-Instance.new("UICorner", infoHudFrame).CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", infoHudFrame).CornerRadius = UDim.new(0, 12)
 local ihStroke = Instance.new("UIStroke", infoHudFrame)
-ihStroke.Color = Color3.fromRGB(60, 60, 60); ihStroke.Thickness = 1; ihStroke.Transparency = 0.35
+ihStroke.Color = Color3.fromRGB(50, 50, 50); ihStroke.Thickness = 1; ihStroke.Transparency = 0.25
+local ihGrad = Instance.new("UIGradient")
+ihGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(20, 20, 20)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0))
+})
+ihGrad.Rotation = 90
+ihGrad.Parent = infoHudFrame
+
+local ihDot = Instance.new("Frame")
+ihDot.Size = UDim2.new(0, 8, 0, 8)
+ihDot.Position = UDim2.new(0, 12, 0, 13)
+ihDot.AnchorPoint = Vector2.new(0.5, 0.5)
+ihDot.BackgroundColor3 = Color3.fromRGB(90, 255, 140)
+ihDot.Parent = infoHudFrame
+Instance.new("UICorner", ihDot).CornerRadius = UDim.new(1, 0)
+local ihDotGlow = Instance.new("Frame")
+ihDotGlow.Size = UDim2.new(0, 8, 0, 8)
+ihDotGlow.Position = UDim2.new(0, 12, 0, 13)
+ihDotGlow.AnchorPoint = Vector2.new(0.5, 0.5)
+ihDotGlow.BackgroundColor3 = Color3.fromRGB(90, 255, 140)
+ihDotGlow.BackgroundTransparency = 0.7
+ihDotGlow.ZIndex = -1
+ihDotGlow.Parent = infoHudFrame
+Instance.new("UICorner", ihDotGlow).CornerRadius = UDim.new(1, 0)
+
+local ihHeader = Instance.new("TextLabel")
+ihHeader.Size = UDim2.new(1, -30, 0, 22)
+ihHeader.Position = UDim2.new(0, 24, 0, 2)
+ihHeader.BackgroundTransparency = 1
+ihHeader.Text = "APPLEWARE"
+ihHeader.TextColor3 = Color3.fromRGB(240, 240, 240)
+ihHeader.Font = Enum.Font.GothamBold
+ihHeader.TextSize = 11
+ihHeader.TextXAlignment = Enum.TextXAlignment.Left
+ihHeader.Parent = infoHudFrame
+
+local ihSub = Instance.new("TextLabel")
+ihSub.Size = UDim2.new(1, -30, 0, 10)
+ihSub.Position = UDim2.new(0, 24, 0, 16)
+ihSub.BackgroundTransparency = 1
+ihSub.Text = "Session Active"
+ihSub.TextColor3 = Color3.fromRGB(120, 120, 120)
+ihSub.Font = Enum.Font.Gotham
+ihSub.TextSize = 9
+ihSub.TextXAlignment = Enum.TextXAlignment.Left
+ihSub.Parent = infoHudFrame
+
+local ihLine = Instance.new("Frame")
+ihLine.Size = UDim2.new(1, -20, 0, 1)
+ihLine.Position = UDim2.new(0, 10, 0, 30)
+ihLine.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+ihLine.BackgroundTransparency = 0.4
+ihLine.Parent = infoHudFrame
+
+task.spawn(function()
+    while ihDot.Parent do
+        TweenService:Create(ihDot, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {BackgroundTransparency = 0.4}):Play()
+        TweenService:Create(ihDotGlow, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Size = UDim2.new(0, 16, 0, 16), BackgroundTransparency = 0.9}):Play()
+        task.wait(1)
+        if not ihDot.Parent then break end
+        TweenService:Create(ihDot, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {BackgroundTransparency = 0}):Play()
+        TweenService:Create(ihDotGlow, TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Size = UDim2.new(0, 8, 0, 8), BackgroundTransparency = 0.7}):Play()
+        task.wait(1)
+    end
+end)
 
 local function makeInfoRow(y, label)
     local lbl = Instance.new("TextLabel")
-    lbl.Size = UDim2.new(0.5, -8, 0, 22)
-    lbl.Position = UDim2.new(0, 10, 0, y)
+    lbl.Size = UDim2.new(0.55, -8, 0, 18)
+    lbl.Position = UDim2.new(0, 12, 0, y)
     lbl.BackgroundTransparency = 1
     lbl.Text = label
-    lbl.TextColor3 = Color3.fromRGB(150, 150, 150)
+    lbl.TextColor3 = Color3.fromRGB(140, 140, 140)
     lbl.Font = Enum.Font.GothamMedium
     lbl.TextSize = 11
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.Parent = infoHudFrame
     local val = Instance.new("TextLabel")
-    val.Size = UDim2.new(0.5, -8, 0, 22)
-    val.Position = UDim2.new(0.5, 0, 0, y)
+    val.Size = UDim2.new(0.45, -8, 0, 18)
+    val.Position = UDim2.new(0.55, 0, 0, y)
     val.BackgroundTransparency = 1
     val.Text = "-"
     val.TextColor3 = Color3.fromRGB(245, 245, 245)
@@ -566,14 +601,26 @@ local function makeInfoRow(y, label)
     return val
 end
 
-local ihTime = makeInfoRow(6, "Session")
-local ihPlayers = makeInfoRow(28, "Players")
-local ihRole = makeInfoRow(50, "Role")
+local ihTime = makeInfoRow(40, "Session")
+local ihPlayers = makeInfoRow(60, "Players")
+local ihRole = makeInfoRow(80, "Role")
+local ihPing = makeInfoRow(100, "Ping")
+local ihFps = makeInfoRow(120, "FPS")
 
 local hudSessionStart = tick()
+local fpsSamples = {}
+local currentFps = 60
+
+RunService.RenderStepped:Connect(function(dt)
+    if dt and dt > 0 then
+        table.insert(fpsSamples, 1 / dt)
+        if #fpsSamples > 30 then table.remove(fpsSamples, 1) end
+    end
+end)
+
 task.spawn(function()
     while true do
-        task.wait(0.25)
+        task.wait(0.35)
         if state.infoHudEnabled then
             if not infoHudFrame.Visible then infoHudFrame.Visible = true end
             local elapsed = math.floor(tick() - hudSessionStart)
@@ -591,9 +638,28 @@ task.spawn(function()
                 end
             end)
             ihRole.Text = role
-            if role == "Murderer" then ihRole.TextColor3 = Color3.fromRGB(255, 80, 80)
-            elseif role == "Sheriff" then ihRole.TextColor3 = Color3.fromRGB(80, 160, 255)
+            if role == "Murderer" then ihRole.TextColor3 = Color3.fromRGB(255, 90, 90)
+            elseif role == "Sheriff" then ihRole.TextColor3 = Color3.fromRGB(90, 170, 255)
             else ihRole.TextColor3 = Color3.fromRGB(120, 255, 140) end
+
+            pcall(function()
+                local ping = StatsService.Network.ServerStatsItem["Data Ping"]:GetValue()
+                ping = math.floor(ping)
+                ihPing.Text = ping .. " ms"
+                if ping < 80 then ihPing.TextColor3 = Color3.fromRGB(120, 255, 140)
+                elseif ping < 150 then ihPing.TextColor3 = Color3.fromRGB(255, 200, 80)
+                else ihPing.TextColor3 = Color3.fromRGB(255, 100, 100) end
+            end)
+
+            if #fpsSamples > 0 then
+                local sum = 0
+                for _, v in ipairs(fpsSamples) do sum = sum + v end
+                currentFps = math.floor(sum / #fpsSamples + 0.5)
+            end
+            ihFps.Text = tostring(currentFps)
+            if currentFps >= 50 then ihFps.TextColor3 = Color3.fromRGB(120, 255, 140)
+            elseif currentFps >= 30 then ihFps.TextColor3 = Color3.fromRGB(255, 200, 80)
+            else ihFps.TextColor3 = Color3.fromRGB(255, 100, 100) end
         else
             if infoHudFrame.Visible then infoHudFrame.Visible = false end
         end
@@ -609,6 +675,7 @@ function nicolas:GiveTask(t)
     if self._destroyed then self:_cleanupTask(t) return end
     table_insert(self._tasks, t); return t
 end
+function nicolas:GiveTasks(...) for _, t in ipairs({...}) do self:GiveTask(t) end end
 function nicolas:_cleanupTask(t)
     local ty = typeof(t)
     if ty == "RBXScriptConnection" then t:Disconnect()
@@ -751,7 +818,6 @@ local lastRoundState = false
 local roundStartTime = 0
 local hasCollectedThisRound = false
 local roundFullyStarted = false
-local farmDeathCheckTime = 0
 
 -- ==================== FLING ====================
 local activeResets = {}
@@ -1458,26 +1524,6 @@ local function teleportToCustom()
     teleportToPlayer(target, "Custom")
 end
 
-function saveCurrentPosition(slot)
-    local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-    if root then
-        savedPositions[slot] = root.CFrame
-        setStatus("Position saved to slot " .. slot)
-    end
-end
-
-function loadPosition(slot)
-    local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-    if root and savedPositions[slot] then
-        root.CFrame = savedPositions[slot]
-        root.AssemblyLinearVelocity = Vector3.zero
-        root.AssemblyAngularVelocity = Vector3.zero
-        setStatus("Teleported to saved slot " .. slot)
-    else
-        setStatus("No saved position in slot " .. slot)
-    end
-end
-
 task.spawn(function()
     while true do
         task.wait(0.5)
@@ -1582,248 +1628,6 @@ local function resetX4(index)
         votingRunning = false; isExecutingAction = false
     end)
 end
-
--- ==================== INVISIBLE (HOOK-BASED GHOST) ====================
-local invisActive = false
-local invisGhost = nil
-local invisLoop = nil
-local invisStaticPos = nil
-local invisLastSafeCFrame = nil
-local invisRealRoot = nil
-local invisGhostRoot = nil
-
-local _hasHook = false
-pcall(function() _hasHook = (hookmetamethod ~= nil and checkcaller ~= nil) end)
-
-if _hasHook then
-    local oldIndex
-    oldIndex = hookmetamethod(game, "__index", function(self, key)
-        if not invisActive or checkcaller() or self ~= invisRealRoot then
-            return oldIndex(self, key)
-        end
-        if invisGhostRoot and invisGhostRoot.Parent and (key == "CFrame" or key == "Position") then
-            if key == "CFrame" then return invisGhostRoot.CFrame
-            elseif key == "Position" then return invisGhostRoot.Position end
-        end
-        return oldIndex(self, key)
-    end)
-
-    local oldNewIndex
-    oldNewIndex = hookmetamethod(game, "__newindex", function(self, key, value)
-        if not invisActive or checkcaller() or self ~= invisRealRoot then
-            return oldNewIndex(self, key, value)
-        end
-        if invisGhostRoot and invisGhostRoot.Parent and (key == "CFrame" or key == "Position") then
-            if key == "CFrame" then invisGhostRoot.CFrame = value
-            elseif key == "Position" then invisGhostRoot.Position = value end
-            return
-        end
-        return oldNewIndex(self, key, value)
-    end)
-end
-
-local function invisCleanup()
-    local char = LP.Character
-    local r = char and char:FindFirstChild("HumanoidRootPart")
-    local h = char and char:FindFirstChildOfClass("Humanoid")
-    local targetCFrame = (invisGhostRoot and invisGhostRoot.CFrame) or invisLastSafeCFrame
-    if r and targetCFrame then
-        r.CFrame = targetCFrame
-        r.AssemblyLinearVelocity = Vector3.zero
-        r.AssemblyAngularVelocity = Vector3.zero
-    end
-    if char then
-        for _, v in char:GetChildren() do
-            if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then v.CanCollide = true
-            elseif v:IsA("Accessory") then
-                local handle = v:FindFirstChild("Handle")
-                if handle then handle.CanCollide = false end
-            end
-        end
-    end
-    if h then
-        local cam = Workspace.CurrentCamera
-        if cam then cam.CameraSubject = h end
-        h.PlatformStand = false
-        h:SetStateEnabled(Enum.HumanoidStateType.Climbing, true)
-        h:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
-        h:SetStateEnabled(Enum.HumanoidStateType.Running, true)
-        h.AutoRotate = true
-        h.Jump = false
-        h:ChangeState(Enum.HumanoidStateType.GettingUp)
-    end
-    if invisGhost then invisGhost:Destroy() invisGhost = nil end
-    if invisLoop then invisLoop:Disconnect() invisLoop = nil end
-    invisStaticPos = nil
-    invisLastSafeCFrame = nil
-    invisRealRoot = nil
-    invisGhostRoot = nil
-end
-
-local function invisStart()
-    if invisActive then return end
-    local char = LP.Character
-    if not char then setStatus("No character") return end
-    local r = char:FindFirstChild("HumanoidRootPart")
-    local h = char:FindFirstChildOfClass("Humanoid")
-    if not r or not h or h.Health <= 0 then setStatus("Missing root/humanoid") return end
-
-    invisRealRoot = r
-    invisStaticPos = CFrame.new(0, Workspace.FallenPartsDestroyHeight + 100, 0)
-    invisLastSafeCFrame = r.CFrame
-
-    char.Archivable = true
-    invisGhost = char:Clone()
-    invisGhost.Parent = Workspace
-    char.Archivable = false
-
-    for _, v in invisGhost:GetDescendants() do
-        if v:IsA("BasePart") then v.Transparency = 0.5
-        elseif v:IsA("Accessory") then
-            local handle = v:FindFirstChild("Handle")
-            if handle and handle:IsA("BasePart") then handle.Transparency = 0.5 end
-        elseif v:IsA("LocalScript") or v:IsA("Script") then v:Destroy() end
-    end
-
-    local gh = invisGhost:FindFirstChild("Humanoid")
-    invisGhostRoot = invisGhost:FindFirstChild("HumanoidRootPart")
-    local cam = Workspace.CurrentCamera
-    if gh and cam then cam.CameraSubject = gh end
-    if gh then gh:SetStateEnabled(Enum.HumanoidStateType.Climbing, true) end
-
-    h.PlatformStand = true
-    r.CFrame = invisStaticPos
-    for _, v in char:GetDescendants() do
-        if v:IsA("BasePart") then v.CanCollide = false end
-    end
-
-    invisActive = true
-    setStatus("Invisible ON")
-
-    invisLoop = RunService.Heartbeat:Connect(function(dt)
-        local limit = Workspace.FallenPartsDestroyHeight + 35
-        if invisGhost and invisGhost.Parent == Workspace and gh and gh.Health > 0 and invisGhostRoot and invisGhostRoot.Position.Y > limit and h and h.Health > 0 then
-            if cam and cam.CameraSubject ~= gh then cam.CameraSubject = gh end
-            local currentState = gh:GetState()
-            if currentState ~= Enum.HumanoidStateType.Climbing then
-                invisLastSafeCFrame = invisGhostRoot.CFrame
-                if UIS.MouseBehavior == Enum.MouseBehavior.LockCenter then
-                    local look = cam.CFrame.LookVector
-                    local targetRot = CFrame.lookAt(invisGhostRoot.Position, invisGhostRoot.Position + Vector3.new(look.X, 0, look.Z))
-                    invisGhostRoot.CFrame = invisGhostRoot.CFrame:Lerp(targetRot, math.clamp(dt * 25, 0, 1))
-                end
-            end
-            gh:Move(h.MoveDirection, false)
-            gh.Jump = h.Jump
-            r.CFrame = invisStaticPos
-            local gv = invisGhostRoot.AssemblyLinearVelocity
-            if gv.Magnitude > 120 then gv = gv.Unit * 120 end
-            r.AssemblyLinearVelocity = gv
-            r.AssemblyAngularVelocity = invisGhostRoot.AssemblyAngularVelocity
-        else
-            invisCleanup()
-            state.invisibleEnabled = false
-            updateAllToggleVisuals("invisibleEnabled")
-        end
-    end)
-end
-
-local function invisStop()
-    if not invisActive and not invisGhost then return end
-    invisActive = false
-    invisCleanup()
-    setStatus("Invisible OFF")
-end
-
-task.spawn(function()
-    local last = false
-    while true do
-        task.wait(0.1)
-        local now = state.invisibleEnabled == true
-        if now ~= last then
-            if now then invisStart() else invisStop() end
-            last = now
-        end
-    end
-end)
-
-LP.CharacterRemoving:Connect(function()
-    if invisActive then
-        state.invisibleEnabled = false
-        updateAllToggleVisuals("invisibleEnabled")
-    end
-end)
-
--- ==================== SMALL HITBOX ====================
-local smallHitboxActive = false
-local smallHitboxSaved = {}
-local smallHitboxScale = 0.35
-
-local function applySmallHitbox()
-    local char = LP.Character
-    if not char then return end
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if not hum then return end
-    for _, part in ipairs(char:GetDescendants()) do
-        if part:IsA("BasePart") then
-            if not smallHitboxSaved[part] then
-                smallHitboxSaved[part] = { Size = part.Size, CanCollide = part.CanCollide }
-            end
-            if part.Name ~= "HumanoidRootPart" then
-                local s = smallHitboxSaved[part].Size
-                part.Size = Vector3.new(s.X * smallHitboxScale, s.Y * smallHitboxScale, s.Z * smallHitboxScale)
-            end
-        end
-    end
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if hrp then
-        if not smallHitboxSaved[hrp] then
-            smallHitboxSaved[hrp] = { Size = hrp.Size, CanCollide = hrp.CanCollide }
-        end
-        hrp.Size = Vector3.new(0.5, 0.5, 0.5)
-        hrp.Transparency = 1
-    end
-end
-
-local function restoreSmallHitbox()
-    for part, data in pairs(smallHitboxSaved) do
-        if part and part.Parent then
-            pcall(function()
-                part.Size = data.Size
-                part.CanCollide = data.CanCollide
-                if part.Name == "HumanoidRootPart" then part.Transparency = 1 end
-            end)
-        end
-    end
-    smallHitboxSaved = {}
-end
-
-task.spawn(function()
-    while true do
-        task.wait(0.1)
-        if state.smallHitboxEnabled then
-            if not smallHitboxActive then
-                smallHitboxActive = true
-                setStatus("Small Hitbox ON")
-            end
-            applySmallHitbox()
-        else
-            if smallHitboxActive then
-                smallHitboxActive = false
-                restoreSmallHitbox()
-                setStatus("Small Hitbox OFF")
-            end
-        end
-    end
-end)
-
-LP.CharacterAdded:Connect(function()
-    smallHitboxSaved = {}
-    if state.smallHitboxEnabled then
-        task.wait(0.5)
-        applySmallHitbox()
-    end
-end)
 
 -- ==================== UI ====================
 buildUI = function(rebuilding)
@@ -2418,24 +2222,22 @@ buildUI = function(rebuilding)
     tgg(pages["Secret"], "Fly (WASD / Joystick)", 2, "flyEnabled")
     makeSliderRow(pages["Secret"], "Fly Speed", 3, state.flySpeed or 50, 10, 300, "flySpeed")
     tgg(pages["Secret"], "Infinite Jump", 4, "infJumpEnabled")
-    tgg(pages["Secret"], "Prone (Low Hitbox)", 5, "proneEnabled")
 
-    addSection(pages["Secret"], "Physics", 6)
-    tgg(pages["Secret"], "Noclip", 7, "noclip")
-    tgg(pages["Secret"], "Freeze (Anchor)", 8, "freeze")
+    addSection(pages["Secret"], "Physics", 5)
+    tgg(pages["Secret"], "Noclip", 6, "noclip")
+    tgg(pages["Secret"], "Freeze (Anchor)", 7, "freeze")
 
-    addSection(pages["Secret"], "Attributes", 9)
-    tgg(pages["Secret"], "Speed Changer", 10, "speedEnabled")
-    makeSliderRow(pages["Secret"], "Walk Speed", 11, state.speedValue or 16, 16, 500, "speedValue")
-    tgg(pages["Secret"], "Jump Power", 12, "jumpEnabled")
-    makeSliderRow(pages["Secret"], "Jump Power", 13, state.jumpValue or 50, 50, 500, "jumpValue")
-    tgg(pages["Secret"], "Small Hitbox (Hard to Hit)", 14, "smallHitboxEnabled")
+    addSection(pages["Secret"], "Attributes", 8)
+    tgg(pages["Secret"], "Speed Changer", 9, "speedEnabled")
+    makeSliderRow(pages["Secret"], "Walk Speed", 10, state.speedValue or 16, 16, 500, "speedValue")
+    tgg(pages["Secret"], "Jump Power", 11, "jumpEnabled")
+    makeSliderRow(pages["Secret"], "Jump Power", 12, state.jumpValue or 50, 50, 500, "jumpValue")
 
-    addSection(pages["Secret"], "Invisibility", 15)
-    tgg(pages["Secret"], "Invisible (Ghost Mode)", 16, "invisibleEnabled")
+    addSection(pages["Secret"], "Invisibility", 13)
+    tgg(pages["Secret"], "Invisible (Ghost Mode)", 14, "invisibleEnabled")
     local invisHint = Instance.new("TextLabel")
     invisHint.Size = UDim2.new(1, 0, 0, 44 * selectedScale)
-    invisHint.LayoutOrder = 17
+    invisHint.LayoutOrder = 15
     invisHint.BackgroundTransparency = 1
     invisHint.Text = "Clones your body into a ghost you control. Server scripts see the ghost's position as yours. Movement replicates to others normally."
     invisHint.TextColor3 = TEXT_DIM
@@ -2445,22 +2247,22 @@ buildUI = function(rebuilding)
     invisHint.TextWrapped = true
     invisHint.Parent = pages["Secret"]
 
-    addSection(pages["Secret"], "Visuals", 18)
-    tgg(pages["Secret"], "Fullbright", 19, "fullbright")
-    tgg(pages["Secret"], "FOV Changer", 20, "fovEnabled")
-    makeSliderRow(pages["Secret"], "Field of View", 21, state.fovValue or 70, 30, 120, "fovValue")
-    tgg(pages["Secret"], "Camera Max Zoom", 22, "cameraZoomEnabled")
-    makeSliderRow(pages["Secret"], "Max Zoom Distance", 23, state.cameraMaxZoom or 500, 100, 2000, "cameraMaxZoom")
-    tgg(pages["Secret"], "Info HUD", 24, "infoHudEnabled")
+    addSection(pages["Secret"], "Visuals", 16)
+    tgg(pages["Secret"], "Fullbright", 17, "fullbright")
+    tgg(pages["Secret"], "FOV Changer", 18, "fovEnabled")
+    makeSliderRow(pages["Secret"], "Field of View", 19, state.fovValue or 70, 30, 120, "fovValue")
+    tgg(pages["Secret"], "Camera Max Zoom", 20, "cameraZoomEnabled")
+    makeSliderRow(pages["Secret"], "Max Zoom Distance", 21, state.cameraMaxZoom or 500, 100, 2000, "cameraMaxZoom")
+    tgg(pages["Secret"], "Info HUD", 22, "infoHudEnabled")
 
-    addSection(pages["Secret"], "Utility", 25)
-    tgg(pages["Secret"], "Instant Interact", 26, "instantInteract")
+    addSection(pages["Secret"], "Utility", 23)
+    tgg(pages["Secret"], "Instant Interact", 24, "instantInteract")
 
-    addSection(pages["Secret"], "Teleportation", 27)
-    tgg(pages["Secret"], "Click / Tap Teleport", 28, "clickTP")
+    addSection(pages["Secret"], "Teleportation", 25)
+    tgg(pages["Secret"], "Click / Tap Teleport", 26, "clickTP")
     local tpHint = Instance.new("TextLabel")
     tpHint.Size = UDim2.new(1, 0, 0, 30 * selectedScale)
-    tpHint.LayoutOrder = 29
+    tpHint.LayoutOrder = 27
     tpHint.BackgroundTransparency = 1
     tpHint.Text = "PC: click anywhere | Mobile: tap anywhere. Disable before using the fly buttons."
     tpHint.TextColor3 = TEXT_DIM
@@ -2470,11 +2272,11 @@ buildUI = function(rebuilding)
     tpHint.TextWrapped = true
     tpHint.Parent = pages["Secret"]
 
-    addSection(pages["Secret"], "Saved Positions", 30)
+    addSection(pages["Secret"], "Saved Positions", 28)
     for i = 1, 3 do
         local row = Instance.new("Frame")
         row.Size = UDim2.new(1, 0, 0, 36 * selectedScale)
-        row.LayoutOrder = 30 + i
+        row.LayoutOrder = 28 + i
         row.BackgroundColor3 = CARD
         row.Parent = pages["Secret"]
         Instance.new("UICorner", row).CornerRadius = r(10)
@@ -2521,8 +2323,8 @@ buildUI = function(rebuilding)
         tpBtn.MouseButton1Click:Connect(function() loadPosition(i) end)
     end
 
-    addSection(pages["Secret"], "Quick Actions", 34)
-    addActionButton(pages["Secret"], "Reset Character", 35, function()
+    addSection(pages["Secret"], "Quick Actions", 32)
+    addActionButton(pages["Secret"], "Reset Character", 33, function()
         local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
         if hum then hum.Health = 0 end
     end)
@@ -3130,7 +2932,6 @@ buildUI = function(rebuilding)
         "Auto Grab Gun", "Auto Rejoin", "Auto Serverhop", "Auto Prestige",
         "Show Quick Toggles Menu", "Fly", "Noclip", "Infinite Jump",
         "Speed Changer", "Jump Power", "Invisible (Ghost)",
-        "Prone (Low Hitbox)", "Small Hitbox",
         "Instant Interact", "Camera Max Zoom", "Info HUD",
         "Freeze (Anchor)",
         "Fullbright", "FOV Changer", "Click / Tap Teleport"
@@ -3334,8 +3135,6 @@ buildUI = function(rebuilding)
             ["Notify Map Name"] = "notifyMapName", ["Round Timer"] = "showRoundTimerCountdown",
             ["Fly"] = "flyEnabled", ["Noclip"] = "noclip", ["Infinite Jump"] = "infJumpEnabled",
             ["Speed Changer"] = "speedEnabled", ["Jump Power"] = "jumpEnabled", ["Invisible (Ghost)"] = "invisibleEnabled",
-            ["Prone (Low Hitbox)"] = "proneEnabled",
-            ["Small Hitbox"] = "smallHitboxEnabled",
             ["Instant Interact"] = "instantInteract",
             ["Camera Max Zoom"] = "cameraZoomEnabled", ["Info HUD"] = "infoHudEnabled",
             ["Freeze (Anchor)"] = "freeze", ["Fullbright"] = "fullbright",
@@ -3594,23 +3393,6 @@ task.spawn(function()
     end
 end)
 
--- ==================== PRONE (LOW HITBOX) ====================
-task.spawn(function()
-    while true do
-        task.wait(0.15)
-        if LP.Character then
-            local hum = LP.Character:FindFirstChildOfClass("Humanoid")
-            if hum and hum.Health > 0 then
-                if state.proneEnabled then
-                    if hum.HipHeight ~= -1.2 then hum.HipHeight = -1.2 end
-                else
-                    if hum.HipHeight ~= 2 and hum.HipHeight == -1.2 then hum.HipHeight = 2 end
-                end
-            end
-        end
-    end
-end)
-
 -- ==================== INSTANT INTERACT ====================
 task.spawn(function()
     while true do
@@ -3679,7 +3461,7 @@ task.spawn(function()
                     end
                 else
                     if freezeApplied then
-                        if not (state.xpFarm or (state.farm and (isLobby() or isExecutingAction))) and not invisActive then
+                        if not (state.xpFarm or (state.farm and (isLobby() or isExecutingAction))) then
                             root.Anchored = false
                         end
                         freezeApplied = false
@@ -3692,6 +3474,7 @@ task.spawn(function()
     end
 end)
 
+-- FOV changer
 local savedOriginalFOV = nil
 task.spawn(function()
     task.wait(1)
@@ -3730,7 +3513,6 @@ end
 
 local function doClickTeleport(x, y)
     if not state.clickTP then return end
-    if invisActive then return end
     local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if not root then return end
     local pos = getTeleportTargetFromScreen(x, y)
@@ -3755,6 +3537,213 @@ UIS.TouchTap:Connect(function(positions, gpe)
     if not state.clickTP then return end
     if positions and positions[1] then
         doClickTeleport(positions[1].X, positions[1].Y)
+    end
+end)
+
+local savedPositions = {nil, nil, nil}
+
+local function saveCurrentPosition(slot)
+    local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    if root then
+        savedPositions[slot] = root.CFrame
+        setStatus("Position saved to slot " .. slot)
+    end
+end
+
+local function loadPosition(slot)
+    local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    if root and savedPositions[slot] then
+        root.CFrame = savedPositions[slot]
+        root.AssemblyLinearVelocity = Vector3.zero
+        root.AssemblyAngularVelocity = Vector3.zero
+        setStatus("Teleported to saved slot " .. slot)
+    else
+        setStatus("No saved position in slot " .. slot)
+    end
+end
+
+-- ==================== INVISIBLE (GHOST MODE) — your original script ====================
+local invisActive = false
+local invisGhost = nil
+local invisLoop = nil
+local invisStaticPos = nil
+local invisLastSafeCFrame = nil
+local invisRealRoot = nil
+local invisGhostRoot = nil
+
+local _hookOK = false
+pcall(function() _hookOK = (hookmetamethod ~= nil and checkcaller ~= nil and debug and debug.info) end)
+
+if _hookOK then
+    local _oldIndex
+    _oldIndex = hookmetamethod(game, "__index", function(self, key)
+        if not invisActive or checkcaller() or self ~= invisRealRoot then
+            return _oldIndex(self, key)
+        end
+        for i = 2, 5 do
+            local src = debug.info(i, "s")
+            if src then
+                local lower = string.lower(src)
+                if string.find(lower, "cheat") or string.find(lower, "ac") or string.find(lower, "anti") or string.find(lower, "adonet") or string.find(lower, "detection") or string.find(lower, "security") then
+                    return _oldIndex(self, key)
+                end
+            end
+        end
+        if invisGhostRoot and (key == "CFrame" or key == "Position") then
+            if key == "CFrame" then return invisGhostRoot.CFrame
+            elseif key == "Position" then return invisGhostRoot.Position end
+        end
+        return _oldIndex(self, key)
+    end)
+
+    local _oldNewIndex
+    _oldNewIndex = hookmetamethod(game, "__newindex", function(self, key, value)
+        if not invisActive or checkcaller() or self ~= invisRealRoot then
+            return _oldNewIndex(self, key, value)
+        end
+        for i = 2, 5 do
+            local src = debug.info(i, "s")
+            if src then
+                local lower = string.lower(src)
+                if string.find(lower, "cheat") or string.find(lower, "ac") or string.find(lower, "anti") or string.find(lower, "adonet") or string.find(lower, "detection") or string.find(lower, "security") then
+                    return _oldNewIndex(self, key, value)
+                end
+            end
+        end
+        if invisGhostRoot and (key == "CFrame" or key == "Position") then
+            if key == "CFrame" then invisGhostRoot.CFrame = value
+            elseif key == "Position" then invisGhostRoot.Position = value end
+            return
+        end
+        return _oldNewIndex(self, key, value)
+    end)
+end
+
+local function invisStop()
+    if not invisActive and not invisGhost then return end
+    invisActive = false
+    local char = LP.Character
+    local r = char and char:FindFirstChild("HumanoidRootPart")
+    local h = char and char:FindFirstChildOfClass("Humanoid")
+    local targetCFrame = (invisGhostRoot and invisGhostRoot.CFrame) or invisLastSafeCFrame
+    if r and targetCFrame then
+        r.CFrame = targetCFrame
+        r.AssemblyLinearVelocity = Vector3.zero
+        r.AssemblyAngularVelocity = Vector3.zero
+    end
+    if char then
+        for _, v in char:GetChildren() do
+            if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then v.CanCollide = true
+            elseif v:IsA("Accessory") then
+                local handle = v:FindFirstChild("Handle")
+                if handle then handle.CanCollide = false end
+            end
+        end
+    end
+    if h then
+        local cam = Workspace.CurrentCamera
+        if cam then cam.CameraSubject = h end
+        h.PlatformStand = false
+        h:SetStateEnabled(Enum.HumanoidStateType.Climbing, true)
+        h:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
+        h:SetStateEnabled(Enum.HumanoidStateType.Running, true)
+        h.AutoRotate = true
+        h.Jump = false
+        h:ChangeState(Enum.HumanoidStateType.GettingUp)
+    end
+    if invisGhost then invisGhost:Destroy() invisGhost = nil end
+    if invisLoop then invisLoop:Disconnect() invisLoop = nil end
+    invisStaticPos = nil
+    invisLastSafeCFrame = nil
+    invisRealRoot = nil
+    invisGhostRoot = nil
+end
+
+local function invisStart()
+    if invisActive then return end
+    local char = LP.Character
+    if not char then return end
+    local r = char:FindFirstChild("HumanoidRootPart")
+    local h = char:FindFirstChildOfClass("Humanoid")
+    if not r or not h or h.Health <= 0 then return end
+
+    invisRealRoot = r
+    invisStaticPos = CFrame.new(0, Workspace.FallenPartsDestroyHeight + 100, 0)
+    invisLastSafeCFrame = r.CFrame
+
+    char.Archivable = true
+    invisGhost = char:Clone()
+    invisGhost.Parent = Workspace
+    char.Archivable = false
+
+    for _, v in invisGhost:GetDescendants() do
+        if v:IsA("BasePart") then v.Transparency = 0.5
+        elseif v:IsA("Accessory") then
+            local handle = v:FindFirstChild("Handle")
+            if handle and handle:IsA("BasePart") then handle.Transparency = 0.5 end
+        elseif v:IsA("LocalScript") or v:IsA("Script") then v:Destroy() end
+    end
+
+    local gh = invisGhost:FindFirstChild("Humanoid")
+    invisGhostRoot = invisGhost:FindFirstChild("HumanoidRootPart")
+    local cam = Workspace.CurrentCamera
+    if gh and cam then cam.CameraSubject = gh end
+    if gh then gh:SetStateEnabled(Enum.HumanoidStateType.Climbing, true) end
+
+    h.PlatformStand = true
+    r.CFrame = invisStaticPos
+    for _, v in char:GetDescendants() do
+        if v:IsA("BasePart") then v.CanCollide = false end
+    end
+
+    invisActive = true
+    setStatus("Invisible ON")
+
+    invisLoop = RunService.Heartbeat:Connect(function(dt)
+        local limit = Workspace.FallenPartsDestroyHeight + 35
+        if invisGhost and invisGhost.Parent == Workspace and gh and gh.Health > 0 and invisGhostRoot and invisGhostRoot.Position.Y > limit and h and h.Health > 0 then
+            if cam and cam.CameraSubject ~= gh then cam.CameraSubject = gh end
+            local currentState = gh:GetState()
+            if currentState ~= Enum.HumanoidStateType.Climbing then
+                invisLastSafeCFrame = invisGhostRoot.CFrame
+                if UIS.MouseBehavior == Enum.MouseBehavior.LockCenter then
+                    local look = cam.CFrame.LookVector
+                    local targetRot = CFrame.lookAt(invisGhostRoot.Position, invisGhostRoot.Position + Vector3.new(look.X, 0, look.Z))
+                    invisGhostRoot.CFrame = invisGhostRoot.CFrame:Lerp(targetRot, math.clamp(dt * 25, 0, 1))
+                end
+            end
+            gh:Move(h.MoveDirection, false)
+            gh.Jump = h.Jump
+            r.CFrame = invisStaticPos
+            local gv = invisGhostRoot.AssemblyLinearVelocity
+            if gv.Magnitude > 120 then gv = gv.Unit * 120 end
+            r.AssemblyLinearVelocity = gv
+            r.AssemblyAngularVelocity = invisGhostRoot.AssemblyAngularVelocity
+        else
+            invisStop()
+            state.invisibleEnabled = false
+            updateAllToggleVisuals("invisibleEnabled")
+        end
+    end)
+end
+
+task.spawn(function()
+    local last = false
+    while true do
+        task.wait(0.1)
+        local now = state.invisibleEnabled == true
+        if now ~= last then
+            if now then invisStart() else invisStop() end
+            last = now
+        end
+    end
+end)
+
+LP.CharacterRemoving:Connect(function()
+    if invisActive then
+        invisStop()
+        state.invisibleEnabled = false
+        updateAllToggleVisuals("invisibleEnabled")
     end
 end)
 
@@ -3932,10 +3921,8 @@ task.spawn(function()
         if not inRound then
             lastRoundState = false; roundFullyStarted = false; hasCollectedThisRound = false
             currentCoinCount = 0; bagFull = false; isExecutingAction = false; busy = false
-            cancelFarmTween()
         elseif not lastRoundState then
             lastRoundState = true; roundStartTime = tick(); setStatus("Map loaded...")
-            farmDeathCheckTime = tick()
             if state.notifyMapName then
                 local mapName = getMapName()
                 if mapName then task.spawn(function() showNotification('Map loaded: <font color="#7ec8ff">' .. mapName .. '</font>') end) end
@@ -3944,26 +3931,17 @@ task.spawn(function()
         if inRound and hasRoles and not roundFullyStarted then
             if (tick() - roundStartTime) > 6 then roundFullyStarted = true; setStatus("Round started") end
         end
-        if state.farm and (not LP.Character or not LP.Character:FindFirstChildOfClass("Humanoid")) then
-            if tick() - farmDeathCheckTime > 3 then
-                farmDeathCheckTime = tick()
-                cancelFarmTween()
-                setStatus("Farm: waiting for respawn...")
-            end
-        else
-            farmDeathCheckTime = tick()
-        end
     end
 end)
 
 task.spawn(function()
     while true do
         task.wait(0.04)
-        if state.invisibleEnabled then cancelFarmTween() continue end
+        if invisActive then cancelFarmTween() continue end
         if not alive() then cancelFarmTween() continue end
         local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
         local humanoid = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-        if not root or not humanoid then cancelFarmTween() continue end
+        if not root or not humanoid then continue end
         if state.xpFarm then
             cancelFarmTween(); humanoid.PlatformStand = true; root.Anchored = true
             root.CFrame = HIDE_POS; root.AssemblyLinearVelocity = Vector3.zero; root.AssemblyAngularVelocity = Vector3.zero
@@ -3977,11 +3955,6 @@ task.spawn(function()
                 root.AssemblyLinearVelocity = Vector3.zero
             end
             lastCoinFoundTime = tick(); continue
-        end
-        if currentFarmTween and currentFarmTween.PlaybackState == Enum.PlaybackState.Playing then
-            root.AssemblyLinearVelocity = Vector3.zero
-            root.AssemblyAngularVelocity = Vector3.zero
-            continue
         end
         root.Anchored = false; humanoid.PlatformStand = true; humanoid.AutoRotate = false
         root.AssemblyLinearVelocity = Vector3.zero; root.AssemblyAngularVelocity = Vector3.zero
@@ -4004,6 +3977,9 @@ task.spawn(function()
         if not closestCoin then cancelFarmTween() continue end
         local dist = (root.Position - closestCoin.Position).Magnitude
         if dist <= 7 then collectCoin(root, closestCoin) end
+        if currentFarmTween and currentFarmTween.PlaybackState == Enum.PlaybackState.Playing and currentTargetCoin == closestCoin then
+            collectCoin(root, closestCoin); continue
+        end
         cancelFarmTween(); currentTargetCoin = closestCoin
         local targetPos = closestCoin.Position + Vector3.new(0, -UNDER, 0)
         local targetCFrame = CFrame.new(targetPos) * CFrame.Angles(math.rad(90), 0, math.rad(180))
