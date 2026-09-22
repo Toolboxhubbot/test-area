@@ -3102,8 +3102,8 @@ local invisSavedCFrame = nil
 local invisVirtualPos = nil
 local invisVirtualVel = Vector3.zero
 local invisSavedAnchored = false
-local invisSavedTransparency = {}   -- [BasePart/Decal] = original transparency
-local invisSavedCanCollide = {}     -- [BasePart] = original CanCollide
+local invisSavedTransparency = {}
+local invisSavedCanCollide = {}
 
 local function ensureGhostFolder()
     if ghostFolder and ghostFolder.Parent then return end
@@ -3126,7 +3126,7 @@ local function createGhost()
     clone.Name = "AW_GhostCharacter"
 
     for _, d in ipairs(clone:GetDescendants()) do
-        if d:IsA("Script") or d:IsA("LocalScript") or d:IsA("ModuleScript") then
+        if d:IsPartA("Script") or d:IsA("LocalScript") or d:IsA("ModuleScript") then
             d:Destroy()
         elseif d:IsA("BasePart") then
             d.CanCollide = false
@@ -3162,7 +3162,7 @@ local function createGhost()
         clone.PrimaryPart = ghostRoot
     else
         local firstPart = clone:FindFirstChildWhichIsA("BasePart")
-        if firstPart then clone.PrimaryPart = firstPart end
+        if first then clone.PrimaryPart = firstPart end
     end
 
     clone.Parent = ghostFolder
@@ -3179,8 +3179,6 @@ local function createGhost()
     ghostHighlight.Parent = ghostFolder
 end
 
--- Force real character parts invisible (this replicates to other clients
--- because the LocalPlayer owns its character's parts)
 local function applyRealInvisibility()
     if not LP.Character then return end
     for _, d in ipairs(LP.Character:GetDescendants()) do
@@ -3237,11 +3235,8 @@ local function startInvisible()
         if ghostRoot then cam.CameraSubject = ghostRoot end
     end
 
-    -- Make the real body invisible to everyone (client-owned → replicates)
     applyRealInvisibility()
 
-    -- Park the real character far below the map so even if the transparency
-    -- somehow fails to replicate, they're nowhere near the action
     hrp.Anchored = true
     hrp.CFrame = HIDE_POS
 
@@ -3291,14 +3286,11 @@ task.spawn(function()
     end
 end)
 
--- Keep re-applying invisibility every frame in case the game or
--- accessories try to reset transparency
 task.spawn(function()
     while true do
         task.wait(0.1)
         if invisActive and LP.Character then
             applyRealInvisibility()
-            -- Keep HRP glued to hide position (server sees you parked)
             local hrp = LP.Character:FindFirstChild("HumanoidRootPart")
             if hrp and hrp.CFrame ~= HIDE_POS then
                 hrp.CFrame = HIDE_POS
@@ -3310,7 +3302,6 @@ task.spawn(function()
 end)
 
 LP.CharacterAdded:Connect(function()
-    -- Clear saved transparencies because it's a new character
     invisSavedTransparency = {}
     invisSavedCanCollide = {}
     if state.invisibleEnabled then
@@ -3323,6 +3314,7 @@ LP.CharacterAdded:Connect(function()
         if state.invisibleEnabled then startInvisible() end
     end
 end)
+
 -- ==================== VIRTUAL MOVEMENT (invisible mode) ====================
 RunService.RenderStepped:Connect(function(dt)
     if not invisActive then return end
