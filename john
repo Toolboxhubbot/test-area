@@ -1,4 +1,4 @@
--- Auto-load Anti-Fling (safe loader)
+-- Auto-load Anti-Fling (safe loader — won't crash if URL is down)
 task.spawn(function()
     local url = "https://raw.githubusercontent.com/Toolboxhubbot/antifling/refs/heads/main/antifling"
     local src = nil
@@ -18,7 +18,7 @@ task.spawn(function()
         end)
     end
     if not src or #src < 10 then
-        warn("[Appleware] Anti-fling fetch failed - skipping loader (script continues normally)")
+        warn("[Appleware] Anti-fling fetch failed - script continues normally")
         return
     end
     local fn
@@ -519,7 +519,7 @@ rtValue.TextColor3 = Color3.fromRGB(255, 255, 255)
 rtValue.Font = Enum.Font.GothamBold; rtValue.TextSize = 22
 rtValue.TextStrokeTransparency = 1; rtValue.Parent = roundTimerFrame
 
--- ==================== INFO HUD (IMPROVED) ====================
+-- ==================== INFO HUD ====================
 local infoHudGui = Instance.new("ScreenGui")
 infoHudGui.Name = "ApplewareInfoHud"
 infoHudGui.Parent = getGuiParent()
@@ -3589,7 +3589,7 @@ local function loadPosition(slot)
     end
 end
 
--- ==================== INVISIBLE (GHOST MODE) — your original script ====================
+-- ==================== INVISIBLE (GHOST MODE) ====================
 local invisActive = false
 local invisGhost = nil
 local invisLoop = nil
