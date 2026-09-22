@@ -197,10 +197,9 @@ local state = {
     cameraZoomEnabled=false, cameraMaxZoom=500, infoHudEnabled=false,
     antiRagdoll=true, freeze=false, fullbright=false,
     fovEnabled=false, fovValue=70, clickTP=false,
-    killAura=false, flingAura=false, autoDodge=false, autoBlockGun=false,
+    killAura=false, flingAura=false, autoDodge=false,
     bunnyHop=false,
     savedPosition=nil,
-    -- HUD element toggles
     hudShowSession=true, hudShowPlayers=true, hudShowRole=true,
     hudShowPing=true, hudShowFps=true, hudShowPlayerRoles=true,
 }
@@ -224,7 +223,6 @@ local settingsConfig = {
     openBtnColor={r=0, g=0, b=0},
     openBtnTextColor={r=255, g=255, b=255},
     secretRevealSeen=false,
-    secretRevealNever=false,
     quickTogglesList={
         "Farm (Safe)","XP Farm","Disable 3D Rendering","FPS Boost (Potato)",
         "Auto Shoot Murderer","Auto Kill All","Auto Fling Murderer",
@@ -267,7 +265,7 @@ local toggleDisplayNames = {
     fovEnabled="FOV Changer", clickTP="Click / Tap Teleport",
     cameraZoomEnabled="Camera Max Zoom", infoHudEnabled="Info HUD",
     killAura="Kill Aura", flingAura="Fling Aura", autoDodge="Auto Dodge",
-    autoBlockGun="Auto Block Gun", bunnyHop="Bunny Hop",
+    bunnyHop="Bunny Hop",
     hudShowSession="HUD: Session Time", hudShowPlayers="HUD: Player Count",
     hudShowRole="HUD: Your Role", hudShowPing="HUD: Ping",
     hudShowFps="HUD: FPS", hudShowPlayerRoles="HUD: Player Role List",
@@ -306,7 +304,7 @@ pcall(function()
     end
 end)
 
--- ============ FORCE BLACK & WHITE THEME (overrides config) ============
+-- ============ FORCE BLACK & WHITE (overrides config) ============
 settingsConfig.bgColor = {r=0, g=0, b=0}
 settingsConfig.textColor = {r=255, g=255, b=255}
 settingsConfig.textStrokeColor = {r=0, g=0, b=0}
@@ -535,7 +533,7 @@ rtValue.BackgroundTransparency = 1; rtValue.Text = "0:00"
 rtValue.TextColor3 = Color3.new(1, 1, 1)
 rtValue.Font = Enum.Font.GothamBold; rtValue.TextSize = 22
 
--- ============ INFO HUD (with player role list) ============
+-- ============ INFO HUD (auto-collapsing via UIListLayout) ============
 local ihGui = Instance.new("ScreenGui")
 ihGui.Name = "AWIH"; ihGui.Parent = getGuiParent()
 ihGui.ResetOnSpawn = false; ihGui.DisplayOrder = 999996; ihGui.IgnoreGuiInset = true
@@ -543,7 +541,8 @@ ihGui.ResetOnSpawn = false; ihGui.DisplayOrder = 999996; ihGui.IgnoreGuiInset = 
 local infoHudFrame = Instance.new("Frame", ihGui)
 infoHudFrame.AnchorPoint = Vector2.new(1, 0)
 infoHudFrame.Position = UDim2.new(1, -14, 0, 14)
-infoHudFrame.Size = UDim2.new(0, 220, 0, 340)
+infoHudFrame.Size = UDim2.new(0, 220, 0, 0)
+infoHudFrame.AutomaticSize = Enum.AutomaticSize.Y
 infoHudFrame.BackgroundColor3 = Color3.fromRGB(8, 8, 8)
 infoHudFrame.BackgroundTransparency = 0.08
 infoHudFrame.Visible = false
@@ -552,45 +551,68 @@ Instance.new("UICorner", infoHudFrame).CornerRadius = UDim.new(0, 12)
 local ihS = Instance.new("UIStroke", infoHudFrame)
 ihS.Color = Color3.fromRGB(50, 50, 50); ihS.Transparency = 0.25
 
+local ihPad = Instance.new("UIPadding", infoHudFrame)
+ihPad.PaddingTop = UDim.new(0, 8)
+ihPad.PaddingBottom = UDim.new(0, 10)
+ihPad.PaddingLeft = UDim.new(0, 12)
+ihPad.PaddingRight = UDim.new(0, 12)
+
+local ihLayout = Instance.new("UIListLayout", infoHudFrame)
+ihLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ihLayout.Padding = UDim.new(0, 2)
+
 local ihH = Instance.new("TextLabel", infoHudFrame)
-ihH.Size = UDim2.new(1, -30, 0, 22); ihH.Position = UDim2.new(0, 24, 0, 4)
+ihH.Size = UDim2.new(1, 0, 0, 18)
+ihH.LayoutOrder = 1
 ihH.BackgroundTransparency = 1; ihH.Text = "APPLEWARE"
 ihH.TextColor3 = Color3.fromRGB(240, 240, 240)
-ihH.Font = Enum.Font.GothamBold; ihH.TextSize = 11; ihH.TextXAlignment = Enum.TextXAlignment.Left
+ihH.Font = Enum.Font.GothamBold; ihH.TextSize = 11
+ihH.TextXAlignment = Enum.TextXAlignment.Left
 
-local function makeInfoRow(y, lbl)
-    local l = Instance.new("TextLabel", infoHudFrame)
-    l.Size = UDim2.new(0.55, -8, 0, 18); l.Position = UDim2.new(0, 12, 0, y)
+local function makeInfoRow(order, lbl)
+    local row = Instance.new("Frame", infoHudFrame)
+    row.Size = UDim2.new(1, 0, 0, 16)
+    row.LayoutOrder = order
+    row.BackgroundTransparency = 1
+
+    local l = Instance.new("TextLabel", row)
+    l.Size = UDim2.new(0.55, 0, 1, 0); l.Position = UDim2.new(0, 0, 0, 0)
     l.BackgroundTransparency = 1; l.Text = lbl
     l.TextColor3 = Color3.fromRGB(140, 140, 140)
-    l.Font = Enum.Font.GothamMedium; l.TextSize = 11; l.TextXAlignment = Enum.TextXAlignment.Left
-    local v = Instance.new("TextLabel", infoHudFrame)
-    v.Size = UDim2.new(0.45, -8, 0, 18); v.Position = UDim2.new(0.55, 0, 0, y)
+    l.Font = Enum.Font.GothamMedium; l.TextSize = 11
+    l.TextXAlignment = Enum.TextXAlignment.Left
+
+    local v = Instance.new("TextLabel", row)
+    v.Size = UDim2.new(0.45, 0, 1, 0); v.Position = UDim2.new(0.55, 0, 0, 0)
     v.BackgroundTransparency = 1; v.Text = "-"
     v.TextColor3 = Color3.fromRGB(245, 245, 245)
-    v.Font = Enum.Font.GothamBold; v.TextSize = 11; v.TextXAlignment = Enum.TextXAlignment.Right
-    return v
+    v.Font = Enum.Font.GothamBold; v.TextSize = 11
+    v.TextXAlignment = Enum.TextXAlignment.Right
+    return row, v
 end
 
-local ihTime = makeInfoRow(40, "Session")
-local ihPlayers = makeInfoRow(60, "Players")
-local ihRole = makeInfoRow(80, "Your Role")
-local ihPing = makeInfoRow(100, "Ping")
-local ihFps = makeInfoRow(120, "FPS")
+local ihTimeRow, ihTime = makeInfoRow(2, "Session")
+local ihPlayersRow, ihPlayers = makeInfoRow(3, "Players")
+local ihRoleRow, ihRole = makeInfoRow(4, "Your Role")
+local ihPingRow, ihPing = makeInfoRow(5, "Ping")
+local ihFpsRow, ihFps = makeInfoRow(6, "FPS")
 
 local ihSep = Instance.new("Frame", infoHudFrame)
-ihSep.Size = UDim2.new(1,-20,0,1); ihSep.Position = UDim2.new(0,10,0,142)
+ihSep.Size = UDim2.new(1, 0, 0, 1)
+ihSep.LayoutOrder = 7
 ihSep.BackgroundColor3 = Color3.fromRGB(45,45,45); ihSep.BackgroundTransparency = 0.4
 
 local ihListTitle = Instance.new("TextLabel", infoHudFrame)
-ihListTitle.Size = UDim2.new(1,-20,0,14); ihListTitle.Position = UDim2.new(0,12,0,148)
+ihListTitle.Size = UDim2.new(1, 0, 0, 14)
+ihListTitle.LayoutOrder = 8
 ihListTitle.BackgroundTransparency = 1; ihListTitle.Text = "PLAYER ROLES"
 ihListTitle.TextColor3 = Color3.fromRGB(120,120,120)
 ihListTitle.Font = Enum.Font.GothamBold; ihListTitle.TextSize = 9
 ihListTitle.TextXAlignment = Enum.TextXAlignment.Left
 
 local ihPlayerList = Instance.new("ScrollingFrame", infoHudFrame)
-ihPlayerList.Size = UDim2.new(1,-16,0,165); ihPlayerList.Position = UDim2.new(0,8,0,166)
+ihPlayerList.Size = UDim2.new(1, 0, 0, 130)
+ihPlayerList.LayoutOrder = 9
 ihPlayerList.BackgroundTransparency = 1; ihPlayerList.BorderSizePixel = 0
 ihPlayerList.ScrollBarThickness = 2; ihPlayerList.ScrollBarImageColor3 = Color3.fromRGB(60,60,60)
 ihPlayerList.CanvasSize = UDim2.new(0,0,0,0)
@@ -1156,22 +1178,6 @@ end)
 
 task.spawn(function()
     while true do
-        task.wait(0.1)
-        if state.autoBlockGun and alive() then
-            local s = getSheriff()
-            if s and s.Character then
-                local sHead = s.Character:FindFirstChild("Head")
-                if sHead then
-                    local cam = Workspace.CurrentCamera
-                    cam.CFrame = CFrame.lookAt(cam.CFrame.Position, sHead.Position)
-                end
-            end
-        end
-    end
-end)
-
-task.spawn(function()
-    while true do
         task.wait(0.05)
         if state.bunnyHop and LP.Character then
             local h = LP.Character:FindFirstChildOfClass("Humanoid")
@@ -1180,112 +1186,89 @@ task.spawn(function()
     end
 end)
 
--- ============ SECRET REVEAL POPUP ============
-local secretRevealGui, secretRevealShowing = nil, false
-local function showSecretReveal()
-    if secretRevealShowing or secretRevealGui then return end
-    secretRevealShowing = true
-    secretRevealGui = Instance.new("ScreenGui")
-    secretRevealGui.Name = "AWSecretReveal"
-    secretRevealGui.Parent = getGuiParent()
-    secretRevealGui.ResetOnSpawn = false
-    secretRevealGui.DisplayOrder = 2000000
-    secretRevealGui.IgnoreGuiInset = true
+-- ============ PARTY POP (confetti, replaces old popup) ============
+local secretPartyPlaying = false
+local function playPartyPop()
+    if secretPartyPlaying then return end
+    secretPartyPlaying = true
 
-    local bg = Instance.new("Frame", secretRevealGui)
-    bg.Size = UDim2.new(1,0,1,0)
-    bg.BackgroundColor3 = Color3.new(0,0,0); bg.BackgroundTransparency = 0.4
+    local pg = Instance.new("ScreenGui")
+    pg.Name = "AWPartyPop"
+    pg.Parent = getGuiParent()
+    pg.ResetOnSpawn = false
+    pg.DisplayOrder = 2000000
+    pg.IgnoreGuiInset = true
 
-    local box = Instance.new("Frame", bg)
-    box.Size = UDim2.new(0, 0, 0, 0)
-    box.AnchorPoint = Vector2.new(0.5, 0.5)
-    box.Position = UDim2.new(0.5, 0, 0.5, 0)
-    box.BackgroundColor3 = Color3.fromRGB(10,10,10); box.BackgroundTransparency = 0.05
-    Instance.new("UICorner", box).CornerRadius = UDim.new(0, 16)
-    local stroke = Instance.new("UIStroke", box)
-    stroke.Color = Color3.fromRGB(255,255,255); stroke.Thickness = 2
+    local colors = {
+        Color3.fromRGB(255, 80, 80),
+        Color3.fromRGB(80, 200, 255),
+        Color3.fromRGB(255, 220, 80),
+        Color3.fromRGB(120, 255, 120),
+        Color3.fromRGB(255, 140, 255),
+        Color3.new(1, 1, 1),
+    }
 
-    local title = Instance.new("TextLabel", box)
-    title.Size = UDim2.new(1, 0, 0, 60); title.Position = UDim2.new(0, 0, 0, 20)
-    title.BackgroundTransparency = 1
-    title.Text = "CONGRATULATIONS!"
-    title.TextColor3 = Color3.fromRGB(255, 220, 60)
-    title.Font = Enum.Font.GothamBlack; title.TextSize = 32
-
-    local sub = Instance.new("TextLabel", box)
-    sub.Size = UDim2.new(1, 0, 0, 30); sub.Position = UDim2.new(0, 0, 0, 80)
-    sub.BackgroundTransparency = 1
-    sub.Text = "You have found the secret!"
-    sub.TextColor3 = Color3.new(1,1,1)
-    sub.Font = Enum.Font.GothamBold; sub.TextSize = 18
-
-    local checkFrame = Instance.new("Frame", box)
-    checkFrame.Size = UDim2.new(1, -60, 0, 30); checkFrame.Position = UDim2.new(0, 30, 0, 130)
-    checkFrame.BackgroundTransparency = 1
-
-    local cbOuter = Instance.new("Frame", checkFrame)
-    cbOuter.Size = UDim2.new(0, 22, 0, 22); cbOuter.Position = UDim2.new(0, 0, 0.5, -11)
-    cbOuter.BackgroundColor3 = Color3.fromRGB(30,30,30)
-    Instance.new("UICorner", cbOuter).CornerRadius = UDim.new(0, 4)
-    local cbStroke = Instance.new("UIStroke", cbOuter)
-    cbStroke.Color = Color3.fromRGB(150,150,150)
-
-    local cbInner = Instance.new("Frame", cbOuter)
-    cbInner.Size = UDim2.new(0, 0, 0, 0); cbInner.AnchorPoint = Vector2.new(0.5, 0.5)
-    cbInner.Position = UDim2.new(0.5, 0, 0.5, 0); cbInner.BackgroundColor3 = Color3.fromRGB(90, 255, 140)
-    Instance.new("UICorner", cbInner).CornerRadius = UDim.new(0, 3)
-
-    local cbLabel = Instance.new("TextLabel", checkFrame)
-    cbLabel.Size = UDim2.new(1, -30, 1, 0); cbLabel.Position = UDim2.new(0, 30, 0, 0)
-    cbLabel.BackgroundTransparency = 1
-    cbLabel.Text = "Don't show this every time?"
-    cbLabel.TextColor3 = Color3.fromRGB(220,220,220)
-    cbLabel.Font = Enum.Font.Gotham; cbLabel.TextSize = 14
-    cbLabel.TextXAlignment = Enum.TextXAlignment.Left
-
-    local cbBtn = Instance.new("TextButton", checkFrame)
-    cbBtn.Size = UDim2.new(1, 0, 1, 0); cbBtn.BackgroundTransparency = 1; cbBtn.Text = ""
-    local checked = false
-    cbBtn.MouseButton1Click:Connect(function()
-        checked = not checked
-        if checked then
-            TweenService:Create(cbInner, TweenInfo.new(0.2), {Size = UDim2.new(1, -6, 1, -6)}):Play()
-        else
-            TweenService:Create(cbInner, TweenInfo.new(0.2), {Size = UDim2.new(0, 0, 0, 0)}):Play()
-        end
-    end)
-
-    local yesBtn = Instance.new("TextButton", box)
-    yesBtn.Size = UDim2.new(0, 170, 0, 44); yesBtn.Position = UDim2.new(0.5, -180, 1, -70)
-    yesBtn.BackgroundColor3 = Color3.fromRGB(35, 140, 65)
-    yesBtn.Text = "Yes (Never again)"; yesBtn.TextColor3 = Color3.new(1,1,1)
-    yesBtn.Font = Enum.Font.GothamBold; yesBtn.TextSize = 13
-    Instance.new("UICorner", yesBtn).CornerRadius = UDim.new(0, 10)
-
-    local noBtn = Instance.new("TextButton", box)
-    noBtn.Size = UDim2.new(0, 170, 0, 44); noBtn.Position = UDim2.new(0.5, 10, 1, -70)
-    noBtn.BackgroundColor3 = Color3.fromRGB(160, 40, 40)
-    noBtn.Text = "No (Show every time)"; noBtn.TextColor3 = Color3.new(1,1,1)
-    noBtn.Font = Enum.Font.GothamBold; noBtn.TextSize = 13
-    Instance.new("UICorner", noBtn).CornerRadius = UDim.new(0, 10)
-
-    local function dismiss()
-        if secretRevealGui then secretRevealGui:Destroy() end
-        secretRevealGui = nil; secretRevealShowing = false
+    for i = 1, 90 do
+        local piece = Instance.new("Frame", pg)
+        local sz = math.random(4, 10)
+        piece.Size = UDim2.new(0, sz, 0, sz)
+        piece.Position = UDim2.new(math.random(), 0, -0.15, 0)
+        piece.BackgroundColor3 = colors[math.random(#colors)]
+        piece.BorderSizePixel = 0
+        piece.Rotation = math.random(0, 360)
+        Instance.new("UICorner", piece).CornerRadius = UDim.new(0, 2)
+        local startRot = piece.Rotation
+        local fallDur = 1.6 + math.random() * 0.9
+        local spin = math.random(-900, 900)
+        task.delay(math.random() * 0.35, function()
+            if not piece.Parent then return end
+            TweenService:Create(piece, TweenInfo.new(fallDur, Enum.EasingStyle.Linear), {
+                Position = UDim2.new(math.random(), 0, 1.15, 0),
+                Rotation = startRot + spin
+            }):Play()
+        end)
     end
 
-    yesBtn.MouseButton1Click:Connect(function()
-        settingsConfig.secretRevealNever = true
-        settingsConfig.secretRevealSeen = true
-        saveSettings(); dismiss()
-    end)
-    noBtn.MouseButton1Click:Connect(function()
-        settingsConfig.secretRevealNever = false
-        settingsConfig.secretRevealSeen = true
-        saveSettings(); dismiss()
-    end)
+    local banner = Instance.new("TextLabel", pg)
+    banner.Size = UDim2.new(1, 0, 0, 90)
+    banner.Position = UDim2.new(0, 0, 0.42, -50)
+    banner.BackgroundTransparency = 1
+    banner.Text = "CONGRATULATIONS!"
+    banner.TextColor3 = Color3.fromRGB(255, 220, 60)
+    banner.Font = Enum.Font.GothamBlack
+    banner.TextSize = 46
+    banner.TextStrokeColor3 = Color3.new(0, 0, 0)
+    banner.TextStrokeTransparency = 0
+    banner.TextTransparency = 1
 
-    TweenService:Create(box, TweenInfo.new(0.6, Enum.EasingStyle.Back), {Size = UDim2.new(0, 480, 0, 280)}):Play()
+    local sub = Instance.new("TextLabel", pg)
+    sub.Size = UDim2.new(1, 0, 0, 34)
+    sub.Position = UDim2.new(0, 0, 0.42, 40)
+    sub.BackgroundTransparency = 1
+    sub.Text = "You found the secret area!"
+    sub.TextColor3 = Color3.new(1, 1, 1)
+    sub.Font = Enum.Font.GothamBold
+    sub.TextSize = 22
+    sub.TextStrokeColor3 = Color3.new(0, 0, 0)
+    sub.TextStrokeTransparency = 0
+    sub.TextTransparency = 1
+
+    TweenService:Create(banner, TweenInfo.new(0.4, Enum.EasingStyle.Back), {TextTransparency = 0}):Play()
+    TweenService:Create(sub, TweenInfo.new(0.4, Enum.EasingStyle.Back), {TextTransparency = 0}):Play()
+
+    task.delay(2.0, function()
+        TweenService:Create(banner, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
+        TweenService:Create(sub, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
+        for _, c in ipairs(pg:GetChildren()) do
+            if c:IsA("Frame") then
+                TweenService:Create(c, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
+            end
+        end
+        task.delay(0.6, function()
+            pg:Destroy()
+            secretPartyPlaying = false
+        end)
+    end)
 end
 
 -- ============ ACTIONS ============
@@ -1698,8 +1681,10 @@ buildUI = function(reb)
             TweenService:Create(np, TweenInfo.new(0.35, Enum.EasingStyle.Back), {Position = UDim2.new(0, 0, 0, 0)}):Play()
             staggerFade(np)
         end
-        if n == "Secret" and not settingsConfig.secretRevealSeen and not settingsConfig.secretRevealNever then
-            task.defer(function() showSecretReveal() end)
+        if n == "Secret" and not settingsConfig.secretRevealSeen then
+            settingsConfig.secretRevealSeen = true
+            saveSettings()
+            task.defer(function() playPartyPop() end)
         end
         task.delay(0.2, function() switching = false end)
     end
@@ -1897,31 +1882,30 @@ buildUI = function(reb)
     tgg(pages["Secret"], "Kill Aura", 15, "killAura")
     tgg(pages["Secret"], "Fling Aura", 16, "flingAura")
     tgg(pages["Secret"], "Auto Dodge (Murderer)", 17, "autoDodge")
-    tgg(pages["Secret"], "Auto Block Gun", 18, "autoBlockGun")
 
-    addSect(pages["Secret"], "Invisibility", 19)
-    tgg(pages["Secret"], "Invisible (Ghost Mode)", 20, "invisibleEnabled")
+    addSect(pages["Secret"], "Invisibility", 18)
+    tgg(pages["Secret"], "Invisible (Ghost Mode)", 19, "invisibleEnabled")
 
-    addSect(pages["Secret"], "Visuals", 21)
-    tgg(pages["Secret"], "Fullbright", 22, "fullbright")
-    tgg(pages["Secret"], "FOV Changer", 23, "fovEnabled")
-    makeSlider(pages["Secret"], "Field of View", 24, state.fovValue or 70, 30, 120, "fovValue")
-    tgg(pages["Secret"], "Camera Max Zoom", 25, "cameraZoomEnabled")
-    makeSlider(pages["Secret"], "Max Zoom", 26, state.cameraMaxZoom or 500, 100, 2000, "cameraMaxZoom")
-    tgg(pages["Secret"], "Info HUD", 27, "infoHudEnabled")
+    addSect(pages["Secret"], "Visuals", 20)
+    tgg(pages["Secret"], "Fullbright", 21, "fullbright")
+    tgg(pages["Secret"], "FOV Changer", 22, "fovEnabled")
+    makeSlider(pages["Secret"], "Field of View", 23, state.fovValue or 70, 30, 120, "fovValue")
+    tgg(pages["Secret"], "Camera Max Zoom", 24, "cameraZoomEnabled")
+    makeSlider(pages["Secret"], "Max Zoom", 25, state.cameraMaxZoom or 500, 100, 2000, "cameraMaxZoom")
+    tgg(pages["Secret"], "Info HUD", 26, "infoHudEnabled")
 
-    addSect(pages["Secret"], "HUD Contents (visible when HUD on)", 28)
-    tgg(pages["Secret"], "Show Session Time", 29, "hudShowSession")
-    tgg(pages["Secret"], "Show Player Count", 30, "hudShowPlayers")
-    tgg(pages["Secret"], "Show Your Role", 31, "hudShowRole")
-    tgg(pages["Secret"], "Show Ping", 32, "hudShowPing")
-    tgg(pages["Secret"], "Show FPS", 33, "hudShowFps")
-    tgg(pages["Secret"], "Show Player Role List", 34, "hudShowPlayerRoles")
+    addSect(pages["Secret"], "HUD Contents (visible when HUD on)", 27)
+    tgg(pages["Secret"], "Show Session Time", 28, "hudShowSession")
+    tgg(pages["Secret"], "Show Player Count", 29, "hudShowPlayers")
+    tgg(pages["Secret"], "Show Your Role", 30, "hudShowRole")
+    tgg(pages["Secret"], "Show Ping", 31, "hudShowPing")
+    tgg(pages["Secret"], "Show FPS", 32, "hudShowFps")
+    tgg(pages["Secret"], "Show Player Role List", 33, "hudShowPlayerRoles")
 
-    addSect(pages["Secret"], "Utility", 35)
-    tgg(pages["Secret"], "Click / Tap Teleport", 36, "clickTP")
-    addBtn(pages["Secret"], "Save Position", 37, saveCurrentPos)
-    addBtn(pages["Secret"], "Return to Saved Position", 38, loadSavedPos)
+    addSect(pages["Secret"], "Utility", 34)
+    tgg(pages["Secret"], "Click / Tap Teleport", 35, "clickTP")
+    addBtn(pages["Secret"], "Save Position", 36, saveCurrentPos)
+    addBtn(pages["Secret"], "Return to Saved Position", 37, loadSavedPos)
 
     -- FARM TAB
     tgg(pages["Farm"], "Farm (Safe)", 1, "farm")
@@ -2736,7 +2720,7 @@ task.spawn(function()
     end
 end)
 
--- ============ INFO HUD UPDATE (with sub-toggles) ============
+-- ============ INFO HUD UPDATE (auto-collapsing rows + role predictions) ============
 task.spawn(function()
     while true do
         task.wait(0.35)
@@ -2744,19 +2728,19 @@ task.spawn(function()
             if not infoHudFrame.Visible then infoHudFrame.Visible = true end
 
             if state.hudShowSession then
-                ihTime.Visible = true
+                ihTimeRow.Visible = true
                 local el = math.floor(tick() - hudStart)
                 local hh = math.floor(el / 3600); local mm = math.floor((el % 3600) / 60); local ss = el % 60
                 ihTime.Text = string.format("%02d:%02d:%02d", hh, mm, ss)
-            else ihTime.Visible = false end
+            else ihTimeRow.Visible = false end
 
             if state.hudShowPlayers then
-                ihPlayers.Visible = true
+                ihPlayersRow.Visible = true
                 ihPlayers.Text = tostring(#Players:GetPlayers())
-            else ihPlayers.Visible = false end
+            else ihPlayersRow.Visible = false end
 
             if state.hudShowRole then
-                ihRole.Visible = true
+                ihRoleRow.Visible = true
                 local role = "Innocent"
                 if lpHasGun() then role = "Sheriff"
                 else
@@ -2765,23 +2749,23 @@ task.spawn(function()
                 end
                 ihRole.Text = role
                 ihRole.TextColor3 = roleColor(role)
-            else ihRole.Visible = false end
+            else ihRoleRow.Visible = false end
 
             if state.hudShowPing then
-                ihPing.Visible = true
+                ihPingRow.Visible = true
                 pcall(function()
                     ihPing.Text = math.floor(StatsService.Network.ServerStatsItem["Data Ping"]:GetValue()) .. " ms"
                 end)
-            else ihPing.Visible = false end
+            else ihPingRow.Visible = false end
 
             if state.hudShowFps then
-                ihFps.Visible = true
+                ihFpsRow.Visible = true
                 if #fpsSamples > 0 then
                     local s = 0; for _, v in ipairs(fpsSamples) do s = s + v end
                     curFps = math.floor(s / #fpsSamples + 0.5)
                 end
                 ihFps.Text = tostring(curFps)
-            else ihFps.Visible = false end
+            else ihFpsRow.Visible = false end
 
             if state.hudShowPlayerRoles then
                 ihSep.Visible = true
@@ -2798,7 +2782,7 @@ task.spawn(function()
                     pl.Size = UDim2.new(1, -4, 0, 16)
                     pl.LayoutOrder = order
                     pl.BackgroundTransparency = 1
-                    pl.Text = "  " .. p.Name
+                    pl.Text = "  " .. p.Name .. " [" .. pRole .. "]"
                     pl.TextColor3 = roleColor(pRole)
                     pl.Font = Enum.Font.GothamMedium
                     pl.TextSize = 10
