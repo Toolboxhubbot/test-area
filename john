@@ -1,6 +1,33 @@
--- Auto-load Anti-Fling (your original)
-pcall(function()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/Toolboxhubbot/antifling/refs/heads/main/antifling"))()
+-- Auto-load Anti-Fling (safe loader)
+task.spawn(function()
+    local url = "https://raw.githubusercontent.com/Toolboxhubbot/antifling/refs/heads/main/antifling"
+    local src = nil
+    pcall(function()
+        if game.HttpGet then src = game:HttpGet(url) end
+    end)
+    if not src and syn and syn.request then
+        pcall(function()
+            local r = syn.request({Url = url, Method = "GET"})
+            if r and r.Body then src = r.Body end
+        end)
+    end
+    if not src and request then
+        pcall(function()
+            local r = request({Url = url, Method = "GET"})
+            if r and r.Body then src = r.Body end
+        end)
+    end
+    if not src or #src < 10 then
+        warn("[Appleware] Anti-fling fetch failed - skipping loader (script continues normally)")
+        return
+    end
+    local fn
+    pcall(function() fn = loadstring(src) end)
+    if fn then
+        pcall(function() fn() end)
+    else
+        warn("[Appleware] Anti-fling script didn't compile - skipping")
+    end
 end)
 
 LocalTeleportService = game:GetService("TeleportService")
