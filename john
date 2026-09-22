@@ -74,6 +74,93 @@ local function getGuiParent()
     return LP:FindFirstChild("PlayerGui") or CoreGui
 end
 
+-- ============================================================
+-- LOADING SCREEN
+-- ============================================================
+local loadingGui = Instance.new("ScreenGui")
+loadingGui.Name = "ApplewareLoading"
+loadingGui.Parent = getGuiParent()
+loadingGui.ResetOnSpawn = false
+loadingGui.DisplayOrder = 1000000
+loadingGui.IgnoreGuiInset = true
+
+local lBg = Instance.new("Frame")
+lBg.Size = UDim2.new(1,0,1,0)
+lBg.BackgroundColor3 = Color3.fromRGB(0,0,0)
+lBg.BackgroundTransparency = 0.5
+lBg.Parent = loadingGui
+
+local lBox = Instance.new("Frame")
+lBox.Size = UDim2.new(0, 300, 0, 220)
+lBox.AnchorPoint = Vector2.new(0.5, 0.5)
+lBox.Position = UDim2.new(0.5, 0, 0.5, 0)
+lBox.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+lBox.BackgroundTransparency = 0.1
+lBox.Parent = lBg
+Instance.new("UICorner", lBox).CornerRadius = UDim.new(0, 16)
+local lStroke = Instance.new("UIStroke", lBox)
+lStroke.Color = Color3.fromRGB(50, 50, 50)
+lStroke.Thickness = 1
+
+local lLogo = Instance.new("Frame")
+lLogo.Size = UDim2.new(0, 100, 0, 100)
+lLogo.AnchorPoint = Vector2.new(0.5, 0.5)
+lLogo.Position = UDim2.new(0.5, 0, 0.35, 0)
+lLogo.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+lLogo.Parent = lBox
+Instance.new("UICorner", lLogo).CornerRadius = UDim.new(1, 0)
+local lLogoStroke = Instance.new("UIStroke", lLogo)
+lLogoStroke.Color = Color3.fromRGB(80, 80, 80)
+lLogoStroke.Thickness = 2
+
+local lLogoText = Instance.new("TextLabel")
+lLogoText.Size = UDim2.new(1, 0, 1, 0)
+lLogoText.BackgroundTransparency = 1
+lLogoText.Text = "A"
+lLogoText.TextColor3 = Color3.fromRGB(255, 255, 255)
+lLogoText.Font = Enum.Font.GothamBlack
+lLogoText.TextSize = 60
+lLogoText.Parent = lLogo
+
+local lTitle = Instance.new("TextLabel")
+lTitle.Size = UDim2.new(1, 0, 0, 30)
+lTitle.Position = UDim2.new(0, 0, 0.65, 0)
+lTitle.BackgroundTransparency = 1
+lTitle.Text = "Loading Appleware for you..."
+lTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+lTitle.Font = Enum.Font.GothamBold
+lTitle.TextSize = 18
+lTitle.Parent = lBox
+
+local lBarBg = Instance.new("Frame")
+lBarBg.Size = UDim2.new(0.7, 0, 0, 6)
+lBarBg.AnchorPoint = Vector2.new(0.5, 0.5)
+lBarBg.Position = UDim2.new(0.5, 0, 0.85, 0)
+lBarBg.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+lBarBg.Parent = lBox
+Instance.new("UICorner", lBarBg).CornerRadius = UDim.new(1, 0)
+
+local lBarFill = Instance.new("Frame")
+lBarFill.Size = UDim2.new(0, 0, 1, 0)
+lBarFill.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+lBarFill.Parent = lBarBg
+Instance.new("UICorner", lBarFill).CornerRadius = UDim.new(1, 0)
+
+TweenService:Create(lBarFill, TweenInfo.new(3, Enum.EasingStyle.Linear), {Size = UDim2.new(1, 0, 1, 0)}):Play()
+task.wait(3)
+TweenService:Create(lBg, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1}):Play()
+TweenService:Create(lBox, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 1}):Play()
+TweenService:Create(lStroke, TweenInfo.new(0.5), {Transparency = 1}):Play()
+TweenService:Create(lLogo, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
+TweenService:Create(lLogoStroke, TweenInfo.new(0.5), {Transparency = 1}):Play()
+TweenService:Create(lLogoText, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
+TweenService:Create(lTitle, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
+TweenService:Create(lBarBg, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
+TweenService:Create(lBarFill, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
+task.wait(0.5)
+loadingGui:Destroy()
+-- ============================================================
+
 local CONFIG_FOLDER_NAME = "ApplewareConfigs"
 local CONFIG_FILE_NAME = "Appleware.json"
 pcall(function() if makefolder and isfolder and not isfolder(CONFIG_FOLDER_NAME) then makefolder(CONFIG_FOLDER_NAME) end end)
@@ -83,6 +170,7 @@ local function getFullPath()
 end
 
 local saveSettings, buildUI, st
+local stopFarmAndReturnToLobby
 
 local state = {
     farm=false, xpFarm=false, noclip=false, gun=false, afk=false,
@@ -352,7 +440,7 @@ local function showNotification(t)
     end)
 end
 
--- Round timer
+-- Round timer (draggable)
 local rtGui = Instance.new("ScreenGui")
 rtGui.Name = "ApplewareRoundTimer"; rtGui.Parent = getGuiParent()
 rtGui.ResetOnSpawn = false; rtGui.DisplayOrder = 999997; rtGui.IgnoreGuiInset = true
@@ -360,6 +448,7 @@ local roundTimerFrame = Instance.new("Frame")
 roundTimerFrame.AnchorPoint = Vector2.new(0.5,0); roundTimerFrame.Position = UDim2.new(0.5,0,0,8)
 roundTimerFrame.Size = UDim2.new(0,132,0,54); roundTimerFrame.BackgroundColor3 = Color3.fromRGB(0,0,0)
 roundTimerFrame.BackgroundTransparency = 0.1; roundTimerFrame.Visible = false; roundTimerFrame.Parent = rtGui
+roundTimerFrame.Active = true; roundTimerFrame.Draggable = true
 Instance.new("UICorner", roundTimerFrame).CornerRadius = UDim.new(0,10)
 local rtStroke = Instance.new("UIStroke", roundTimerFrame)
 rtStroke.Color = Color3.fromRGB(60,60,60); rtStroke.Thickness = 1; rtStroke.Transparency = 0.3
@@ -375,7 +464,7 @@ rtValue.TextColor3 = Color3.fromRGB(255,255,255)
 rtValue.Font = Enum.Font.GothamBold; rtValue.TextSize = 22
 rtValue.TextStrokeTransparency = 1; rtValue.Parent = roundTimerFrame
 
--- Info HUD
+-- Info HUD (draggable)
 local ihGui = Instance.new("ScreenGui")
 ihGui.Name = "ApplewareInfoHud"; ihGui.Parent = getGuiParent()
 ihGui.ResetOnSpawn = false; ihGui.DisplayOrder = 999996; ihGui.IgnoreGuiInset = true
@@ -383,6 +472,7 @@ local infoHudFrame = Instance.new("Frame")
 infoHudFrame.AnchorPoint = Vector2.new(1,0); infoHudFrame.Position = UDim2.new(1,-14,0,14)
 infoHudFrame.Size = UDim2.new(0,220,0,158); infoHudFrame.BackgroundColor3 = Color3.fromRGB(8,8,8)
 infoHudFrame.BackgroundTransparency = 0.08; infoHudFrame.Visible = false; infoHudFrame.Parent = ihGui
+infoHudFrame.Active = true; infoHudFrame.Draggable = true
 Instance.new("UICorner", infoHudFrame).CornerRadius = UDim.new(0,12)
 local ihS = Instance.new("UIStroke", infoHudFrame)
 ihS.Color = Color3.fromRGB(50,50,50); ihS.Thickness = 1; ihS.Transparency = 0.25
@@ -503,6 +593,12 @@ local function setToggleState(key, value)
     if key == "antiRagdoll" then value = true end
     local prev = state[key]
     state[key] = value
+    -- If the user turns Farm / XP Farm off, clean everything up + go to lobby
+    if (key == "farm" or key == "xpFarm") and prev == true and value == false then
+        if stopFarmAndReturnToLobby then
+            task.spawn(stopFarmAndReturnToLobby)
+        end
+    end
     if prev ~= value and not notifyExcluded[key] then
         local n = toggleDisplayNames[key] or key
         local c = value and "#5aff8c" or "#ff5a5a"
@@ -808,6 +904,51 @@ local function cancelFarmTween()
     if farmVelocityConn then farmVelocityConn:Disconnect() farmVelocityConn = nil end
     currentTargetCoin = nil
 end
+
+-- Cleanly shut down the farm: un-anchor, restore animations/state/collision,
+-- reset camera subject, and drop the player back in the lobby.
+stopFarmAndReturnToLobby = function()
+    cancelFarmTween()
+
+    local ch = LP.Character
+    if not ch then return end
+    local h = ch:FindFirstChildOfClass("Humanoid")
+    local r = ch:FindFirstChild("HumanoidRootPart")
+
+    if r then
+        r.Anchored = false
+        for _, v in ipairs(ch:GetDescendants()) do
+            if v:IsA("BasePart") then v.CanCollide = true end
+        end
+        r.CFrame = LOBBY_CFRAME
+        r.AssemblyLinearVelocity = Vector3.zero
+        r.AssemblyAngularVelocity = Vector3.zero
+    end
+
+    if h and h.Health > 0 then
+        for _, t in ipairs(h:GetPlayingAnimationTracks()) do
+            pcall(function() t:Stop() end)
+        end
+        h.PlatformStand = false
+        h.Sit = false
+        h.AutoRotate = true
+        h.WalkSpeed = state.speedEnabled and (state.speedValue or 16) or 16
+        h.UseJumpPower = state.jumpEnabled and true or false
+        h.JumpPower = state.jumpEnabled and (state.jumpValue or 50) or 50
+        pcall(function() h:ChangeState(Enum.HumanoidStateType.GettingUp) end)
+        task.wait(0.1)
+        if h.Parent and h.Health > 0 then
+            pcall(function() h:ChangeState(Enum.HumanoidStateType.Running) end)
+        end
+        local cam = Workspace.CurrentCamera
+        if cam and cam.CameraSubject ~= h then
+            cam.CameraSubject = h
+        end
+    end
+
+    setStatus("Farm stopped - returned to lobby")
+end
+
 applyLowDeviceOptimizations = function(en)
     pcall(function()
         if en then
