@@ -198,6 +198,10 @@ local state = {
     savedPosition=nil,
     hudShowSession=true, hudShowPlayers=true, hudShowRole=true,
     hudShowPing=true, hudShowFps=true, hudShowPlayerRoles=true,
+    disableAnimations=false,
+    currentAnimId=nil, currentAnimName=nil,
+    customAnimsEnabled=false,
+    customAnims={ Idle="Default", Walk="Default", Run="Default", Jump="Default", Climb="Default", Fall="Default", Sit="Default" },
 }
 
 local settingsConfig = {
@@ -219,6 +223,7 @@ local settingsConfig = {
     openBtnColor={r=0, g=0, b=0},
     openBtnTextColor={r=255, g=255, b=255},
     secretRevealSeen=false,
+    secretDeleteNoticeSeen=false,
     quickTogglesList={
         "Farm (Safe)","XP Farm","Disable 3D Rendering","FPS Boost (Potato)",
         "Auto Shoot Murderer","Auto Kill All","Auto Fling Murderer",
@@ -265,6 +270,8 @@ local toggleDisplayNames = {
     hudShowSession="HUD: Session Time", hudShowPlayers="HUD: Player Count",
     hudShowRole="HUD: Your Role", hudShowPing="HUD: Ping",
     hudShowFps="HUD: FPS", hudShowPlayerRoles="HUD: Player Role List",
+    disableAnimations="UI Animations",
+    customAnimsEnabled="Custom Animations",
 }
 local nExcl = {}
 
@@ -293,6 +300,13 @@ pcall(function()
         if settingsConfig.roundLength then ROUND_LENGTH_FALLBACK = settingsConfig.roundLength end
         if type(settingsConfig.flingList) ~= "table" then settingsConfig.flingList = {} end
         if type(settingsConfig.whitelist) ~= "table" then settingsConfig.whitelist = {} end
+        if type(state.customAnims) ~= "table" then
+            state.customAnims = { Idle="Default", Walk="Default", Run="Default", Jump="Default", Climb="Default", Fall="Default", Sit="Default" }
+        else
+            for _, s in ipairs({"Idle","Walk","Run","Jump","Climb","Fall","Sit"}) do
+                if state.customAnims[s] == nil then state.customAnims[s] = "Default" end
+            end
+        end
     end
 end)
 
@@ -345,12 +359,14 @@ state.antiRagdoll = true
 local function c3(t) return Color3.fromRGB(t.r or 0, t.g or 0, t.b or 0) end
 
 local function attachBounce(b)
+    if state.disableAnimations then return end
     local s = Instance.new("UIScale", b)
     b.MouseButton1Down:Connect(function() TweenService:Create(s, TweenInfo.new(0.08), {Scale=0.92}):Play() end)
     local function r() TweenService:Create(s, TweenInfo.new(0.45, Enum.EasingStyle.Elastic), {Scale=1}):Play() end
     b.MouseButton1Up:Connect(r); b.MouseLeave:Connect(r)
 end
 local function attachRipple(b, c)
+    if state.disableAnimations then return end
     c = c or Color3.new(1,1,1); b.ClipsDescendants = true
     b.MouseButton1Down:Connect(function()
         local pos = b.AbsolutePosition
@@ -369,6 +385,7 @@ local function attachRipple(b, c)
     end)
 end
 local function attachShine(b)
+    if state.disableAnimations then return end
     b.ClipsDescendants = true
     local s = Instance.new("Frame", b)
     s.Size = UDim2.new(0, 28, 1.6, 0); s.Position = UDim2.new(-0.35, 0, -0.3, 0)
@@ -381,6 +398,7 @@ local function attachShine(b)
     end)
 end
 local function staggerFade(p)
+    if state.disableAnimations then return end
     local ch = {}
     for _, c in ipairs(p:GetChildren()) do
         if c:IsA("GuiObject") and c.Visible ~= false then table.insert(ch, c) end
@@ -492,6 +510,189 @@ local function notify(t)
     end)
 end
 
+-- ============ ANIMATION / EMOTE PLAYER ============
+local playingAnimTrack = nil
+local slotTracks = {}
+local animState = { current = "Idle" }
+
+local R15_DEFAULTS = {
+    Idle  = "507766666",
+    Walk  = "507777826",
+    Run   = "507784897",
+    Jump  = "507768375",
+    Fall  = "507767914",
+    Climb = "507765644",
+    Sit   = "2506281703",
+}
+
+local slotPriority = {
+    Idle  = Enum.AnimationPriority.Idle,
+    Walk  = Enum.AnimationPriority.Movement,
+    Run   = Enum.AnimationPriority.Movement,
+    Jump  = Enum.AnimationPriority.Movement,
+    Climb = Enum.AnimationPriority.Movement,
+    Fall  = Enum.AnimationPriority.Movement,
+    Sit   = Enum.AnimationPriority.Idle,
+}
+
+local function getAnimator(h)
+    if not h then return nil end
+    local animator = h:FindFirstChildOfClass("Animator")
+    if not animator then
+        animator = Instance.new("Animator")
+        animator.Parent = h
+    end
+    return animator
+end
+
+local function isR15()
+    local ch = LP.Character
+    if not ch then return false end
+    local h = ch:FindFirstChildOfClass("Humanoid")
+    if not h then return false end
+    return h.RigType == Enum.HumanoidRigType.R15
+end
+
+local function stopEmote()
+    if playingAnimTrack then
+        pcall(function() playingAnimTrack:Stop(0) end)
+        pcall(function() playingAnimTrack:Destroy() end)
+        playingAnimTrack = nil
+        state.currentAnimId = nil
+        state.currentAnimName = nil
+    end
+end
+
+local function playEmote(id, name)
+    local ch = LP.Character
+    if not ch then notify('<font color="#ff5a5a">No character</font>'); return end
+    local h = ch:FindFirstChildOfClass("Humanoid")
+    if not h or h.Health <= 0 then notify('<font color="#ff5a5a">No Humanoid</font>'); return end
+    if h.RigType ~= Enum.HumanoidRigType.R15 then
+        notify('<font color="#ff5a5a">Emotes need R15 rig</font>'); return
+    end
+    stopEmote()
+    local animator = getAnimator(h)
+    local anim = Instance.new("Animation")
+    anim.AnimationId = "rbxassetid://" .. tostring(id)
+    local ok, track = pcall(function() return animator:LoadAnimation(anim) end)
+    if ok and track then
+        track.Priority = Enum.AnimationPriority.Action4
+        track.Looped = true
+        pcall(function() track:Play(0.15, 1, 1) end)
+        playingAnimTrack = track
+        state.currentAnimId = id
+        state.currentAnimName = name
+        notify('Now playing: <font color="#7ec8ff">' .. tostring(name) .. '</font>')
+    else
+        notify('<font color="#ff5a5a">Failed:</font> ' .. tostring(name))
+    end
+end
+
+local function stopSlotTrack(slot)
+    if slotTracks[slot] then
+        pcall(function() slotTracks[slot]:Stop(0) end)
+        pcall(function() slotTracks[slot]:Destroy() end)
+        slotTracks[slot] = nil
+    end
+end
+
+local function stopAllSlotTracks()
+    for k in pairs(slotTracks) do stopSlotTrack(k) end
+end
+
+local function playSlot(slot, id)
+    stopSlotTrack(slot)
+    local ch = LP.Character
+    if not ch then return end
+    local h = ch:FindFirstChildOfClass("Humanoid")
+    if not h or h.Health <= 0 then return end
+    if h.RigType ~= Enum.HumanoidRigType.R15 then return end
+
+    local useId = id
+    if not id or id == "Default" or id == "" then
+        useId = R15_DEFAULTS[slot]
+    end
+    if not useId then return end
+
+    local animator = getAnimator(h)
+    local anim = Instance.new("Animation")
+    anim.AnimationId = "rbxassetid://" .. tostring(useId)
+    local ok, track = pcall(function() return animator:LoadAnimation(anim) end)
+    if ok and track then
+        track.Priority = slotPriority[slot] or Enum.AnimationPriority.Action
+        track.Looped = true
+        pcall(function() track:Play(0.15, 1, 1) end)
+        slotTracks[slot] = track
+    end
+end
+
+local function setDefaultAnimateDisabled(disabled)
+    local ch = LP.Character
+    if not ch then return end
+    local animate = ch:FindFirstChild("Animate")
+    if animate then pcall(function() animate.Disabled = disabled end) end
+end
+
+local function applySlotAnims()
+    if not state.customAnimsEnabled then
+        stopAllSlotTracks()
+        setDefaultAnimateDisabled(false)
+        return
+    end
+    if not LP.Character then return end
+    local h = LP.Character:FindFirstChildOfClass("Humanoid")
+    if not h or h.RigType ~= Enum.HumanoidRigType.R15 then
+        notify('<font color="#ff5a5a">Custom anims need R15 rig</font>')
+        state.customAnimsEnabled = false
+        if updateViz then updateViz("customAnimsEnabled") end
+        return
+    end
+    setDefaultAnimateDisabled(true)
+    animState.current = "Idle"
+    playSlot("Idle", state.customAnims.Idle)
+end
+
+-- State monitor: switches slot animations based on what the character is doing
+task.spawn(function()
+    while true do
+        task.wait(0.08)
+        if state.customAnimsEnabled and LP.Character then
+            local h = LP.Character:FindFirstChildOfClass("Humanoid")
+            if h and h.Health > 0 and h.RigType == Enum.HumanoidRigType.R15 then
+                local st = h:GetState()
+                local speed = 0
+                if h.RootPart then
+                    speed = Vector3.new(h.RootPart.AssemblyLinearVelocity.X, 0, h.RootPart.AssemblyLinearVelocity.Z).Magnitude
+                end
+                local newSlot = "Idle"
+                if st == Enum.HumanoidStateType.Climbing then newSlot = "Climb"
+                elseif st == Enum.HumanoidStateType.Freefall then newSlot = "Fall"
+                elseif st == Enum.HumanoidStateType.Jumping then newSlot = "Jump"
+                elseif h.Sit or st == Enum.HumanoidStateType.Seated then newSlot = "Sit"
+                elseif h.MoveDirection.Magnitude > 0.1 then
+                    if speed > 12 then newSlot = "Run" else newSlot = "Walk" end
+                end
+                if newSlot ~= animState.current then
+                    animState.current = newSlot
+                    playSlot(newSlot, state.customAnims[newSlot])
+                end
+            end
+        end
+    end
+end)
+
+LP.CharacterAdded:Connect(function()
+    stopEmote()
+    stopAllSlotTracks()
+    animState.current = "Idle"
+    if state.customAnimsEnabled then
+        task.wait(1.2)
+        applySlotAnims()
+    end
+end)
+-- =============================================================
+
 -- Round timer
 local rtGui = Instance.new("ScreenGui")
 rtGui.Name = "AWRT"; rtGui.Parent = getGuiParent()
@@ -521,7 +722,7 @@ rtValue.BackgroundTransparency = 1; rtValue.Text = "0:00"
 rtValue.TextColor3 = Color3.new(1, 1, 1)
 rtValue.Font = Enum.Font.GothamBold; rtValue.TextSize = 22
 
--- Info HUD (auto-collapsing)
+-- Info HUD
 local ihGui = Instance.new("ScreenGui")
 ihGui.Name = "AWIH"; ihGui.Parent = getGuiParent()
 ihGui.ResetOnSpawn = false; ihGui.DisplayOrder = 999996; ihGui.IgnoreGuiInset = true
@@ -621,8 +822,9 @@ local mainTgls = {}; local quickTgls = {}
 local quickFrame = nil; local bgFrame = nil; local bgImage = nil; local mainOpenBtn = nil
 local applyLowDeviceOptimizations = function() end
 local applyFpsBoost = function() end
+local updateViz = function() end
 
-local function updateViz(key)
+updateViz = function(key)
     if mainTgls[key] then
         local d = mainTgls[key]; local on = state[key]
         TweenService:Create(d.pill, TweenInfo.new(0.28, Enum.EasingStyle.Quint), {
@@ -699,6 +901,10 @@ local function setToggleState(key, value)
             end)
         elseif key == "fpsBoost" then applyFpsBoost(state.fpsBoost)
         elseif key == "quickTogglesVisible" and quickFrame then quickFrame.Visible = state.quickTogglesVisible
+        elseif key == "disableAnimations" then
+            task.delay(0.15, function() pcall(function() buildUI(true) end) end)
+        elseif key == "customAnimsEnabled" then
+            task.spawn(function() applySlotAnims() end)
         elseif key == "showRoundTimerCountdown" and not value then roundTimerFrame.Visible = false end
         saveSettings()
     end)
@@ -827,7 +1033,6 @@ local function getRoundTimeRemaining()
     return nil
 end
 
--- ==================== ROLE DETECTION (FIXED: checks data before tools) ====================
 local cachedRoleModule = nil
 local cachedRoleModuleAt = 0
 local function getCachedRoleData()
@@ -871,19 +1076,16 @@ local function getPlayerRole(plr)
     local ch = plr.Character
     local bp = plr:FindFirstChild("Backpack")
 
-    -- 1) Player attributes (set the instant roles are assigned)
     for _, attrName in ipairs({"Role","role","RoleName","roleName","Team","team"}) do
         local a = plr:GetAttribute(attrName)
         if a and tostring(a) ~= "" then return tostring(a) end
     end
 
-    -- 2) Team
     if plr.Team and plr.Team.Name ~= "" then
         local tn = plr.Team.Name
         if tn ~= "Innocents" and tn ~= "Lobby" then return tn end
     end
 
-    -- 3) Character attributes / tags
     if ch then
         for _, attrName in ipairs({"Role","role","RoleName","roleName"}) do
             local a = ch:GetAttribute(attrName)
@@ -894,7 +1096,6 @@ local function getPlayerRole(plr)
         if ch:FindFirstChild("Hero")     or ch:FindFirstChild("IsHero")     then return "Hero"     end
     end
 
-    -- 4) Role module data
     local rd = getCachedRoleData()
     if rd and type(rd) == "table" then
         local pd = rd[plr.Name] or rd[tostring(plr.UserId)] or rd[plr.UserId]
@@ -907,7 +1108,6 @@ local function getPlayerRole(plr)
         end
     end
 
-    -- 5) Tools (last resort)
     if (ch and ch:FindFirstChild("Knife")) or (bp and bp:FindFirstChild("Knife")) then return "Murderer" end
     if (ch and ch:FindFirstChild("Gun"))   or (bp and bp:FindFirstChild("Gun"))   then return "Sheriff"  end
 
@@ -1317,6 +1517,75 @@ local function playPartyPop()
     end)
 end
 
+local function showSecretDeleteNotice()
+    local pg = Instance.new("ScreenGui")
+    pg.Name = "AWDeleteNotice"
+    pg.Parent = getGuiParent()
+    pg.ResetOnSpawn = false
+    pg.DisplayOrder = 2500000
+    pg.IgnoreGuiInset = true
+
+    local bg = Instance.new("Frame", pg)
+    bg.Size = UDim2.new(1, 0, 1, 0)
+    bg.BackgroundColor3 = Color3.new(0, 0, 0)
+    bg.BackgroundTransparency = 1
+    bg.BorderSizePixel = 0
+    TweenService:Create(bg, TweenInfo.new(0.5), {BackgroundTransparency = 0.35}):Play()
+
+    local card = Instance.new("Frame", bg)
+    card.AnchorPoint = Vector2.new(0.5, 0.5)
+    card.Position = UDim2.new(0.5, 0, 0.5, 0)
+    card.Size = UDim2.new(0, 0, 0, 0)
+    card.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    card.BorderSizePixel = 0
+    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 16)
+    local cs = Instance.new("UIStroke", card)
+    cs.Color = Color3.fromRGB(80, 80, 80); cs.Transparency = 0.2
+    TweenService:Create(card, TweenInfo.new(0.6, Enum.EasingStyle.Back), {Size = UDim2.new(0, 400, 0, 210)}):Play()
+
+    local title = Instance.new("TextLabel", card)
+    title.Size = UDim2.new(1, -30, 0, 60)
+    title.Position = UDim2.new(0, 15, 0, 25)
+    title.BackgroundTransparency = 1
+    title.Text = "Please delete the Appleware.json file"
+    title.TextColor3 = Color3.new(1, 1, 1)
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 17
+    title.TextWrapped = true
+    title.TextTransparency = 1
+
+    local desc = Instance.new("TextLabel", card)
+    desc.Size = UDim2.new(1, -30, 0, 50)
+    desc.Position = UDim2.new(0, 15, 0, 90)
+    desc.BackgroundTransparency = 1
+    desc.Text = "This message is shown only once."
+    desc.TextColor3 = Color3.fromRGB(170, 170, 170)
+    desc.Font = Enum.Font.Gotham
+    desc.TextSize = 12
+    desc.TextWrapped = true
+    desc.TextTransparency = 1
+
+    local okBtn = Instance.new("TextButton", card)
+    okBtn.Size = UDim2.new(1, -40, 0, 36)
+    okBtn.Position = UDim2.new(0, 20, 1, -56)
+    okBtn.BackgroundColor3 = Color3.new(1, 1, 1)
+    okBtn.Text = "Got it"
+    okBtn.TextColor3 = Color3.new(0, 0, 0)
+    okBtn.Font = Enum.Font.GothamBold
+    okBtn.TextSize = 13
+    okBtn.AutoButtonColor = false
+    Instance.new("UICorner", okBtn).CornerRadius = UDim.new(0, 9)
+
+    TweenService:Create(title, TweenInfo.new(0.5), {TextTransparency = 0}):Play()
+    TweenService:Create(desc, TweenInfo.new(0.6), {TextTransparency = 0}):Play()
+
+    okBtn.MouseButton1Click:Connect(function()
+        TweenService:Create(card, TweenInfo.new(0.4, Enum.EasingStyle.Back), {Size = UDim2.new(0, 0, 0, 0)}):Play()
+        TweenService:Create(bg, TweenInfo.new(0.4), {BackgroundTransparency = 1}):Play()
+        task.delay(0.5, function() if pg then pg:Destroy() end end)
+    end)
+end
+
 local function killCustomNow()
     task.spawn(function()
         if #settingsConfig.flingList == 0 then setStatus("Custom Targets list is empty!") return end
@@ -1583,6 +1852,201 @@ local function resetX4(i)
         voting = false; isExecutingAction = false
     end)
 end
+
+-- ====================== EMOTE + ANIMATION DATA ======================
+local EMOTES = {
+    {id="93105950995997", name="Caramelldansen"},
+    {id="84306405425879", name="Caramell Dansen [BEST]"},
+    {id="85361710130557", name="Caramelldansen (Alt)"},
+    {id="80877772569772", name="Default Dance | OG"},
+    {id="133158580522571", name="Default Dance"},
+    {id="17746270218",  name="Sturdy Dance - Ice Spice"},
+    {id="85608190427964",name="Sturdy Dance"},
+    {id="129149402922241",name="Griddy"},
+    {id="126516908191316",name="Billy Bounce"},
+    {id="93450937830334",name="Billy Bounce (Alt)"},
+    {id="98901420955781",name="Hakari Dance [FORSAKEN]"},
+    {id="122147154162464",name="Hakari Dance"},
+    {id="131013239122616",name="Hakari Dance (Alt)"},
+    {id="15571539403",  name="Nicki Minaj Anaconda"},
+    {id="15571538346",  name="Nicki Minaj Boom Boom Boom"},
+    {id="15571540519",  name="Nicki Minaj Starships"},
+    {id="15571536896",  name="Nicki Minaj Super Bass"},
+    {id="78058324703968",name="Michael Jackson [BEST]"},
+    {id="122773107025712",name="Michael Jackson"},
+    {id="94226046885073",name="Smooth Criminal MJ"},
+    {id="15506503658",  name="Victory Dance"},
+    {id="6865013133",   name="Cha Cha"},
+    {id="3696764866",   name="Cha-Cha (Alt)"},
+    {id="115777223962514",name="Ya Ya Ying Dance"},
+    {id="121076776003313",name="Ya Ya Ying Dance [OG]"},
+    {id="131407261984740",name="Buss It! [OG]"},
+    {id="89157328525577",name="Silly Jumping Spider"},
+    {id="85364777159340",name="Rat Dance"},
+    {id="94083401455021",name="Rat Dance (Alt)"},
+    {id="79460913196046",name="Rat Dance Meme"},
+    {id="86656342856697",name="Macarena"},
+    {id="73946479113094",name="Macarena (Alt)"},
+    {id="81808860196321",name="Hotel Transylvania Macarena"},
+    {id="91927498467600",name="Koto Nai Meme Dance"},
+    {id="130655908439646",name="Beat Da Koto Nai"},
+    {id="126468010841883",name="Spice Queen of Da Place"},
+    {id="121347449465835",name="Spice Keep Bouncing"},
+    {id="70975021709810",name="Big G Bounce"},
+    {id="139271706064778",name="Hip Bounce"},
+    {id="104060042886647",name="[OG] Brooklyn Pop Hip Swing"},
+    {id="120037539988659",name="[OG] Nya San Russian Kawaii"},
+    {id="111665668810578",name="Sigma Boy Dance"},
+    {id="17000058939",  name="Mini Kong"},
+    {id="18443268949",  name="SpongeBob Imaginaaation"},
+    {id="107899954696611",name="Spongebob Shuffle Dance"},
+    {id="18443271885",  name="SpongeBob Dance"},
+    {id="3576721660",   name="Robot"},
+    {id="5917570207",   name="Floss Dance"},
+    {id="132367660388476",name="SHAKE"},
+    {id="13520623514",  name="TWICE Fancy"},
+    {id="14900151704",  name="TWICE LIKEY"},
+    {id="91811386043367",name="TWICE - What Is Love"},
+    {id="13344121112",  name="TWICE What Is Love (Alt)"},
+    {id="12874468267",  name="TWICE The Feels"},
+    {id="79194689807074",name="TWICE - The Feels"},
+    {id="116468071022853",name="Gangnam Style (Original)"},
+    {id="80923445784018",name="Gangnam Style"},
+    {id="104142334418357",name="It's Gangnam Style! [BEST]"},
+    {id="119256963154827",name="Dougie Meme Dance"},
+    {id="114756515400742",name="Dougie [BEST]"},
+    {id="93675237485386",name="Dougie"},
+    {id="123831614665513",name="Jump - BLACKPINK [BEST]"},
+    {id="106977382414370",name="Jump - BLACKPINK"},
+    {id="122404842843791",name="JUMP - BP (KPOP)"},
+    {id="138319492354914",name="Yuji Jumping Slowed"},
+    {id="113702736944973",name="Yuji Jumping Edit"},
+    {id="4212496830",    name="Zombie"},
+    {id="75017857395637",name="TV Time Dance"},
+    {id="128729212388115",name="Phibz [OG]"},
+    {id="95386318624540",name="Phibz"},
+    {id="92237689732858",name="Da Hood Stomp"},
+    {id="123783725600432",name="Da Hood Dance"},
+    {id="123043305808890",name="Spongebob"},
+    {id="137284968787523",name="Street Glide"},
+    {id="91773089278851",name="Street Flow Bounce"},
+    {id="129931581232815",name="VEM CA NÉNEM"},
+    {id="130838810836830",name="Umamusume Dance"},
+    {id="130575801528647",name="Childish Tantrum"},
+    {id="121911959295081",name="Kid Tantrum"},
+    {id="5104374556",    name="Tantrum"},
+    {id="13823339506",   name="Tommy Archer"},
+    {id="133248139921782",name="Jumpstyle dance"},
+    {id="89614983665331",name="Jumpstyle Dance (Alt)"},
+    {id="99563839802389",name="Jumpstyle (Alt 2)"},
+    {id="121067808279598",name="PARROT PARTY DANCE"},
+    {id="129389629031100",name="Ledge/Railing Sit"},
+    {id="3576717965",    name="Shy"},
+    {id="129668542320076",name="/e sit"},
+    {id="124072098165199",name="/e dance2"},
+    {id="93511411593120",name="/e fly"},
+    {id="97830214926142",name="Accurate Admin Fly"},
+}
+
+local ANIMATIONS = {
+    {id="73100418080632", name="Aura Floating Emote"},
+    {id="79795305221612", name="Floating Aura"},
+    {id="102256275785620",name="Angel Flying"},
+    {id="127195099938159",name="Chill Floating Fly Aura"},
+    {id="80772558169667", name="Slow Transformation"},
+    {id="78660312825816", name="GRIMES - Oblivion"},
+    {id="89104845724058", name="Adorable Dolly Pose"},
+    {id="87739743400914", name="Catwalk Walk"},
+    {id="120380776076922",name="Catwalk Walk (Alt)"},
+    {id="138140141577966",name="Catwalk Walk (OG)"},
+    {id="120302905807132",name="STURDY"},
+    {id="135922662345048",name="Snow Angels"},
+    {id="125386993330077",name="Scene Profile Idle Y2K"},
+    {id="138453007205351",name="Sukuna Aura Pose"},
+    {id="93043556902763", name="Aura Posing"},
+    {id="122498540377510",name="Godly Floating Sleeping Aura"},
+    {id="103981563274328",name="Faceless Aura"},
+    {id="137909901344953",name="Cute Bossy Sassy Idle"},
+    {id="139828710607670",name="Cute Sitting Idle Pose"},
+    {id="135994700702758",name="Cute n Shy Idle Profile Pose"},
+    {id="127478024269658",name="7 Rings Dance"},
+    {id="136271269847411",name="Metro Man Arm Swings"},
+    {id="107758711296968",name="Floating Lying Down: Metro Man"},
+    {id="109779894589589",name="Excited Spinning Dog"},
+    {id="87587450444673", name="Spinning"},
+    {id="84555218084038", name="Helicopter Spin"},
+    {id="110553756436163",name="Helicopter"},
+    {id="140547238892659",name="Helicopter (Alt)"},
+    {id="119431985170060",name="Helicopter (Alt 2)"},
+    {id="3576719440",     name="T Pose"},
+    {id="3823158750",     name="Godlike"},
+    {id="5104377791",     name="Hero Landing"},
+    {id="4689362868",     name="Sleep"},
+    {id="3716633898",     name="Twirl"},
+    {id="128920596154369",name="Belly Dance"},
+    {id="76700167742736", name="Belly Dance (Alt)"},
+    {id="121899062503943",name="Belly Dancing"},
+    {id="105933851371838",name="Kawaii Shy Sit Idle Pose"},
+    {id="126684112484206",name="Cute Shy Avatar Pose (LOOPED)"},
+    {id="129766891082557",name="Sweetest Angel Sit Pose"},
+    {id="124031351335869",name="Kayah's Cute Pose"},
+    {id="13768975574",    name="TWICE Pop by Nayeon"},
+    {id="88416001739999", name="Biblically Accurate Emote"},
+    {id="133596366979822",name="Biblically Accurate Emote (Alt)"},
+    {id="103040723950430",name="Gojo Floating Pose / The Honored One"},
+    {id="100953557187752",name="Gojo Floating The Honored One"},
+    {id="108317182353594",name="Gojo Levitation"},
+    {id="91085159191582", name="Gojo Floating JJK"},
+    {id="132631811481169",name="Invincible Viltrumite Flying"},
+    {id="93375577935500", name="Invincible Floating (LOW)"},
+    {id="131950236025472",name="Relax Flying Anime (Floating)"},
+    {id="117134539591727",name="Floating Idle animation"},
+    {id="132152702263080",name="Fairy Sit Floating Anime"},
+    {id="95339652051393", name="Sad Depressed Crying Sit"},
+    {id="124305244640379",name="Shattered"},
+    {id="130726889233022",name="Rolling Crybaby"},
+    {id="123403317287994",name="Just Sitting"},
+    {id="139621472081340",name="Sit"},
+    {id="129575609080331",name="Cute Sit"},
+    {id="126847889432485",name="Vibing Sit"},
+    {id="85370173309996", name="Side Sit"},
+    {id="82167506755506", name="Cute Sit (Alt)"},
+    {id="113112871341684",name="CUTE SIT"},
+    {id="131875333242836",name="Cute Sit (Alt 2)"},
+    {id="118688124889191",name="Nya San"},
+    {id="12715393154",    name="TWICE Moonlight Sunrise"},
+    {id="12715395038",    name="TWICE Set Me Free Dance 1"},
+    {id="12715397488",    name="TWICE Set Me Free Dance 2"},
+    {id="127271798262177",name="M3GAN's Dance"},
+    {id="122087602422027",name="Kawaii Bouncy Anime Girl Dance"},
+    {id="130855166586798",name="Kawaii Bouncy Anime Girl (OG)"},
+    {id="74193679388896", name="Bouncy Cute Girl Anime Idle"},
+    {id="93875137466223", name="Scary Tall Creature Transformation"},
+    {id="127764273000599",name="Dropkick"},
+    {id="138487798883208",name="Kawaii Cute Cat Girl Pose Idle"},
+    {id="140269876098643",name="IShowSpeed Bounce Dance"},
+    {id="86617727183442", name="Slow-Mo Backflip"},
+    {id="122461225964217",name="Big Back Baby Boo"},
+    {id="93443111556634", name="Floating Throne Aura Pose"},
+    {id="102392888934746",name="Godly Aura Floating Pose"},
+    {id="117049327096718",name="Chill Flying Levitation"},
+    {id="12507097350",    name="Alo Yoga Lotus Position"},
+    {id="12507106431",    name="Alo Yoga Warrior II"},
+    {id="12507120275",    name="Alo Yoga Triangle"},
+    {id="122814100170962",name="Obby Head Emote"},
+    {id="76394392186917", name="Obby Emote"},
+    {id="118853736905967",name="Wall Aura Farm Pose"},
+    {id="88969192102242", name="Wall Lean"},
+    {id="71556328869803", name="Wall Lean YN [AURA FARM]"},
+    {id="110537281410647",name="Wall Lean Idle [Aura Farm]"},
+    {id="125033083158711",name="Aura Wall Lean"},
+    {id="75911227509248", name="Ghost Floating"},
+    {id="111499780397123",name="Levitation Idle Emote 2"},
+    {id="15698511500",    name="Cuco - Levitate"},
+    {id="87826892596287", name="Levitate"},
+}
+-- ===================================================================
+
 buildUI = function(reb)
     mainTgls = {}; quickTgls = {}
 
@@ -1672,7 +2136,7 @@ buildUI = function(reb)
     ct.Position = UDim2.new(0, sw + 10 * selectedScale, 0, 10 * selectedScale)
     ct.BackgroundTransparency = 1; ct.ClipsDescendants = true
 
-    local tabs = {"Farm","Combat","Teleport","ESP","Webhook","Misc","UI","Voting","Secret"}
+    local tabs = {"Farm","Combat","Teleport","ESP","Webhook","Misc","UI","Voting","Emotes","Animations","Secret"}
     local pages, pageGs, btns = {}, {}, {}
     local curTab = "Farm"; local switching = false
 
@@ -1727,6 +2191,11 @@ buildUI = function(reb)
             settingsConfig.secretRevealSeen = true
             saveSettings()
             task.defer(function() playPartyPop() end)
+        end
+        if n == "Secret" and not settingsConfig.secretDeleteNoticeSeen then
+            settingsConfig.secretDeleteNoticeSeen = true
+            saveSettings()
+            task.delay(2.6, function() showSecretDeleteNotice() end)
         end
         task.delay(0.2, function() switching = false end)
     end
@@ -1901,6 +2370,400 @@ buildUI = function(reb)
         Instance.new("UICorner", box).CornerRadius = R(10)
         box.FocusLost:Connect(function() onC(box.Text) end)
         return box
+    end
+
+    local function buildAnimPage(page, list, label)
+        local info = Instance.new("TextLabel", page)
+        info.Size = UDim2.new(1, 0, 0, 20 * selectedScale)
+        info.LayoutOrder = 1
+        info.BackgroundTransparency = 1
+        info.Text = "R15 Only — plays locally on your character"
+        info.TextColor3 = Color3.fromRGB(150, 150, 150)
+        info.Font = Enum.Font.GothamBold
+        info.TextSize = 10 * fm
+        info.TextXAlignment = Enum.TextXAlignment.Left
+
+        local stopBtn = Instance.new("TextButton", page)
+        stopBtn.Size = UDim2.new(1, 0, 0, 34 * selectedScale)
+        stopBtn.LayoutOrder = 2
+        stopBtn.BackgroundColor3 = Color3.fromRGB(120, 30, 30)
+        stopBtn.Text = "  ■ Stop Current Emote"
+        stopBtn.TextColor3 = Color3.new(1, 1, 1)
+        stopBtn.Font = Enum.Font.GothamBold
+        stopBtn.TextSize = 12 * fm
+        stopBtn.TextXAlignment = Enum.TextXAlignment.Left
+        stopBtn.AutoButtonColor = false
+        Instance.new("UICorner", stopBtn).CornerRadius = R(9)
+        attachBounce(stopBtn); attachRipple(stopBtn)
+        stopBtn.MouseButton1Click:Connect(function()
+            stopEmote()
+            notify('<font color="#7ec8ff">Emote stopped</font>')
+        end)
+
+        local search = Instance.new("TextBox", page)
+        search.Size = UDim2.new(1, 0, 0, 32 * selectedScale)
+        search.LayoutOrder = 3
+        search.BackgroundColor3 = CARD
+        search.PlaceholderText = "Search " .. label .. " (" .. tostring(#list) .. ")..."
+        search.PlaceholderColor3 = TXTD
+        search.Text = ""
+        search.TextColor3 = TXT
+        search.Font = Enum.Font.Gotham
+        search.TextSize = 12 * fm
+        search.ClearTextOnFocus = false
+        Instance.new("UICorner", search).CornerRadius = R(9)
+
+        local sc = Instance.new("ScrollingFrame", page)
+        sc.Size = UDim2.new(1, 0, 0, 380 * selectedScale)
+        sc.LayoutOrder = 4
+        sc.BackgroundTransparency = 1
+        sc.ScrollBarThickness = 3 * selectedScale
+        sc.ScrollBarImageColor3 = BORD
+        sc.CanvasSize = UDim2.new(0, 0, 0, 0)
+        local sl = Instance.new("UIListLayout", sc)
+        sl.SortOrder = Enum.SortOrder.LayoutOrder
+        sl.Padding = UDim.new(0, 5 * selectedScale)
+        sl:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            sc.CanvasSize = UDim2.new(0, 0, 0, sl.AbsoluteContentSize.Y + 8)
+        end)
+
+        local function render(filter)
+            for _, c in ipairs(sc:GetChildren()) do
+                if c:IsA("GuiObject") and c ~= sl then c:Destroy() end
+            end
+            filter = string.lower(filter or "")
+            local shown = 0
+            for i, entry in ipairs(list) do
+                local nm = string.lower(entry.name)
+                if filter == "" or string.find(nm, filter, 1, true) then
+                    shown = shown + 1
+                    local b = Instance.new("TextButton", sc)
+                    b.Size = UDim2.new(1, 0, 0, 32 * selectedScale)
+                    b.LayoutOrder = i
+                    b.BackgroundColor3 = CARD
+                    b.Text = ""
+                    b.AutoButtonColor = false
+                    b.ClipsDescendants = true
+                    Instance.new("UICorner", b).CornerRadius = R(8)
+                    local l = Instance.new("TextLabel", b)
+                    l.Size = UDim2.new(1, -12 * selectedScale, 1, 0)
+                    l.Position = UDim2.new(0, 12 * selectedScale, 0, 0)
+                    l.BackgroundTransparency = 1
+                    l.Text = entry.name
+                    l.TextColor3 = TXT
+                    l.Font = Enum.Font.GothamMedium
+                    l.TextSize = 11.5 * fm
+                    l.TextXAlignment = Enum.TextXAlignment.Left
+                    l.TextTruncate = Enum.TextTruncate.AtEnd
+                    b.MouseEnter:Connect(function()
+                        TweenService:Create(b, TweenInfo.new(0.2), {BackgroundColor3 = CH}):Play()
+                    end)
+                    b.MouseLeave:Connect(function()
+                        TweenService:Create(b, TweenInfo.new(0.2), {BackgroundColor3 = CARD}):Play()
+                    end)
+                    attachBounce(b); attachRipple(b)
+                    b.MouseButton1Click:Connect(function()
+                        playEmote(entry.id, entry.name)
+                    end)
+                end
+            end
+            if shown == 0 then
+                local l = Instance.new("TextLabel", sc)
+                l.Size = UDim2.new(1, 0, 0, 24 * selectedScale)
+                l.BackgroundTransparency = 1
+                l.Text = "No matches"
+                l.TextColor3 = TXTD
+                l.Font = Enum.Font.Gotham
+                l.TextSize = 11 * fm
+                l.TextXAlignment = Enum.TextXAlignment.Left
+            end
+        end
+        search:GetPropertyChangedSignal("Text"):Connect(function() render(search.Text) end)
+        render("")
+    end
+
+    -- Slot-based animation tab
+    local function buildSlotsPage(page, list)
+        local info = Instance.new("TextLabel", page)
+        info.Size = UDim2.new(1, 0, 0, 20 * selectedScale)
+        info.LayoutOrder = 1
+        info.BackgroundTransparency = 1
+        info.Text = "R15 Only — assigns an animation to each movement slot"
+        info.TextColor3 = Color3.fromRGB(150, 150, 150)
+        info.Font = Enum.Font.GothamBold
+        info.TextSize = 10 * fm
+        info.TextXAlignment = Enum.TextXAlignment.Left
+
+        -- Enable toggle
+        local enRow = Instance.new("Frame", page)
+        enRow.Size = UDim2.new(1, 0, 0, 40 * selectedScale)
+        enRow.LayoutOrder = 2; enRow.BackgroundColor3 = CARD
+        Instance.new("UICorner", enRow).CornerRadius = R(10)
+        local enLbl = Instance.new("TextLabel", enRow)
+        enLbl.Size = UDim2.new(1, -64 * selectedScale, 1, 0)
+        enLbl.Position = UDim2.new(0, 14 * selectedScale, 0, 0)
+        enLbl.BackgroundTransparency = 1; enLbl.Text = "Enable Custom Animations"
+        enLbl.TextColor3 = TXT; enLbl.Font = Enum.Font.GothamMedium; enLbl.TextSize = 12.5 * fm
+        enLbl.TextXAlignment = Enum.TextXAlignment.Left
+        local enPill = Instance.new("Frame", enRow)
+        enPill.Size = UDim2.new(0, 44 * selectedScale, 0, 24 * selectedScale)
+        enPill.Position = UDim2.new(1, -54 * selectedScale, 0.5, -12 * selectedScale)
+        enPill.BackgroundColor3 = state.customAnimsEnabled and ACC or Color3.fromRGB(32,32,32)
+        Instance.new("UICorner", enPill).CornerRadius = UDim.new(1, 0)
+        local enDot = Instance.new("Frame", enPill)
+        enDot.Size = UDim2.new(0, 16 * selectedScale, 0, 16 * selectedScale)
+        enDot.Position = state.customAnimsEnabled and UDim2.new(1, -20 * selectedScale, 0.5, -8 * selectedScale)
+                        or UDim2.new(0, 4 * selectedScale, 0.5, -8 * selectedScale)
+        enDot.BackgroundColor3 = state.customAnimsEnabled and Color3.new(0,0,0) or Color3.fromRGB(200,200,200)
+        Instance.new("UICorner", enDot).CornerRadius = UDim.new(1, 0)
+        mainTgls["customAnimsEnabled"] = {pill = enPill, dot = enDot}
+        local enHit = Instance.new("TextButton", enRow)
+        enHit.Size = UDim2.new(1, 0, 1, 0); enHit.BackgroundTransparency = 1; enHit.Text = ""; enHit.AutoButtonColor = false
+        enHit.MouseButton1Click:Connect(function()
+            state.customAnimsEnabled = not state.customAnimsEnabled
+            TweenService:Create(enPill, TweenInfo.new(0.28, Enum.EasingStyle.Quint), {
+                BackgroundColor3 = state.customAnimsEnabled and ACC or Color3.fromRGB(32,32,32)
+            }):Play()
+            TweenService:Create(enDot, TweenInfo.new(0.42, Enum.EasingStyle.Back), {
+                Position = state.customAnimsEnabled and UDim2.new(1, -20 * selectedScale, 0.5, -8 * selectedScale)
+                            or UDim2.new(0, 4 * selectedScale, 0.5, -8 * selectedScale),
+                BackgroundColor3 = state.customAnimsEnabled and Color3.new(0,0,0) or Color3.fromRGB(200,200,200)
+            }):Play()
+            applySlotAnims()
+            saveSettings()
+            notify("Custom Anims " .. (state.customAnimsEnabled and "enabled" or "disabled"))
+        end)
+
+        -- Picker overlay
+        local picker = Instance.new("Frame", main)
+        picker.Name = "AnimPicker"
+        picker.Size = UDim2.new(1, 0, 1, 0)
+        picker.BackgroundColor3 = Color3.new(0, 0, 0)
+        picker.BackgroundTransparency = 0.35
+        picker.Visible = false
+        picker.ZIndex = 900000
+        picker.Active = true
+
+        local pCard = Instance.new("Frame", picker)
+        pCard.AnchorPoint = Vector2.new(0.5, 0.5)
+        pCard.Position = UDim2.new(0.5, 0, 0.5, 0)
+        pCard.Size = UDim2.new(0, 380 * selectedScale, 0, 380 * selectedScale)
+        pCard.BackgroundColor3 = BG_COLOR
+        pCard.ZIndex = 900001
+        Instance.new("UICorner", pCard).CornerRadius = R(12)
+        local pStroke = Instance.new("UIStroke", pCard)
+        pStroke.Color = BORD; pStroke.Transparency = 0.3
+
+        local pTitle = Instance.new("TextLabel", pCard)
+        pTitle.Size = UDim2.new(1, -20 * selectedScale, 0, 30 * selectedScale)
+        pTitle.Position = UDim2.new(0, 10 * selectedScale, 0, 6 * selectedScale)
+        pTitle.BackgroundTransparency = 1
+        pTitle.Text = "Select Animation"
+        pTitle.TextColor3 = TXT
+        pTitle.Font = Enum.Font.GothamBold
+        pTitle.TextSize = 13 * fm
+        pTitle.TextXAlignment = Enum.TextXAlignment.Left
+        pTitle.ZIndex = 900002
+
+        local pClose = Instance.new("TextButton", pCard)
+        pClose.Size = UDim2.new(0, 26 * selectedScale, 0, 26 * selectedScale)
+        pClose.Position = UDim2.new(1, -34 * selectedScale, 0, 8 * selectedScale)
+        pClose.BackgroundColor3 = Color3.fromRGB(160, 40, 40)
+        pClose.Text = "X"
+        pClose.TextColor3 = Color3.new(1, 1, 1)
+        pClose.Font = Enum.Font.GothamBold
+        pClose.TextSize = 12 * fm
+        pClose.ZIndex = 900002
+        Instance.new("UICorner", pClose).CornerRadius = R(6)
+
+        local pSearch = Instance.new("TextBox", pCard)
+        pSearch.Size = UDim2.new(1, -20 * selectedScale, 0, 30 * selectedScale)
+        pSearch.Position = UDim2.new(0, 10 * selectedScale, 0, 40 * selectedScale)
+        pSearch.BackgroundColor3 = CARD
+        pSearch.PlaceholderText = "Search..."
+        pSearch.PlaceholderColor3 = TXTD
+        pSearch.Text = ""
+        pSearch.TextColor3 = TXT
+        pSearch.Font = Enum.Font.Gotham
+        pSearch.TextSize = 12 * fm
+        pSearch.ClearTextOnFocus = false
+        pSearch.ZIndex = 900002
+        Instance.new("UICorner", pSearch).CornerRadius = R(8)
+
+        local pList = Instance.new("ScrollingFrame", pCard)
+        pList.Size = UDim2.new(1, -20 * selectedScale, 1, -80 * selectedScale)
+        pList.Position = UDim2.new(0, 10 * selectedScale, 0, 74 * selectedScale)
+        pList.BackgroundTransparency = 1
+        pList.ScrollBarThickness = 3 * selectedScale
+        pList.ScrollBarImageColor3 = BORD
+        pList.CanvasSize = UDim2.new(0, 0, 0, 0)
+        pList.ZIndex = 900002
+        local pLayout = Instance.new("UIListLayout", pList)
+        pLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        pLayout.Padding = UDim.new(0, 4 * selectedScale)
+        pLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            pList.CanvasSize = UDim2.new(0, 0, 0, pLayout.AbsoluteContentSize.Y + 8)
+        end)
+
+        local pickerSlot = nil
+        local refreshSlotButtons
+
+        local function closePicker()
+            picker.Visible = false
+            pickerSlot = nil
+        end
+        pClose.MouseButton1Click:Connect(closePicker)
+
+        local function renderPicker()
+            for _, c in ipairs(pList:GetChildren()) do
+                if c:IsA("GuiObject") and c ~= pLayout then c:Destroy() end
+            end
+            local filter = string.lower(pSearch.Text or "")
+            local order = 0
+            do
+                order = order + 1
+                local b = Instance.new("TextButton", pList)
+                b.Size = UDim2.new(1, 0, 0, 30 * selectedScale)
+                b.LayoutOrder = order
+                b.BackgroundColor3 = CARD
+                b.Text = ""
+                b.AutoButtonColor = false
+                Instance.new("UICorner", b).CornerRadius = R(7)
+                local l = Instance.new("TextLabel", b)
+                l.Size = UDim2.new(1, -12 * selectedScale, 1, 0)
+                l.Position = UDim2.new(0, 12 * selectedScale, 0, 0)
+                l.BackgroundTransparency = 1; l.Text = "Default (Roblox)"
+                l.TextColor3 = Color3.fromRGB(150, 200, 255)
+                l.Font = Enum.Font.GothamBold; l.TextSize = 11.5 * fm
+                l.TextXAlignment = Enum.TextXAlignment.Left
+                b.MouseButton1Click:Connect(function()
+                    if pickerSlot then
+                        state.customAnims[pickerSlot] = "Default"
+                        if state.customAnimsEnabled then
+                            playSlot(pickerSlot, "Default")
+                        end
+                        saveSettings()
+                        if refreshSlotButtons then refreshSlotButtons() end
+                    end
+                    closePicker()
+                end)
+            end
+            for i, entry in ipairs(list) do
+                local nm = string.lower(entry.name)
+                if filter == "" or string.find(nm, filter, 1, true) then
+                    order = order + 1
+                    local b = Instance.new("TextButton", pList)
+                    b.Size = UDim2.new(1, 0, 0, 30 * selectedScale)
+                    b.LayoutOrder = order
+                    b.BackgroundColor3 = CARD
+                    b.Text = ""
+                    b.AutoButtonColor = false
+                    Instance.new("UICorner", b).CornerRadius = R(7)
+                    local l = Instance.new("TextLabel", b)
+                    l.Size = UDim2.new(1, -12 * selectedScale, 1, 0)
+                    l.Position = UDim2.new(0, 12 * selectedScale, 0, 0)
+                    l.BackgroundTransparency = 1; l.Text = entry.name
+                    l.TextColor3 = TXT
+                    l.Font = Enum.Font.GothamMedium; l.TextSize = 11.5 * fm
+                    l.TextXAlignment = Enum.TextXAlignment.Left
+                    l.TextTruncate = Enum.TextTruncate.AtEnd
+                    b.MouseEnter:Connect(function()
+                        TweenService:Create(b, TweenInfo.new(0.15), {BackgroundColor3 = CH}):Play()
+                    end)
+                    b.MouseLeave:Connect(function()
+                        TweenService:Create(b, TweenInfo.new(0.15), {BackgroundColor3 = CARD}):Play()
+                    end)
+                    b.MouseButton1Click:Connect(function()
+                        if pickerSlot then
+                            state.customAnims[pickerSlot] = tostring(entry.id)
+                            if state.customAnimsEnabled then
+                                playSlot(pickerSlot, tostring(entry.id))
+                            end
+                            saveSettings()
+                            if refreshSlotButtons then refreshSlotButtons() end
+                        end
+                        closePicker()
+                    end)
+                end
+            end
+        end
+        pSearch:GetPropertyChangedSignal("Text"):Connect(renderPicker)
+
+        local slotButtons = {}
+        refreshSlotButtons = function()
+            for slot, btn in pairs(slotButtons) do
+                local id = state.customAnims[slot]
+                if not id or id == "Default" or id == "" then
+                    btn.Text = "Default"
+                    btn.TextColor3 = Color3.fromRGB(150, 200, 255)
+                else
+                    local found = "ID: " .. tostring(id)
+                    for _, e in ipairs(list) do
+                        if tostring(e.id) == tostring(id) then found = e.name; break end
+                    end
+                    btn.Text = found
+                    btn.TextColor3 = Color3.fromRGB(255, 220, 150)
+                end
+            end
+        end
+
+        local function makeSlotRow(slot, order)
+            local row = Instance.new("Frame", page)
+            row.Size = UDim2.new(1, 0, 0, 54 * selectedScale)
+            row.LayoutOrder = order
+            row.BackgroundColor3 = CARD
+            Instance.new("UICorner", row).CornerRadius = R(10)
+
+            local topLbl = Instance.new("TextLabel", row)
+            topLbl.Size = UDim2.new(1, -20 * selectedScale, 0, 18 * selectedScale)
+            topLbl.Position = UDim2.new(0, 12 * selectedScale, 0, 4 * selectedScale)
+            topLbl.BackgroundTransparency = 1
+            topLbl.Text = slot .. " Animation"
+            topLbl.TextColor3 = TXTD
+            topLbl.Font = Enum.Font.GothamBold
+            topLbl.TextSize = 10 * fm
+            topLbl.TextXAlignment = Enum.TextXAlignment.Left
+
+            local sel = Instance.new("TextButton", row)
+            sel.Size = UDim2.new(1, -24 * selectedScale, 0, 24 * selectedScale)
+            sel.Position = UDim2.new(0, 12 * selectedScale, 0, 22 * selectedScale)
+            sel.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+            sel.Text = "Default"
+            sel.TextColor3 = Color3.fromRGB(150, 200, 255)
+            sel.Font = Enum.Font.GothamMedium
+            sel.TextSize = 11.5 * fm
+            sel.TextXAlignment = Enum.TextXAlignment.Left
+            sel.AutoButtonColor = false
+            Instance.new("UICorner", sel).CornerRadius = R(6)
+            local selPad = Instance.new("UIPadding", sel)
+            selPad.PaddingLeft = UDim.new(0, 10 * selectedScale)
+
+            local arrow = Instance.new("TextLabel", sel)
+            arrow.Size = UDim2.new(0, 20 * selectedScale, 1, 0)
+            arrow.Position = UDim2.new(1, -22 * selectedScale, 0, 0)
+            arrow.BackgroundTransparency = 1
+            arrow.Text = "▼"
+            arrow.TextColor3 = TXT
+            arrow.Font = Enum.Font.GothamBold
+            arrow.TextSize = 10 * fm
+
+            attachBounce(sel)
+            sel.MouseButton1Click:Connect(function()
+                pickerSlot = slot
+                pTitle.Text = "Select " .. slot .. " Animation"
+                pSearch.Text = ""
+                renderPicker()
+                picker.Visible = true
+            end)
+
+            slotButtons[slot] = sel
+        end
+
+        local slots = {"Idle", "Walk", "Run", "Jump", "Climb", "Fall", "Sit"}
+        for i, s in ipairs(slots) do
+            makeSlotRow(s, i + 2)
+        end
+        refreshSlotButtons()
     end
 
     -- SECRET TAB
@@ -2205,6 +3068,7 @@ buildUI = function(reb)
 
     -- UI
     tgg(pages["UI"], "Show Quick Toggles Menu", 1, "quickTogglesVisible")
+    tgg(pages["UI"], "Disable UI Animations", 100, "disableAnimations")
     local sr = Instance.new("Frame", pages["UI"])
     sr.Size = UDim2.new(1, 0, 0, 40 * selectedScale); sr.LayoutOrder = 2
     sr.BackgroundColor3 = CARD
@@ -2275,7 +3139,7 @@ buildUI = function(reb)
         "Player ESP (Roles)","Gun Drop ESP",
         "Anti AFK","Auto Grab Gun","Auto Rejoin","Auto Serverhop (<= 2)",
         "Auto Prestige (Level 100)","Anti-Void","Notify Map Name","Round Timer",
-        "Show Quick Toggles Menu",
+        "Show Quick Toggles Menu","Disable UI Animations",
     }
     local function refreshManager(filter)
         for _, c in ipairs(qms:GetChildren()) do if c:IsA("GuiObject") and c ~= qml then c:Destroy() end end
@@ -2351,6 +3215,11 @@ buildUI = function(reb)
         end
     end)
 
+    -- EMOTES TAB
+    buildAnimPage(pages["Emotes"], EMOTES, "emotes")
+    -- ANIMATIONS TAB (slot-based)
+    buildSlotsPage(pages["Animations"], ANIMATIONS)
+
     -- OPEN BUTTON
     local fb = Instance.new("TextButton", sg)
     fb.Size = UDim2.new(0, 78 * selectedScale, 0, 34 * selectedScale)
@@ -2418,6 +3287,7 @@ buildUI = function(reb)
         ["Auto Prestige (Level 100)"]="autoPrestige",
         ["Show Quick Toggles Menu"]="quickTogglesVisible",
         ["Notify Map Name"]="notifyMapName",["Round Timer"]="showRoundTimerCountdown",
+        ["Disable UI Animations"]="disableAnimations",
     }
 
     local function createQuickItem(name, order)
@@ -2514,6 +3384,7 @@ end
 pcall(function() buildUI() end)
 if state.disable3d then pcall(function() applyLowDeviceOptimizations(true) end) end
 if state.fpsBoost then pcall(function() applyFpsBoost(true) end) end
+if state.customAnimsEnabled then task.spawn(function() task.wait(2); applySlotAnims() end) end
 
 -- Fly
 local flyBV, flyBG = nil, nil; local wasFlying = false
@@ -2767,7 +3638,6 @@ LP.CharacterRemoving:Connect(function()
     if invisActive then invisStop(); state.invisibleEnabled = false; updateViz("invisibleEnabled") end
 end)
 
--- Role notifications (fires as soon as role data is available)
 local nM, nS = false, false
 task.spawn(function()
     while true do
@@ -3123,7 +3993,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- ============ ESP ============
+-- ESP
 local espF = Instance.new("Folder")
 espF.Name = "AW_ESP"
 pcall(function()
