@@ -104,6 +104,7 @@ local state = {
     infJumpEnabled = false,
     invisibleEnabled = false,
     proneEnabled = false,
+    smallHitboxEnabled = false,
     instantInteract = false,
     cameraZoomEnabled = false,
     cameraMaxZoom = 500,
@@ -151,6 +152,7 @@ local toggleDisplayNames = {
     freeze = "Freeze (Anchor)", fullbright = "Fullbright",
     fovEnabled = "FOV Changer", clickTP = "Click / Tap Teleport",
     proneEnabled = "Prone (Low Hitbox)",
+    smallHitboxEnabled = "Small Hitbox",
     instantInteract = "Instant Interact",
     cameraZoomEnabled = "Camera Max Zoom",
     infoHudEnabled = "Info HUD",
@@ -723,6 +725,7 @@ local lastRoundState = false
 local roundStartTime = 0
 local hasCollectedThisRound = false
 local roundFullyStarted = false
+local farmDeathCheckTime = 0
 
 -- ==================== FLING ====================
 local activeResets = {}
@@ -1705,6 +1708,82 @@ LP.CharacterRemoving:Connect(function()
     end
 end)
 
+-- ==================== SMALL HITBOX ====================
+local smallHitboxActive = false
+local smallHitboxSaved = {}
+local smallHitboxScale = 0.35
+
+local function applySmallHitbox()
+    local char = LP.Character
+    if not char then return end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+    for _, part in ipairs(char:GetDescendants()) do
+        if part:IsA("BasePart") then
+            if not smallHitboxSaved[part] then
+                smallHitboxSaved[part] = {
+                    Size = part.Size,
+                    CanCollide = part.CanCollide,
+                }
+            end
+            -- Skip HumanoidRootPart and Handle parts so movement stays intact
+            if part.Name ~= "HumanoidRootPart" then
+                local s = smallHitboxSaved[part].Size
+                part.Size = Vector3.new(s.X * smallHitboxScale, s.Y * smallHitboxScale, s.Z * smallHitboxScale)
+            end
+        end
+    end
+    -- Keep HRP small but not tiny so tweening still works
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if hrp then
+        if not smallHitboxSaved[hrp] then
+            smallHitboxSaved[hrp] = { Size = hrp.Size, CanCollide = hrp.CanCollide }
+        end
+        hrp.Size = Vector3.new(0.5, 0.5, 0.5)
+        hrp.Transparency = 1
+    end
+end
+
+local function restoreSmallHitbox()
+    for part, data in pairs(smallHitboxSaved) do
+        if part and part.Parent then
+            pcall(function()
+                part.Size = data.Size
+                part.CanCollide = data.CanCollide
+                if part.Name == "HumanoidRootPart" then part.Transparency = 1 end
+            end)
+        end
+    end
+    smallHitboxSaved = {}
+end
+
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        if state.smallHitboxEnabled then
+            if not smallHitboxActive then
+                smallHitboxActive = true
+                setStatus("Small Hitbox ON")
+            end
+            applySmallHitbox()
+        else
+            if smallHitboxActive then
+                smallHitboxActive = false
+                restoreSmallHitbox()
+                setStatus("Small Hitbox OFF")
+            end
+        end
+    end
+end)
+
+LP.CharacterAdded:Connect(function()
+    smallHitboxSaved = {}
+    if state.smallHitboxEnabled then
+        task.wait(0.5)
+        applySmallHitbox()
+    end
+end)
+
 -- ==================== UI ====================
 buildUI = function(rebuilding)
     mainToggleButtons = {}
@@ -2309,12 +2388,13 @@ buildUI = function(rebuilding)
     makeSliderRow(pages["Secret"], "Walk Speed", 11, state.speedValue or 16, 16, 500, "speedValue")
     tgg(pages["Secret"], "Jump Power", 12, "jumpEnabled")
     makeSliderRow(pages["Secret"], "Jump Power", 13, state.jumpValue or 50, 50, 500, "jumpValue")
+    tgg(pages["Secret"], "Small Hitbox (Hard to Hit)", 14, "smallHitboxEnabled")
 
-    addSection(pages["Secret"], "Invisibility", 14)
-    tgg(pages["Secret"], "Invisible (Ghost Mode)", 15, "invisibleEnabled")
+    addSection(pages["Secret"], "Invisibility", 15)
+    tgg(pages["Secret"], "Invisible (Ghost Mode)", 16, "invisibleEnabled")
     local invisHint = Instance.new("TextLabel")
     invisHint.Size = UDim2.new(1, 0, 0, 44 * selectedScale)
-    invisHint.LayoutOrder = 16
+    invisHint.LayoutOrder = 17
     invisHint.BackgroundTransparency = 1
     invisHint.Text = "Clones your body into a ghost you control. Server scripts see the ghost's position as yours. Movement replicates to others normally."
     invisHint.TextColor3 = TEXT_DIM
@@ -2324,22 +2404,22 @@ buildUI = function(rebuilding)
     invisHint.TextWrapped = true
     invisHint.Parent = pages["Secret"]
 
-    addSection(pages["Secret"], "Visuals", 17)
-    tgg(pages["Secret"], "Fullbright", 18, "fullbright")
-    tgg(pages["Secret"], "FOV Changer", 19, "fovEnabled")
-    makeSliderRow(pages["Secret"], "Field of View", 20, state.fovValue or 70, 30, 120, "fovValue")
-    tgg(pages["Secret"], "Camera Max Zoom", 21, "cameraZoomEnabled")
-    makeSliderRow(pages["Secret"], "Max Zoom Distance", 22, state.cameraMaxZoom or 500, 100, 2000, "cameraMaxZoom")
-    tgg(pages["Secret"], "Info HUD", 23, "infoHudEnabled")
+    addSection(pages["Secret"], "Visuals", 18)
+    tgg(pages["Secret"], "Fullbright", 19, "fullbright")
+    tgg(pages["Secret"], "FOV Changer", 20, "fovEnabled")
+    makeSliderRow(pages["Secret"], "Field of View", 21, state.fovValue or 70, 30, 120, "fovValue")
+    tgg(pages["Secret"], "Camera Max Zoom", 22, "cameraZoomEnabled")
+    makeSliderRow(pages["Secret"], "Max Zoom Distance", 23, state.cameraMaxZoom or 500, 100, 2000, "cameraMaxZoom")
+    tgg(pages["Secret"], "Info HUD", 24, "infoHudEnabled")
 
-    addSection(pages["Secret"], "Utility", 24)
-    tgg(pages["Secret"], "Instant Interact", 25, "instantInteract")
+    addSection(pages["Secret"], "Utility", 25)
+    tgg(pages["Secret"], "Instant Interact", 26, "instantInteract")
 
-    addSection(pages["Secret"], "Teleportation", 26)
-    tgg(pages["Secret"], "Click / Tap Teleport", 27, "clickTP")
+    addSection(pages["Secret"], "Teleportation", 27)
+    tgg(pages["Secret"], "Click / Tap Teleport", 28, "clickTP")
     local tpHint = Instance.new("TextLabel")
     tpHint.Size = UDim2.new(1, 0, 0, 30 * selectedScale)
-    tpHint.LayoutOrder = 28
+    tpHint.LayoutOrder = 29
     tpHint.BackgroundTransparency = 1
     tpHint.Text = "PC: click anywhere | Mobile: tap anywhere. Disable before using the fly buttons."
     tpHint.TextColor3 = TEXT_DIM
@@ -2349,11 +2429,11 @@ buildUI = function(rebuilding)
     tpHint.TextWrapped = true
     tpHint.Parent = pages["Secret"]
 
-    addSection(pages["Secret"], "Saved Positions", 29)
+    addSection(pages["Secret"], "Saved Positions", 30)
     for i = 1, 3 do
         local row = Instance.new("Frame")
         row.Size = UDim2.new(1, 0, 0, 36 * selectedScale)
-        row.LayoutOrder = 29 + i
+        row.LayoutOrder = 30 + i
         row.BackgroundColor3 = CARD
         row.Parent = pages["Secret"]
         Instance.new("UICorner", row).CornerRadius = r(10)
@@ -2400,8 +2480,8 @@ buildUI = function(rebuilding)
         tpBtn.MouseButton1Click:Connect(function() loadPosition(i) end)
     end
 
-    addSection(pages["Secret"], "Quick Actions", 33)
-    addActionButton(pages["Secret"], "Reset Character", 34, function()
+    addSection(pages["Secret"], "Quick Actions", 34)
+    addActionButton(pages["Secret"], "Reset Character", 35, function()
         local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
         if hum then hum.Health = 0 end
     end)
@@ -3009,7 +3089,7 @@ buildUI = function(rebuilding)
         "Auto Grab Gun", "Auto Rejoin", "Auto Serverhop", "Auto Prestige",
         "Show Quick Toggles Menu", "Fly", "Noclip", "Infinite Jump",
         "Speed Changer", "Jump Power", "Invisible (Ghost)",
-        "Prone (Low Hitbox)",
+        "Prone (Low Hitbox)", "Small Hitbox",
         "Instant Interact", "Camera Max Zoom", "Info HUD",
         "Freeze (Anchor)",
         "Fullbright", "FOV Changer", "Click / Tap Teleport"
@@ -3214,6 +3294,7 @@ buildUI = function(rebuilding)
             ["Fly"] = "flyEnabled", ["Noclip"] = "noclip", ["Infinite Jump"] = "infJumpEnabled",
             ["Speed Changer"] = "speedEnabled", ["Jump Power"] = "jumpEnabled", ["Invisible (Ghost)"] = "invisibleEnabled",
             ["Prone (Low Hitbox)"] = "proneEnabled",
+            ["Small Hitbox"] = "smallHitboxEnabled",
             ["Instant Interact"] = "instantInteract",
             ["Camera Max Zoom"] = "cameraZoomEnabled", ["Info HUD"] = "infoHudEnabled",
             ["Freeze (Anchor)"] = "freeze", ["Fullbright"] = "fullbright",
@@ -3833,8 +3914,10 @@ task.spawn(function()
         if not inRound then
             lastRoundState = false; roundFullyStarted = false; hasCollectedThisRound = false
             currentCoinCount = 0; bagFull = false; isExecutingAction = false; busy = false
+            cancelFarmTween()
         elseif not lastRoundState then
             lastRoundState = true; roundStartTime = tick(); setStatus("Map loaded...")
+            farmDeathCheckTime = tick()
             if state.notifyMapName then
                 local mapName = getMapName()
                 if mapName then task.spawn(function() showNotification('Map loaded: <font color="#7ec8ff">' .. mapName .. '</font>') end) end
@@ -3842,6 +3925,16 @@ task.spawn(function()
         end
         if inRound and hasRoles and not roundFullyStarted then
             if (tick() - roundStartTime) > 6 then roundFullyStarted = true; setStatus("Round started") end
+        end
+        -- Farm death-stuck detection: if farm is on but char has no Humanoid for > 3s, reset
+        if state.farm and (not LP.Character or not LP.Character:FindFirstChildOfClass("Humanoid")) then
+            if tick() - farmDeathCheckTime > 3 then
+                farmDeathCheckTime = tick()
+                cancelFarmTween()
+                setStatus("Farm: waiting for respawn...")
+            end
+        else
+            farmDeathCheckTime = tick()
         end
     end
 end)
@@ -3853,7 +3946,7 @@ task.spawn(function()
         if not alive() then cancelFarmTween() continue end
         local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
         local humanoid = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-        if not root or not humanoid then continue end
+        if not root or not humanoid then cancelFarmTween() continue end
         if state.xpFarm then
             cancelFarmTween(); humanoid.PlatformStand = true; root.Anchored = true
             root.CFrame = HIDE_POS; root.AssemblyLinearVelocity = Vector3.zero; root.AssemblyAngularVelocity = Vector3.zero
@@ -3867,6 +3960,13 @@ task.spawn(function()
                 root.AssemblyLinearVelocity = Vector3.zero
             end
             lastCoinFoundTime = tick(); continue
+        end
+        -- Don't tween if already tweening — prevents tween pile-up
+        if currentFarmTween and currentFarmTween.PlaybackState == Enum.PlaybackState.Playing then
+            -- velocity lock while tweening
+            root.AssemblyLinearVelocity = Vector3.zero
+            root.AssemblyAngularVelocity = Vector3.zero
+            continue
         end
         root.Anchored = false; humanoid.PlatformStand = true; humanoid.AutoRotate = false
         root.AssemblyLinearVelocity = Vector3.zero; root.AssemblyAngularVelocity = Vector3.zero
@@ -3889,9 +3989,6 @@ task.spawn(function()
         if not closestCoin then cancelFarmTween() continue end
         local dist = (root.Position - closestCoin.Position).Magnitude
         if dist <= 7 then collectCoin(root, closestCoin) end
-        if currentFarmTween and currentFarmTween.PlaybackState == Enum.PlaybackState.Playing and currentTargetCoin == closestCoin then
-            collectCoin(root, closestCoin); continue
-        end
         cancelFarmTween(); currentTargetCoin = closestCoin
         local targetPos = closestCoin.Position + Vector3.new(0, -UNDER, 0)
         local targetCFrame = CFrame.new(targetPos) * CFrame.Angles(math.rad(90), 0, math.rad(180))
