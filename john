@@ -103,13 +103,11 @@ local state = {
     speedEnabled = false, speedValue = 16,
     jumpEnabled = false, jumpValue = 50,
     infJumpEnabled = false,
-    invisibleEnabled = false,
     antiRagdoll = true,
     freeze = false,
     fullbright = false,
     fovEnabled = false, fovValue = 70,
     clickTP = false,
-    desyncPlatform = false,
 }
 
 local settingsConfig = {
@@ -143,11 +141,10 @@ local toggleDisplayNames = {
     autoServerHop = "Auto Serverhop", autoPrestige = "Auto Prestige",
     espPlayers = "Player ESP (Roles)", espGunDrop = "Gun Drop ESP",
     quickTogglesVisible = "Quick Toggles Menu",
-    flyEnabled = "Fly", infJumpEnabled = "Infinite Jump", invisibleEnabled = "Invisible",
+    flyEnabled = "Fly", infJumpEnabled = "Infinite Jump",
     speedEnabled = "Speed Changer", jumpEnabled = "Jump Power",
     freeze = "Freeze (Anchor)", fullbright = "Fullbright",
     fovEnabled = "FOV Changer", clickTP = "Click / Tap Teleport",
-    desyncPlatform = "Desync Platform",
 }
 local notifyExcluded = {}
 
@@ -1961,7 +1958,6 @@ buildUI = function(rebuilding)
     makeSliderRow(pages["Secret"], "Jump Power", 12, state.jumpValue or 50, 50, 500, "jumpValue")
 
     addSection(pages["Secret"], "Visuals", 13)
-    tgg(pages["Secret"], "Invisible (In-Place)", 14, "invisibleEnabled")
     tgg(pages["Secret"], "Fullbright", 15, "fullbright")
     tgg(pages["Secret"], "FOV Changer", 16, "fovEnabled")
     makeSliderRow(pages["Secret"], "Field of View", 17, state.fovValue or 70, 30, 120, "fovValue")
@@ -2036,9 +2032,6 @@ buildUI = function(rebuilding)
         local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
         if hum then hum.Health = 0 end
     end)
-
-    addSection(pages["Secret"], "Desync", 27)
-    tgg(pages["Secret"], "Desync Platform (10, 5000, 20)", 28, "desyncPlatform")
 
     -- ==================== FARM ====================
     tgg(pages["Farm"], "Farm (Safe)", 1, "farm")
@@ -2642,7 +2635,7 @@ buildUI = function(rebuilding)
         "Anti AFK", "Anti-Void", "Notify Map Name", "Round Timer",
         "Auto Grab Gun", "Auto Rejoin", "Auto Serverhop", "Auto Prestige",
         "Show Quick Toggles Menu", "Fly", "Noclip", "Infinite Jump",
-        "Speed Changer", "Jump Power", "Invisible",
+        "Speed Changer", "Jump Power",
         "Freeze (Anchor)",
         "Fullbright", "FOV Changer", "Click / Tap Teleport"
     }
@@ -2843,7 +2836,7 @@ buildUI = function(rebuilding)
             ["Auto Prestige"] = "autoPrestige", ["Show Quick Toggles Menu"] = "quickTogglesVisible",
             ["Notify Map Name"] = "notifyMapName", ["Round Timer"] = "showRoundTimerCountdown",
             ["Fly"] = "flyEnabled", ["Noclip"] = "noclip", ["Infinite Jump"] = "infJumpEnabled",
-            ["Speed Changer"] = "speedEnabled", ["Jump Power"] = "jumpEnabled", ["Invisible"] = "invisibleEnabled",
+            ["Speed Changer"] = "speedEnabled", ["Jump Power"] = "jumpEnabled",
             ["Freeze (Anchor)"] = "freeze", ["Fullbright"] = "fullbright",
             ["FOV Changer"] = "fovEnabled", ["Click / Tap Teleport"] = "clickTP",
         }
@@ -3062,7 +3055,7 @@ end)
 task.spawn(function()
     while true do
         task.wait(0.1)
-        if state.noclip and LP.Character and not state.invisibleEnabled then
+        if state.noclip and LP.Character then
             for _, part in ipairs(LP.Character:GetDescendants()) do
                 if part:IsA("BasePart") then part.CanCollide = false end
             end
@@ -3072,7 +3065,7 @@ end)
 
 -- ==================== INFINITE JUMP ====================
 UIS.JumpRequest:Connect(function()
-    if state.infJumpEnabled and LP.Character and not state.invisibleEnabled then
+    if state.infJumpEnabled and LP.Character then
         local hum = LP.Character:FindFirstChildOfClass("Humanoid")
         if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
     end
@@ -3098,166 +3091,11 @@ task.spawn(function()
     end
 end)
 
--- ==================== INVISIBLE (REplicated, anti-desync) ====================
--- LocalTransparencyModifier = 1 is client-only. Transparency = 1 on your
--- own character SHOULD replicate because you own the network. If others
--- still see you, something is resetting Transparency server-side or
--- another script (like the anti-fling loader) is interfering. This block:
---   1) spams Transparency on RenderStepped + Heartbeat + Stepped
---   2) re-forces Transparency on any PropertyChanged of the part
---   3) hooks DescendantAdded (hats/tools/effects/new parts)
---   4) hides sounds / effects / highlights / guis too
-
-local invisActive = false
-local invisSavedProps = {}
-local invisConnections = {}
-
-local function _saveProp(inst, prop)
-    local t = invisSavedProps[inst]
-    if not t then t = {} invisSavedProps[inst] = t end
-    if t[prop] == nil then t[prop] = inst[prop] end
-end
-
-local function _hideVisual(d)
-    if not d or not d.Parent then return end
-    if d:IsA("BasePart") then
-        _saveProp(d, "Transparency")
-        _saveProp(d, "LocalTransparencyModifier")
-        _saveProp(d, "Reflectance")
-        _saveProp(d, "CanCollide")
-        _saveProp(d, "CastShadow")
-        d.Transparency = 1
-        pcall(function() d.LocalTransparencyModifier = 1 end)
-        d.Reflectance = 0
-        d.CanCollide = false
-        d.CastShadow = false
-    elseif d:IsA("Decal") or d:IsA("Texture") then
-        _saveProp(d, "Transparency"); d.Transparency = 1
-    elseif d:IsA("SurfaceAppearance") then
-        _saveProp(d, "AlphaMode")
-        pcall(function() d.AlphaMode = Enum.SurfaceAppearanceAlphaMode.Overlay end)
-    elseif d:IsA("ParticleEmitter") or d:IsA("Beam") or d:IsA("Trail")
-        or d:IsA("Fire") or d:IsA("Smoke") or d:IsA("Sparkles") then
-        _saveProp(d, "Enabled"); pcall(function() d.Enabled = false end)
-    elseif d:IsA("BillboardGui") or d:IsA("SurfaceGui") or d:IsA("Highlight")
-        or d:IsA("SelectionBox") or d:IsA("PointLight") or d:IsA("SpotLight")
-        or d:IsA("SurfaceLight") or d:IsA("BoxHandleAdornment")
-        or d:IsA("SphereHandleAdornment") or d:IsA("LineHandleAdornment")
-        or d:IsA("CylinderHandleAdornment") or d:IsA("SelectionSphere") then
-        _saveProp(d, "Enabled"); _saveProp(d, "Visible")
-        pcall(function() d.Enabled = false end)
-        pcall(function() d.Visible = false end)
-    elseif d:IsA("Sound") then
-        _saveProp(d, "Volume"); pcall(function() d.Volume = 0 end)
-    end
-end
-
-local function _applyInvis()
-    local char = LP.Character
-    if not char then return end
-    for _, d in ipairs(char:GetDescendants()) do _hideVisual(d) end
-    for _, t in ipairs(char:GetChildren()) do
-        if t:IsA("Tool") then
-            for _, d in ipairs(t:GetDescendants()) do _hideVisual(d) end
-        end
-    end
-end
-
-local function _restoreInvis()
-    for inst, props in pairs(invisSavedProps) do
-        if inst and inst.Parent then
-            for k, v in pairs(props) do pcall(function() inst[k] = v end) end
-        end
-    end
-    invisSavedProps = {}
-end
-
-local function _disconnectInvis()
-    for _, c in ipairs(invisConnections) do pcall(function() c:Disconnect() end) end
-    invisConnections = {}
-end
-
-local function _hookPartReversion(part)
-    if not part:IsA("BasePart") then return end
-    table.insert(invisConnections, part:GetPropertyChangedSignal("Transparency"):Connect(function()
-        if invisActive and part.Transparency < 1 then part.Transparency = 1 end
-    end))
-    table.insert(invisConnections, part:GetPropertyChangedSignal("LocalTransparencyModifier"):Connect(function()
-        if invisActive then
-            pcall(function() if part.LocalTransparencyModifier < 1 then part.LocalTransparencyModifier = 1 end end)
-        end
-    end))
-end
-
-local function startInvisible()
-    if invisActive then return end
-    if not LP.Character then return end
-    invisActive = true
-    invisSavedProps = {}
-    _disconnectInvis()
-
-    _applyInvis()
-    for _, d in ipairs(LP.Character:GetDescendants()) do _hookPartReversion(d) end
-
-    table.insert(invisConnections, LP.Character.DescendantAdded:Connect(function(d)
-        if not invisActive then return end
-        task.defer(function()
-            if invisActive and d and d.Parent then
-                _hideVisual(d)
-                _hookPartReversion(d)
-            end
-        end)
-    end))
-
-    -- triple-loop spam beats any single-thread reset
-    table.insert(invisConnections, RunService.RenderStepped:Connect(function()
-        if invisActive then _applyInvis() end
-    end))
-    table.insert(invisConnections, RunService.Heartbeat:Connect(function()
-        if invisActive then _applyInvis() end
-    end))
-    table.insert(invisConnections, RunService.Stepped:Connect(function()
-        if invisActive then _applyInvis() end
-    end))
-
-    setStatus("Invisible ON")
-end
-
-local function stopInvisible()
-    if not invisActive then return end
-    invisActive = false
-    _disconnectInvis()
-    _restoreInvis()
-    setStatus("Invisible OFF")
-end
-
-task.spawn(function()
-    local last = false
-    while true do
-        task.wait(0.05)
-        local now = state.invisibleEnabled == true
-        if now ~= last then
-            if now then startInvisible() else stopInvisible() end
-            last = now
-        end
-    end
-end)
-
-LP.CharacterAdded:Connect(function()
-    _disconnectInvis()
-    invisSavedProps = {}
-    if state.invisibleEnabled then
-        invisActive = false
-        task.wait(0.5)
-        if state.invisibleEnabled then startInvisible() end
-    end
-end)
-
 -- ==================== SECRET FEATURES ====================
 task.spawn(function()
     while true do
         task.wait(0.15)
-        if LP.Character and not state.flyEnabled and not state.invisibleEnabled then
+        if LP.Character and not state.flyEnabled then
             local hum = LP.Character:FindFirstChildOfClass("Humanoid")
             if hum and hum.Health > 0 and hum.PlatformStand and not next(activeResets) then
                 hum.PlatformStand = false
@@ -3271,7 +3109,7 @@ local freezeApplied = false
 task.spawn(function()
     while true do
         task.wait(0.1)
-        if LP.Character and not state.invisibleEnabled then
+        if LP.Character then
             local root = LP.Character:FindFirstChild("HumanoidRootPart")
             if root then
                 if state.freeze then
@@ -3333,7 +3171,6 @@ end
 
 local function doClickTeleport(x, y)
     if not state.clickTP then return end
-    if invisActive then return end
     local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if not root then return end
     local pos = getTeleportTargetFromScreen(x, y)
@@ -3453,7 +3290,7 @@ local lastAntiVoidFire = 0
 task.spawn(function()
     while true do
         task.wait(0.15)
-        if state.antiVoid and LP.Character and not invisActive then
+        if state.antiVoid and LP.Character then
             local root = LP.Character:FindFirstChild("HumanoidRootPart")
             if root and root.Position.Y < -400 then
                 local now = tick()
@@ -3573,7 +3410,6 @@ end)
 task.spawn(function()
     while true do
         task.wait(0.04)
-        if state.invisibleEnabled then cancelFarmTween() continue end
         if not alive() then cancelFarmTween() continue end
         local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
         local humanoid = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
@@ -3691,7 +3527,6 @@ end)
 local lastFarmNoclip = false
 RunService.Stepped:Connect(function()
     if not LP.Character then lastFarmNoclip = false; return end
-    if invisActive then return end
     local shouldNoclip = state.farm and not bagFull and not isExecutingAction and not isLobby() and not state.xpFarm and not next(activeResets)
     if shouldNoclip then
         for _, val in ipairs(LP.Character:GetDescendants()) do
@@ -3719,7 +3554,7 @@ end)
 task.spawn(function()
     while true do
         task.wait(0.15)
-        if state.gun and alive() and not isExecutingAction and not findTool("Gun") and not state.invisibleEnabled then
+        if state.gun and alive() and not isExecutingAction and not findTool("Gun") then
             local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
             if root then
                 for _, v in pairs(Workspace:GetDescendants()) do
@@ -3831,119 +3666,6 @@ RunService.RenderStepped:Connect(function()
     local targetPart = char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
     if not targetPart then return end
     Workspace.CurrentCamera.CFrame = CFrame.lookAt(Workspace.CurrentCamera.CFrame.Position, targetPart.Position)
-end)
-
--- ==================== DESYNC PLATFORM ====================
--- Body teleports to (10, 5000, 20) and anchors there (server sees you there).
--- A local neon platform is spawned so you have something to "stand" on visually.
--- Camera locks at your previous view so you can still aim / watch the map.
--- Toggle off restores you to where you were.
-
-local DESYNC_POS = Vector3.new(10, 5000, 20)
-local desyncActive = false
-local desyncSavedCFrame = nil
-local desyncSavedCamCFrame = nil
-local desyncPlatformPart = nil
-
-local function _aimbotHasTarget()
-    if state.aimbotMurderer then
-        local m = getMurd()
-        return m and m.Character and m.Character:FindFirstChildOfClass("Humanoid") and m.Character.Humanoid.Health > 0
-    elseif state.aimbotSheriff then
-        local s = getGunHolder()
-        return s and s.Character and s.Character:FindFirstChildOfClass("Humanoid") and s.Character.Humanoid.Health > 0
-    end
-    return false
-end
-
-local function _spawnDesyncPlatform()
-    if desyncPlatformPart and desyncPlatformPart.Parent then return end
-    local p = Instance.new("Part")
-    p.Name = "AW_DesyncPlatform"
-    p.Size = Vector3.new(40, 1, 40)
-    p.Position = DESYNC_POS
-    p.Anchored = true
-    p.CanCollide = true
-    p.Material = Enum.Material.Neon
-    p.Color = Color3.fromRGB(90, 130, 255)
-    p.Transparency = 0.25
-    p.TopSurface = Enum.SurfaceType.Smooth
-    p.BottomSurface = Enum.SurfaceType.Smooth
-    p.Parent = Workspace
-    desyncPlatformPart = p
-end
-
-local function _startDesync()
-    if desyncActive then return end
-    if not LP.Character then return end
-    local root = LP.Character:FindFirstChild("HumanoidRootPart")
-    local hum = LP.Character:FindFirstChildOfClass("Humanoid")
-    if not root or not hum or hum.Health <= 0 then return end
-
-    desyncSavedCFrame = root.CFrame
-    desyncSavedCamCFrame = Workspace.CurrentCamera and Workspace.CurrentCamera.CFrame or nil
-    _spawnDesyncPlatform()
-
-    hum.PlatformStand = true
-    root.Anchored = true
-    root.CFrame = CFrame.new(DESYNC_POS + Vector3.new(0, 3.5, 0))
-    root.AssemblyLinearVelocity = Vector3.zero
-    root.AssemblyAngularVelocity = Vector3.zero
-    desyncActive = true
-    setStatus("Desync ON — body hidden at platform")
-end
-
-local function _stopDesync()
-    if not desyncActive then return end
-    desyncActive = false
-    local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-    local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-    if root then
-        root.Anchored = false
-        if desyncSavedCFrame then root.CFrame = desyncSavedCFrame end
-        root.AssemblyLinearVelocity = Vector3.zero
-        root.AssemblyAngularVelocity = Vector3.zero
-    end
-    if hum then
-        hum.PlatformStand = false
-        hum:ChangeState(Enum.HumanoidStateType.GettingUp)
-    end
-    if desyncPlatformPart then desyncPlatformPart:Destroy() desyncPlatformPart = nil end
-    desyncSavedCFrame = nil
-    desyncSavedCamCFrame = nil
-    setStatus("Desync OFF")
-end
-
-task.spawn(function()
-    local last = false
-    while true do
-        task.wait(0.1)
-        local now = state.desyncPlatform == true
-        if now ~= last then
-            if now then _startDesync() else _stopDesync() end
-            last = now
-        end
-    end
-end)
-
-RunService.RenderStepped:Connect(function()
-    if not desyncActive then return end
-    if _aimbotHasTarget() then return end
-    local cam = Workspace.CurrentCamera
-    if cam and desyncSavedCamCFrame then
-        cam.CFrame = desyncSavedCamCFrame
-    end
-end)
-
-LP.CharacterAdded:Connect(function()
-    if desyncActive then
-        desyncActive = false
-        if desyncPlatformPart then desyncPlatformPart:Destroy() desyncPlatformPart = nil end
-        desyncSavedCFrame = nil
-        desyncSavedCamCFrame = nil
-        state.desyncPlatform = false
-        updateAllToggleVisuals("desyncPlatform")
-    end
 end)
 
 print("Appleware loaded - enjoy my script, love you though (made by p04j on discord)")
