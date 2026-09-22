@@ -15,11 +15,8 @@ local UserGameSettings = UserSettings():GetService("UserGameSettings")
 local GuiService = game:GetService("GuiService")
 local UIS = game:GetService("UserInputService")
 local StatsService = game:GetService("Stats")
-local LocalPlayer = Players.LocalPlayer
+local LP = Players.LocalPlayer
 local PlaceId = game.PlaceId
-local LP = LocalPlayer
-local Camera = Workspace.CurrentCamera
-
 local invisActive = false
 
 -- ============ ANTI-FLING ============
@@ -41,7 +38,6 @@ task.spawn(function()
     end)
 end)
 
--- ============ SERVER HOP + CHAT COMMANDS ============
 local function serverHop()
     pcall(function() if QueueTeleport then QueueTeleport("https://www.roblox.com/games/" .. PlaceId) end end)
     pcall(function() TeleportService:Teleport(PlaceId, LP) end)
@@ -54,7 +50,6 @@ pcall(function()
 end)
 pcall(function() if setclipboard then setclipboard("https://discord.gg/ux2fjm2rt8") end end)
 
--- ============ GUI PARENT ============
 local function getGuiParent()
     local ok, g = pcall(function()
         if gethui then return gethui() end
@@ -70,7 +65,18 @@ local function getGuiParent()
     return LP:FindFirstChild("PlayerGui") or CoreGui
 end
 
--- ============ LOADING SCREEN (BLOCKING) ============
+-- ============ CONFIG PATHS ============
+local CF = "ApplewareConfigs"
+local CFl = "Appleware.json"
+pcall(function()
+    if makefolder and isfolder and not isfolder(CF) then makefolder(CF) end
+end)
+local function cfgPath()
+    if isfolder and isfolder(CF) then return CF .. "/" .. CFl end
+    return CFl
+end
+
+-- ============ ANIMATED LOADING SCREEN (BLOCKING) ============
 do
     local g = Instance.new("ScreenGui")
     g.Name = "AWLoad"
@@ -85,10 +91,33 @@ do
     bg.BackgroundTransparency = 1
     local grad = Instance.new("UIGradient", bg)
     grad.Transparency = NumberSequence.new({
-        NumberSequenceKeypoint.new(0, 0.15),
+        NumberSequenceKeypoint.new(0, 0.1),
         NumberSequenceKeypoint.new(0.5, 0.55),
-        NumberSequenceKeypoint.new(1, 0.15),
+        NumberSequenceKeypoint.new(1, 0.1),
     })
+
+    -- floating particles
+    for i = 1, 14 do
+        local p = Instance.new("Frame", bg)
+        local sz = math.random(3, 8)
+        p.Size = UDim2.new(0, sz, 0, sz)
+        p.BackgroundColor3 = Color3.new(1, 1, 1)
+        p.BackgroundTransparency = 0.75
+        p.BorderSizePixel = 0
+        p.Position = UDim2.new(math.random(), 0, 1 + math.random() * 0.3, 0)
+        Instance.new("UICorner", p).CornerRadius = UDim.new(1, 0)
+        local dur = 3 + math.random() * 3
+        task.spawn(function()
+            while p.Parent do
+                p.Position = UDim2.new(p.Position.X.Scale, 0, 1.2, 0)
+                TweenService:Create(p, TweenInfo.new(dur, Enum.EasingStyle.Linear), {
+                    Position = UDim2.new(p.Position.X.Scale, 0, -0.2, 0),
+                    BackgroundTransparency = 1
+                }):Play()
+                task.wait(dur + 0.1)
+            end
+        end)
+    end
 
     local title = Instance.new("TextLabel", bg)
     title.Size = UDim2.new(1, 0, 0, 40)
@@ -161,7 +190,7 @@ do
     task.spawn(function()
         while shine.Parent do
             shine.Position = UDim2.new(-0.35, 0, 0, 0)
-            TweenService:Create(shine, TweenInfo.new(0.7, Enum.EasingStyle.Quad), {Position = UDim2.new(1.05, 0, 0, 0)}):Play()
+            TweenService:Create(shine, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(1.05, 0, 0, 0)}):Play()
             task.wait(0.85)
         end
     end)
@@ -178,19 +207,8 @@ do
     g:Destroy()
 end
 
--- ============ CONFIG ============
-local CONFIG_FOLDER = "ApplewareConfigs"
-local CONFIG_FILE = "Appleware.json"
-pcall(function()
-    if makefolder and isfolder and not isfolder(CONFIG_FOLDER) then makefolder(CONFIG_FOLDER) end
-end)
-local function configPath()
-    if isfolder and isfolder(CONFIG_FOLDER) then return CONFIG_FOLDER .. "/" .. CONFIG_FILE end
-    return CONFIG_FILE
-end
-
 -- ============ STATE ============
-local saveSettings, buildUI, st, stopFarm, refreshPicker, refreshQuick, refreshBg
+local saveSettings, buildUI, st, stopFarm, refreshPicker, refreshQuick, applyTheme
 
 local state = {
     farm=false, xpFarm=false, noclip=false, gun=false, afk=false,
@@ -216,8 +234,19 @@ local settingsConfig = {
     tweenSpeed=25, selectedScale=1, roundLength=200,
     flingList={}, whitelist={},
     bgColor={r=6, g=6, b=6},
-    bgImage="",
-    -- Every toggle/action except Secret items
+    bgImage="", bgImageFile="",
+    textColor={r=245, g=245, b=245},
+    textStrokeColor={r=0, g=0, b=0},
+    textStrokeThickness=0,
+    cardColor={r=14, g=14, b=14},
+    cardHoverColor={r=22, g=22, b=22},
+    borderColor={r=28, g=28, b=28},
+    accentColor={r=255, g=255, b=255},
+    tabBgColor={r=10, g=10, b=10},
+    tabTextColor={r=140, g=140, b=140},
+    tabTextActiveColor={r=245, g=245, b=245},
+    openBtnColor={r=12, g=12, b=12},
+    openBtnTextColor={r=255, g=255, b=255},
     quickTogglesList={
         "Farm (Safe)","XP Farm","Disable 3D Rendering","FPS Boost (Potato)",
         "Auto Shoot Murderer","Auto Kill All","Auto Fling Murderer",
@@ -261,52 +290,106 @@ local toggleDisplayNames = {
     instantInteract="Instant Interact",
     cameraZoomEnabled="Camera Max Zoom", infoHudEnabled="Info HUD",
 }
-
 local nExcl = {}
 
 saveSettings = function()
     pcall(function()
         if writefile then
             pcall(function()
-                if makefolder and isfolder and not isfolder(CONFIG_FOLDER) then makefolder(CONFIG_FOLDER) end
+                if makefolder and isfolder and not isfolder(CF) then makefolder(CF) end
             end)
-            writefile(configPath(), HttpService:JSONEncode({state=state, config=settingsConfig}))
+            writefile(cfgPath(), HttpService:JSONEncode({state=state, config=settingsConfig}))
         end
     end)
 end
 
 pcall(function()
-    local path = configPath()
+    local path = cfgPath()
     if readfile and isfile and isfile(path) then
         local d = HttpService:JSONDecode(readfile(path))
-        if d.state then for k, v in pairs(d.state) do if state[k] ~= nil then state[k] = v end end end
-        if d.config then for k, v in pairs(d.config) do if settingsConfig[k] ~= nil then settingsConfig[k] = v end end end
+        if d.state then
+            for k, v in pairs(d.state) do
+                if state[k] ~= nil then state[k] = v end
+            end
+        end
+        if d.config then
+            for k, v in pairs(d.config) do
+                if settingsConfig[k] ~= nil then settingsConfig[k] = v end
+            end
+        end
         if settingsConfig.tweenSpeed then TWEEN_SPEED = settingsConfig.tweenSpeed end
         if settingsConfig.roundLength then ROUND_LENGTH_FALLBACK = settingsConfig.roundLength end
         if type(settingsConfig.flingList) ~= "table" then settingsConfig.flingList = {} end
         if type(settingsConfig.whitelist) ~= "table" then settingsConfig.whitelist = {} end
-        if type(settingsConfig.bgColor) ~= "table" then settingsConfig.bgColor = {r=6,g=6,b=6} end
     end
 end)
+
+-- ============ FOLDER-FILE LOADERS ============
+local function loadBgImageFromFolder()
+    if not (isfile and readfile) then return nil end
+    pcall(function()
+        if makefolder and isfolder and not isfolder(CF) then makefolder(CF) end
+    end)
+    local extensions = {".png", ".jpg", ".jpeg", ".gif", ".bmp"}
+    for _, ext in ipairs(extensions) do
+        local path = CF .. "/background" .. ext
+        if isfile(path) then
+            if getcustomasset then
+                local ok, asset = pcall(getcustomasset, path)
+                if ok and asset then return asset end
+            end
+            return path
+        end
+    end
+    return nil
+end
+
+local function loadBgColorFromFolder()
+    if not (isfile and readfile) then return false end
+    local path = CF .. "/bgcolor.txt"
+    if not isfile(path) then return false end
+    local content = readfile(path)
+    if not content then return false end
+    local clean = content:gsub("%s", ""):gsub("#", "")
+    local r, g, b = clean:match("^(%x%x)(%x%x)(%x%x)$")
+    if r then
+        settingsConfig.bgColor = {r = tonumber(r, 16), g = tonumber(g, 16), b = tonumber(b, 16)}
+        return true
+    end
+    local r2, g2, b2 = content:match("(%d+)%s*,%s*(%d+)%s*,%s*(%d+)")
+    if r2 then
+        settingsConfig.bgColor = {r = tonumber(r2), g = tonumber(g2), b = tonumber(b2)}
+        return true
+    end
+    return false
+end
+
+pcall(function()
+    if makefolder and isfolder and not isfolder(CF) then makefolder(CF) end
+end)
+local folderBg = loadBgImageFromFolder()
+if folderBg then
+    settingsConfig.bgImage = folderBg
+    settingsConfig.bgImageFile = ""
+end
+loadBgColorFromFolder()
+
 state.antiRagdoll = true
 
--- ============ STATUS ============
-local function setStatus(msg)
-    if not st then return end
-    st.Text = "  " .. tostring(msg)
-    st.TextColor3 = Color3.new(1, 1, 1)
-    task.spawn(function()
-        TweenService:Create(st, TweenInfo.new(0.1), {TextColor3 = Color3.fromRGB(180,180,180)}):Play()
-        task.wait(0.1)
-        if st then TweenService:Create(st, TweenInfo.new(0.25), {TextColor3 = Color3.new(1,1,1)}):Play() end
-    end)
+-- helper to convert config color tables
+local function c3(t)
+    return Color3.fromRGB(t.r or 0, t.g or 0, t.b or 0)
 end
 
 -- ============ UI HELPERS ============
 local function attachBounce(b)
     local s = Instance.new("UIScale", b)
-    b.MouseButton1Down:Connect(function() TweenService:Create(s, TweenInfo.new(0.08), {Scale=0.92}):Play() end)
-    local function r() TweenService:Create(s, TweenInfo.new(0.45, Enum.EasingStyle.Elastic), {Scale=1}):Play() end
+    b.MouseButton1Down:Connect(function()
+        TweenService:Create(s, TweenInfo.new(0.08), {Scale=0.92}):Play()
+    end)
+    local function r()
+        TweenService:Create(s, TweenInfo.new(0.45, Enum.EasingStyle.Elastic), {Scale=1}):Play()
+    end
     b.MouseButton1Up:Connect(r); b.MouseLeave:Connect(r)
 end
 local function attachRipple(b, c)
@@ -325,7 +408,9 @@ local function attachRipple(b, c)
         f.ZIndex = (b.ZIndex or 1) + 5
         Instance.new("UICorner", f).CornerRadius = UDim.new(1, 0)
         local sz = math.max(b.AbsoluteSize.X, b.AbsoluteSize.Y) * 2.5
-        TweenService:Create(f, TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size=UDim2.new(0,sz,0,sz), BackgroundTransparency=1}):Play()
+        TweenService:Create(f, TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, sz, 0, sz), BackgroundTransparency = 1
+        }):Play()
         task.delay(0.6, function() if f and f.Parent then f:Destroy() end end)
     end)
 end
@@ -341,7 +426,19 @@ local function attachShine(b)
     s.ZIndex = (b.ZIndex or 1) + 2
     b.MouseEnter:Connect(function()
         s.Position = UDim2.new(-0.35, 0, -0.3, 0)
-        TweenService:Create(s, TweenInfo.new(0.55), {Position=UDim2.new(1.35, 0, -0.3, 0)}):Play()
+        TweenService:Create(s, TweenInfo.new(0.55), {
+            Position = UDim2.new(1.35, 0, -0.3, 0)
+        }):Play()
+    end)
+end
+local function attachHoverLift(b, amount)
+    amount = amount or 1.03
+    local s = Instance.new("UIScale", b)
+    b.MouseEnter:Connect(function()
+        TweenService:Create(s, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale=amount}):Play()
+    end)
+    b.MouseLeave:Connect(function()
+        TweenService:Create(s, TweenInfo.new(0.35, Enum.EasingStyle.Elastic), {Scale=1}):Play()
     end)
 end
 local function staggerFade(p)
@@ -404,6 +501,10 @@ local function notify(t)
     if nCount >= MAX_NOTES then return end
     nCount = nCount + 1
 
+    local bgCol = c3(settingsConfig.bgColor)
+    local txtCol = c3(settingsConfig.textColor)
+    local borderCol = c3(settingsConfig.borderColor)
+
     local w = Instance.new("Frame", notifyContainer)
     w.Size = UDim2.new(1, 0, 0, 60)
     w.BackgroundTransparency = 1
@@ -412,40 +513,33 @@ local function notify(t)
     local f = Instance.new("Frame", w)
     f.Size = UDim2.new(0.85, 0, 0.9, 0)
     f.Position = UDim2.new(-1.15, 0, 0.05, 0)
-    f.BackgroundColor3 = Color3.new(0, 0, 0)
+    f.BackgroundColor3 = bgCol
     f.BackgroundTransparency = 0.08
     f.ClipsDescendants = true
     Instance.new("UICorner", f).CornerRadius = UDim.new(0, 10)
 
-    local grad = Instance.new("UIGradient", f)
-    grad.Color = ColorSequence.new({
-        ColorSequenceKeypoint.new(0, Color3.fromRGB(14,14,14)),
-        ColorSequenceKeypoint.new(1, Color3.new(0,0,0))
-    })
-    grad.Rotation = 90
-
     local sk = Instance.new("UIStroke", f)
-    sk.Color = Color3.fromRGB(90, 90, 90)
+    sk.Color = borderCol
     sk.Transparency = 0.3
 
     local ac = Instance.new("Frame", f)
     ac.Size = UDim2.new(0, 3, 0, 0)
     ac.Position = UDim2.new(0, 6, 0.5, 0)
     ac.AnchorPoint = Vector2.new(0, 0.5)
-    ac.BackgroundColor3 = Color3.new(1, 1, 1)
+    ac.BackgroundColor3 = c3(settingsConfig.accentColor)
     Instance.new("UICorner", ac).CornerRadius = UDim.new(1, 0)
 
     local ib = Instance.new("Frame", f)
     ib.Size = UDim2.new(0, 0, 0, 0)
     ib.Position = UDim2.new(0, 29, 0.5, 0)
-    ib.BackgroundColor3 = Color3.new(1, 1, 1)
+    ib.BackgroundColor3 = c3(settingsConfig.accentColor)
     Instance.new("UICorner", ib).CornerRadius = UDim.new(1, 0)
 
     local il = Instance.new("TextLabel", ib)
     il.Size = UDim2.new(1, 0, 1, 0)
     il.BackgroundTransparency = 1
     il.Text = "i"
-    il.TextColor3 = Color3.new(0, 0, 0)
+    il.TextColor3 = bgCol
     il.Font = Enum.Font.GothamBold
     il.TextSize = 16
     il.Rotation = -180
@@ -455,7 +549,7 @@ local function notify(t)
     tt.Position = UDim2.new(0, 52, 0, 10)
     tt.BackgroundTransparency = 1
     tt.Text = "Appleware Says:"
-    tt.TextColor3 = Color3.new(1, 1, 1)
+    tt.TextColor3 = txtCol
     tt.Font = Enum.Font.GothamBold
     tt.TextSize = 14
     tt.TextXAlignment = Enum.TextXAlignment.Left
@@ -466,26 +560,30 @@ local function notify(t)
     bd.Position = UDim2.new(0, 52, 0, 30)
     bd.BackgroundTransparency = 1
     bd.Text = t
-    bd.TextColor3 = Color3.new(1, 1, 1)
+    bd.TextColor3 = txtCol
     bd.Font = Enum.Font.Gotham
     bd.TextSize = 12
     bd.TextXAlignment = Enum.TextXAlignment.Left
     bd.RichText = true
     bd.TextTransparency = 1
 
-    local bg = Instance.new("Frame", f)
-    bg.Size = UDim2.new(1, -28, 0, 3)
-    bg.Position = UDim2.new(0, 22, 1, -8)
-    bg.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-    Instance.new("UICorner", bg).CornerRadius = UDim.new(1, 0)
+    local bg2 = Instance.new("Frame", f)
+    bg2.Size = UDim2.new(1, -28, 0, 3)
+    bg2.Position = UDim2.new(0, 22, 1, -8)
+    bg2.BackgroundColor3 = borderCol
+    Instance.new("UICorner", bg2).CornerRadius = UDim.new(1, 0)
 
-    local br = Instance.new("Frame", bg)
+    local br = Instance.new("Frame", bg2)
     br.Size = UDim2.new(1, 0, 1, 0)
-    br.BackgroundColor3 = Color3.new(1, 1, 1)
+    br.BackgroundColor3 = c3(settingsConfig.accentColor)
     Instance.new("UICorner", br).CornerRadius = UDim.new(1, 0)
 
-    TweenService:Create(f, TweenInfo.new(0.65, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position=UDim2.new(0,0,0,0), Size=UDim2.new(1,0,1,0)}):Play()
-    TweenService:Create(ib, TweenInfo.new(0.65, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, false, 0.15), {Size=UDim2.new(0,26,0,26), Position=UDim2.new(0,16,0.5,-13)}):Play()
+    TweenService:Create(f, TweenInfo.new(0.65, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        Position=UDim2.new(0,0,0,0), Size=UDim2.new(1,0,1,0)
+    }):Play()
+    TweenService:Create(ib, TweenInfo.new(0.65, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, false, 0.15), {
+        Size=UDim2.new(0,26,0,26), Position=UDim2.new(0,16,0.5,-13)
+    }):Play()
     TweenService:Create(il, TweenInfo.new(0.9, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, false, 0.15), {Rotation=0}):Play()
     TweenService:Create(ac, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, false, 0.1), {Size=UDim2.new(0,3,0,30)}):Play()
     TweenService:Create(tt, TweenInfo.new(0.4), {TextTransparency=0}):Play()
@@ -495,7 +593,7 @@ local function notify(t)
 
     task.delay(NOTE_DURATION, function()
         if not w.Parent then return end
-        for _, o in ipairs({f, tt, bd, ib, il, ac, br, bg, sk}) do
+        for _, o in ipairs({f, tt, bd, ib, il, ac, br, bg2, sk}) do
             pcall(function()
                 TweenService:Create(o, TweenInfo.new(0.3), {BackgroundTransparency=1, TextTransparency=1, Transparency=1}):Play()
             end)
@@ -506,7 +604,7 @@ local function notify(t)
     end)
 end
 
--- ============ ROUND TIMER (DRAGGABLE) ============
+-- ============ ROUND TIMER ============
 local rtGui = Instance.new("ScreenGui")
 rtGui.Name = "AWRT"
 rtGui.Parent = getGuiParent()
@@ -547,7 +645,7 @@ rtValue.TextColor3 = Color3.new(1, 1, 1)
 rtValue.Font = Enum.Font.GothamBold
 rtValue.TextSize = 22
 
--- ============ INFO HUD (DRAGGABLE) ============
+-- ============ INFO HUD ============
 local ihGui = Instance.new("ScreenGui")
 ihGui.Name = "AWIH"
 ihGui.Parent = getGuiParent()
@@ -569,13 +667,6 @@ Instance.new("UICorner", infoHudFrame).CornerRadius = UDim.new(0, 12)
 local ihS = Instance.new("UIStroke", infoHudFrame)
 ihS.Color = Color3.fromRGB(50, 50, 50)
 ihS.Transparency = 0.25
-
-local ihDot = Instance.new("Frame", infoHudFrame)
-ihDot.Size = UDim2.new(0, 8, 0, 8)
-ihDot.Position = UDim2.new(0, 12, 0, 13)
-ihDot.AnchorPoint = Vector2.new(0.5, 0.5)
-ihDot.BackgroundColor3 = Color3.fromRGB(90, 255, 140)
-Instance.new("UICorner", ihDot).CornerRadius = UDim.new(1, 0)
 
 local ihH = Instance.new("TextLabel", infoHudFrame)
 ihH.Size = UDim2.new(1, -30, 0, 22)
@@ -626,6 +717,37 @@ RunService.RenderStepped:Connect(function(dt)
     end
 end)
 
+-- ============ THEME REFERENCES ============
+local themed = { text = {}, textStroke = {}, card = {}, cardHover = {}, border = {}, accent = {}, tab = {}, openBtn = {}, openBtnText = {} }
+
+local function trackText(obj)
+    table.insert(themed.text, obj)
+    obj.TextColor3 = c3(settingsConfig.textColor)
+    local st = Instance.new("UIStroke", obj)
+    st.Name = "AutoStroke"
+    st.Thickness = settingsConfig.textStrokeThickness or 0
+    st.Color = c3(settingsConfig.textStrokeColor)
+    st.Transparency = 0
+    st.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+    table.insert(themed.textStroke, st)
+    return obj
+end
+local function trackCard(obj)
+    table.insert(themed.card, obj)
+    obj.BackgroundColor3 = c3(settingsConfig.cardColor)
+    return obj
+end
+local function trackBorder(stroke)
+    table.insert(themed.border, stroke)
+    stroke.Color = c3(settingsConfig.borderColor)
+    return stroke
+end
+local function trackAccent(obj)
+    table.insert(themed.accent, obj)
+    obj.BackgroundColor3 = c3(settingsConfig.accentColor)
+    return obj
+end
+
 -- ============ GAME HELPERS ============
 local selectedScale = settingsConfig.selectedScale or 1
 local mainTgls = {}
@@ -633,6 +755,7 @@ local quickTgls = {}
 local quickFrame = nil
 local bgFrame = nil
 local bgImage = nil
+local mainOpenBtn = nil
 local applyLowDeviceOptimizations = function() end
 local applyFpsBoost = function() end
 
@@ -640,25 +763,33 @@ local function updateViz(key)
     if mainTgls[key] then
         local d = mainTgls[key]
         local on = state[key]
-        TweenService:Create(d.pill, TweenInfo.new(0.35), {BackgroundColor3 = on and Color3.new(1,1,1) or Color3.fromRGB(32,32,32)}):Play()
+        TweenService:Create(d.pill, TweenInfo.new(0.35), {
+            BackgroundColor3 = on and Color3.new(1,1,1) or c3(settingsConfig.cardColor)
+        }):Play()
         TweenService:Create(d.dot, TweenInfo.new(0.7, Enum.EasingStyle.Elastic), {
             Position = on and UDim2.new(1, -20*selectedScale, 0.5, -8*selectedScale)
                           or UDim2.new(0, 4*selectedScale, 0.5, -8*selectedScale),
-            BackgroundColor3 = on and Color3.new(0,0,0) or Color3.fromRGB(200,200,200)
+            BackgroundColor3 = on and c3(settingsConfig.cardColor) or c3(settingsConfig.textColor)
         }):Play()
-        if d.inner then
-            TweenService:Create(d.inner, TweenInfo.new(0.35), {
-                BackgroundColor3 = on and Color3.new(1,1,1) or Color3.fromRGB(22,22,22)
-            }):Play()
-        end
     end
     if quickTgls[key] then
         local on = state[key]
         TweenService:Create(quickTgls[key], TweenInfo.new(0.3), {
-            BackgroundColor3 = on and Color3.new(1,1,1) or Color3.fromRGB(18,18,18),
-            TextColor3 = on and Color3.new(0,0,0) or Color3.fromRGB(220,220,220)
+            BackgroundColor3 = on and Color3.new(1,1,1) or c3(settingsConfig.cardColor),
+            TextColor3 = on and c3(settingsConfig.cardColor) or c3(settingsConfig.textColor)
         }):Play()
     end
+end
+
+local function setStatus(msg)
+    if not st then return end
+    st.Text = "  " .. tostring(msg)
+    st.TextColor3 = c3(settingsConfig.textColor)
+    task.spawn(function()
+        TweenService:Create(st, TweenInfo.new(0.1), {TextColor3 = Color3.fromRGB(180,180,180)}):Play()
+        task.wait(0.1)
+        if st then TweenService:Create(st, TweenInfo.new(0.25), {TextColor3 = c3(settingsConfig.textColor)}):Play() end
+    end)
 end
 
 local function setToggleState(key, value)
@@ -677,15 +808,10 @@ local function setToggleState(key, value)
     end
 
     if value then
-        if key == "aimbotMurderer" then
-            state.aimbotSheriff = false; updateViz("aimbotSheriff")
-        elseif key == "aimbotSheriff" then
-            state.aimbotMurderer = false; updateViz("aimbotMurderer")
-        elseif key == "farm" then
-            state.xpFarm = false; updateViz("xpFarm")
-        elseif key == "xpFarm" then
-            state.farm = false; updateViz("farm")
-        end
+        if key == "aimbotMurderer" then state.aimbotSheriff = false; updateViz("aimbotSheriff")
+        elseif key == "aimbotSheriff" then state.aimbotMurderer = false; updateViz("aimbotMurderer")
+        elseif key == "farm" then state.xpFarm = false; updateViz("xpFarm")
+        elseif key == "xpFarm" then state.farm = false; updateViz("farm") end
     end
 
     updateViz(key)
@@ -734,10 +860,8 @@ local totalCoinsEarned = 0
 local sessionStartTime = tick()
 local lastRoundState = false
 local roundStartTime = 0
-local hasCollectedThisRound = false
 local roundFullyStarted = false
 local activeResets = {}
-local MAX_CONCURRENT_RESETS = 6
 
 local function targetIsAlive(plr)
     if not plr or not plr.Parent then return false end
@@ -746,13 +870,11 @@ local function targetIsAlive(plr)
     if not h or h.Health <= 0 then return false end
     return true
 end
-
 local function touch(a, b)
     pcall(function()
         firetouchinterest(a, b, 0); firetouchinterest(a, b, 1)
     end)
 end
-
 local function fullyRestoreCharacter(ch, sd)
     if not ch or not sd then return end
     local h = ch:FindFirstChildOfClass("Humanoid")
@@ -797,7 +919,6 @@ local function resetPlayer(tp)
 
     local odh = Workspace.FallenPartsDestroyHeight
     Workspace.FallenPartsDestroyHeight = -100000
-
     local st = tick()
     activeResets[tp.UserId] = {active = true}
     setStatus("Flinging " .. tp.Name .. "...")
@@ -808,7 +929,7 @@ local function resetPlayer(tp)
             Workspace.FallenPartsDestroyHeight = odh
             if bv.Parent then bv:Destroy() end
             if bg.Parent then bg:Destroy() end
-            restoreCharacter(ch, sd)
+            fullyRestoreCharacter(ch, sd)
             if conn then conn:Disconnect() end
             activeResets[tp.UserId] = nil
             setStatus(targetIsAlive(tp) and ("Fling done - " .. tp.Name .. " survived") or ("Target " .. tp.Name .. " flung!"))
@@ -819,14 +940,11 @@ local function resetPlayer(tp)
             rp.CFrame = CFrame.new(sp) * CFrame.Angles(math.pi/2, 0, 0)
             rp.AssemblyLinearVelocity = Vector3.new(0, -50000, 0)
             rp.AssemblyAngularVelocity = Vector3.new(7500, 7500, 7500)
-            for i = 1, 10 do
-                touch(rp, trp); if th then touch(rp, th) end
-            end
+            for i = 1, 10 do touch(rp, trp); if th then touch(rp, th) end end
         end
     end)
     return true
 end
-local function restoreCharacter(ch, sd) fullyRestoreCharacter(ch, sd) end
 
 local function reliableFling(tp)
     if not tp or tp == LP or not tp.Parent then return end
@@ -984,7 +1102,6 @@ local function alive()
     local c = LP.Character
     return c and c:FindFirstChild("Humanoid") and c.Humanoid.Health > 0 and c:FindFirstChild("HumanoidRootPart")
 end
-
 local function standUp()
     local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
     local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
@@ -999,7 +1116,6 @@ local function standUp()
         r.AssemblyAngularVelocity = Vector3.zero
     end
 end
-
 local function hideSky()
     local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
@@ -1011,14 +1127,12 @@ local function hideSky()
         r.AssemblyAngularVelocity = Vector3.zero
     end
 end
-
 local function cancelFarmTween()
     if currentFarmTween then pcall(function() currentFarmTween:Cancel() end) currentFarmTween = nil end
     if farmVelocityConn then farmVelocityConn:Disconnect() farmVelocityConn = nil end
     currentTargetCoin = nil
 end
 
--- ============ FARM STOP → LOBBY + CAMERA FIX ============
 stopFarm = function()
     cancelFarmTween()
     local ch = LP.Character
@@ -1057,7 +1171,6 @@ stopFarm = function()
     setStatus("Farm stopped - returned to lobby")
 end
 
--- ============ PERF ============
 applyLowDeviceOptimizations = function(en)
     pcall(function()
         if en then
@@ -1162,7 +1275,6 @@ local function findTool(n)
     if bp and bp:FindFirstChild(n) then return bp[n] end
     return nil
 end
-
 local function equipTool(n)
     local ch = LP.Character
     local bp = LP:FindFirstChild("Backpack")
@@ -1178,7 +1290,6 @@ local function equipTool(n)
     end
     return nil
 end
-
 local function executeKillBehind(tp)
     local tc = tp.Character
     local tr = tc and tc:FindFirstChild("HumanoidRootPart")
@@ -1307,19 +1418,6 @@ local function grabGunNow()
     end)
 end
 
-local function autoKillAllPlayers()
-    standUp(); task.wait(0.1)
-    local k = findTool("Knife") or equipTool("Knife")
-    if not k then for i = 1, 10 do task.wait(0.1); k = equipTool("Knife"); if k then break end end end
-    if not k then setStatus("No knife found!") return end
-    for _, tp in ipairs(Players:GetPlayers()) do
-        if tp ~= LP then
-            local th = tp.Character and tp.Character:FindFirstChildOfClass("Humanoid")
-            if th and th.Health > 0 then executeKillBehind(tp) end
-        end
-    end
-end
-
 local function killAllNow()
     task.spawn(function()
         local wf, wx = state.farm, state.xpFarm
@@ -1353,7 +1451,6 @@ local function killSheriffNow()
     end)
 end
 
--- ============ TELEPORTS ============
 local function teleportToLobby()
     local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if r then r.CFrame = LOBBY_CFRAME; setStatus("To Lobby") end
@@ -1502,25 +1599,68 @@ local function resetX4(i)
         voting = false; isExecutingAction = false
     end)
 end
+
+-- ============ THEME APPLIER ============
+applyTheme = function()
+    local cfg = settingsConfig
+    for _, o in ipairs(themed.text) do
+        pcall(function() o.TextColor3 = c3(cfg.textColor) end)
+    end
+    for _, s in ipairs(themed.textStroke) do
+        pcall(function()
+            s.Color = c3(cfg.textStrokeColor)
+            s.Thickness = cfg.textStrokeThickness or 0
+        end)
+    end
+    for _, o in ipairs(themed.card) do
+        pcall(function() o.BackgroundColor3 = c3(cfg.cardColor) end)
+    end
+    for _, s in ipairs(themed.border) do
+        pcall(function() s.Color = c3(cfg.borderColor) end)
+    end
+    for _, o in ipairs(themed.accent) do
+        pcall(function() o.BackgroundColor3 = c3(cfg.accentColor) end)
+    end
+    if bgFrame then bgFrame.BackgroundColor3 = c3(cfg.bgColor) end
+    if quickFrame then quickFrame.BackgroundColor3 = c3(cfg.bgColor) end
+    if mainOpenBtn then
+        mainOpenBtn.BackgroundColor3 = c3(cfg.openBtnColor)
+        mainOpenBtn.TextColor3 = c3(cfg.openBtnTextColor)
+    end
+    for _, b in ipairs(themed.tab) do
+        local isActive = (b:GetAttribute("Active") == true)
+        if isActive then
+            b.TextColor3 = c3(cfg.tabTextActiveColor)
+            b.BackgroundColor3 = c3(cfg.cardHoverColor)
+        else
+            b.TextColor3 = c3(cfg.tabTextColor)
+            b.BackgroundColor3 = c3(cfg.tabBgColor)
+        end
+    end
+    saveSettings()
+end
 -- ============ MAIN UI ============
 buildUI = function(reb)
     mainTgls = {}
     quickTgls = {}
+    themed = { text={}, textStroke={}, card={}, cardHover={}, border={}, accent={}, tab={}, openBtn={}, openBtnText={} }
+
     local parent = getGuiParent()
     pcall(function()
         local o = parent:FindFirstChild("Appleware")
         if o then o:Destroy() end
     end)
 
-    local BG_COLOR = Color3.fromRGB(settingsConfig.bgColor.r or 6, settingsConfig.bgColor.g or 6, settingsConfig.bgColor.b or 6)
-    local SB = Color3.fromRGB(10, 10, 10)
-    local CARD = Color3.fromRGB(14, 14, 14)
-    local CH = Color3.fromRGB(22, 22, 22)
-    local BORD = Color3.fromRGB(28, 28, 28)
-    local TXT = Color3.fromRGB(245, 245, 245)
-    local TXTD = Color3.fromRGB(140, 140, 140)
-    local ACC = Color3.new(1, 1, 1)
-    local SEC = Color3.new(0, 0, 0)
+    local cfg = settingsConfig
+    local BG_COLOR = c3(cfg.bgColor)
+    local CARD = c3(cfg.cardColor)
+    local CH = c3(cfg.cardHoverColor)
+    local BORD = c3(cfg.borderColor)
+    local TXT = c3(cfg.textColor)
+    local TXTD = c3(cfg.tabTextColor)
+    local TXTA = c3(cfg.tabTextActiveColor)
+    local ACC = c3(cfg.accentColor)
+    local TABBG = c3(cfg.tabBgColor)
 
     local bw = 540 * selectedScale
     local bh = 420 * selectedScale
@@ -1535,14 +1675,47 @@ buildUI = function(reb)
     sg.DisplayOrder = 999999
     sg.IgnoreGuiInset = true
 
-    -- Background image (layer behind)
+    -- Background image
     bgImage = Instance.new("ImageLabel", sg)
     bgImage.Size = UDim2.new(1, 0, 1, 0)
     bgImage.BackgroundTransparency = 1
-    bgImage.Image = settingsConfig.bgImage or ""
-    bgImage.Visible = settingsConfig.bgImage ~= ""
     bgImage.ZIndex = -1
     bgImage.ScaleType = Enum.ScaleType.Crop
+
+    local function resolveImage()
+        if cfg.bgImageFile and cfg.bgImageFile ~= "" then
+            if getcustomasset then
+                local ok, asset = pcall(getcustomasset, cfg.bgImageFile)
+                if ok and asset then return asset end
+            end
+        end
+        if cfg.bgImage and cfg.bgImage ~= "" then
+            local clean = cfg.bgImage:match("^(%d+)$")
+            if clean then return "rbxassetid://" .. clean end
+            return cfg.bgImage
+        end
+        return ""
+    end
+
+    local imgSrc = resolveImage()
+    if imgSrc ~= "" then
+        bgImage.Image = imgSrc
+        bgImage.Visible = true
+    else
+        bgImage.Visible = false
+    end
+
+    if imgSrc ~= "" then
+        task.spawn(function()
+            while bgImage and bgImage.Parent do
+                TweenService:Create(bgImage, TweenInfo.new(6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {ImageTransparency=0.25}):Play()
+                task.wait(6)
+                if not bgImage or not bgImage.Parent then break end
+                TweenService:Create(bgImage, TweenInfo.new(6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {ImageTransparency=0}):Play()
+                task.wait(6)
+            end
+        end)
+    end
 
     blackScreen = Instance.new("Frame", sg)
     blackScreen.Size = UDim2.new(1, 0, 1, 0)
@@ -1563,14 +1736,14 @@ buildUI = function(reb)
     Instance.new("UICorner", main).CornerRadius = R(14)
 
     local ms = Instance.new("UIStroke", main)
-    ms.Color = BORD
+    trackBorder(ms)
     ms.Transparency = 0.3
 
     bgFrame = main
 
     local sb = Instance.new("Frame", main)
     sb.Size = UDim2.new(0, sw, 1, 0)
-    sb.BackgroundColor3 = SB
+    sb.BackgroundColor3 = TABBG
     Instance.new("UICorner", sb).CornerRadius = R(14)
 
     local logo = Instance.new("TextLabel", sb)
@@ -1578,16 +1751,10 @@ buildUI = function(reb)
     logo.Position = UDim2.new(0, 6 * selectedScale, 0, 4 * selectedScale)
     logo.BackgroundTransparency = 1
     logo.Text = "Appleware"
-    logo.TextColor3 = TXT
     logo.Font = Enum.Font.GothamBold
     logo.TextSize = 16 * fm
     logo.TextXAlignment = Enum.TextXAlignment.Left
-
-    local ll = Instance.new("Frame", sb)
-    ll.Size = UDim2.new(1, -24 * selectedScale, 0, 1)
-    ll.Position = UDim2.new(0, 12 * selectedScale, 0, 50 * selectedScale)
-    ll.BackgroundColor3 = BORD
-    ll.BackgroundTransparency = 0.4
+    trackText(logo)
 
     local tlb = Instance.new("Frame", sb)
     tlb.Size = UDim2.new(1, -12 * selectedScale, 1, -68 * selectedScale)
@@ -1621,7 +1788,7 @@ buildUI = function(reb)
         pg.Size = UDim2.new(1, 0, 1, 0)
         pg.BackgroundTransparency = 1
         pg.ScrollBarThickness = 3 * selectedScale
-        pg.ScrollBarImageColor3 = Color3.fromRGB(60, 60, 60)
+        pg.ScrollBarImageColor3 = BORD
         pg.CanvasSize = UDim2.new(0, 0, 0, 0)
 
         local l = Instance.new("UIListLayout", pg)
@@ -1644,16 +1811,36 @@ buildUI = function(reb)
         local o = curTab; curTab = n
         for nm, b in pairs(btns) do
             local ia = (nm == n)
+            b:SetAttribute("Active", ia)
             local iSec = (nm == "Secret")
-            local tc = iSec and (ia and TXT or SEC) or (ia and TXT or TXTD)
+            local tc = iSec and (ia and TXT or Color3.new(0,0,0)) or (ia and TXTA or TXTD)
             TweenService:Create(b, TweenInfo.new(0.28), {
                 BackgroundTransparency = ia and 0 or 1,
-                BackgroundColor3 = ia and Color3.fromRGB(22, 22, 22) or Color3.new(0, 0, 0),
+                BackgroundColor3 = ia and CH or TABBG,
                 TextColor3 = tc
             }):Play()
         end
-        if pageGs[o] then pageGs[o].Visible = false end
-        if pageGs[n] then pageGs[n].Visible = true; staggerFade(pages[n]) end
+        if pageGs[o] then
+            local op = pages[o]
+            TweenService:Create(op, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+                Position = UDim2.new(-0.08, 0, 0, 0)
+            }):Play()
+            task.delay(0.2, function()
+                if pageGs[o] then
+                    pageGs[o].Visible = false
+                    op.Position = UDim2.new(0, 0, 0, 0)
+                end
+            end)
+        end
+        if pageGs[n] then
+            pageGs[n].Visible = true
+            local np = pages[n]
+            np.Position = UDim2.new(0.08, 0, 0, 0)
+            TweenService:Create(np, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+                Position = UDim2.new(0, 0, 0, 0)
+            }):Play()
+            staggerFade(np)
+        end
         task.delay(0.2, function() switching = false end)
     end
 
@@ -1661,17 +1848,24 @@ buildUI = function(reb)
         local iSec = (n == "Secret")
         local b = Instance.new("TextButton", tlb)
         b.Size = UDim2.new(1, 0, 0, 32 * selectedScale)
-        b.BackgroundColor3 = (i == 1) and Color3.fromRGB(22, 22, 22) or Color3.new(0, 0, 0)
+        b.BackgroundColor3 = (i == 1) and CH or TABBG
         b.BackgroundTransparency = (i == 1) and 0 or 1
         b.Text = "  " .. n
-        b.TextColor3 = iSec and SEC or ((i == 1) and TXT or TXTD)
+        b.TextColor3 = iSec and Color3.new(0,0,0) or ((i == 1) and TXTA or TXTD)
         b.Font = Enum.Font.GothamMedium
         b.TextSize = 12.5 * fm
         b.TextXAlignment = Enum.TextXAlignment.Left
         b.AutoButtonColor = false
+        b:SetAttribute("Active", i == 1)
         Instance.new("UICorner", b).CornerRadius = R(8)
+        local bStroke = Instance.new("UIStroke", b)
+        bStroke.Thickness = settingsConfig.textStrokeThickness or 0
+        bStroke.Color = c3(settingsConfig.textStrokeColor)
+        bStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+        table.insert(themed.textStroke, bStroke)
         btns[n] = b
-        attachRipple(b, Color3.new(1, 1, 1))
+        table.insert(themed.tab, b)
+        attachRipple(b, ACC)
         makePage(n)
         if i == 1 then pageGs[n].Visible = true end
         b.MouseButton1Click:Connect(function() switchTab(n) end)
@@ -1680,14 +1874,15 @@ buildUI = function(reb)
     st = Instance.new("TextLabel", main)
     st.Size = UDim2.new(1, -sw - 20 * selectedScale, 0, 30 * selectedScale)
     st.Position = UDim2.new(0, sw + 10 * selectedScale, 1, -40 * selectedScale)
-    st.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+    st.BackgroundColor3 = CARD
     st.Text = "  Ready"
-    st.TextColor3 = TXT
     st.Font = Enum.Font.GothamMedium
     st.TextSize = 11.5 * fm
     st.TextXAlignment = Enum.TextXAlignment.Left
     st.TextTruncate = Enum.TextTruncate.AtEnd
     Instance.new("UICorner", st).CornerRadius = R(8)
+    trackText(st)
+    trackCard(st)
 
     -- ============ COMPONENT BUILDERS ============
     local function tgg(page, name, order, key)
@@ -1696,34 +1891,37 @@ buildUI = function(reb)
         row.LayoutOrder = order
         row.BackgroundColor3 = CARD
         Instance.new("UICorner", row).CornerRadius = R(10)
+        trackCard(row)
 
         local lbl = Instance.new("TextLabel", row)
         lbl.Size = UDim2.new(1, -64 * selectedScale, 1, 0)
         lbl.Position = UDim2.new(0, 14 * selectedScale, 0, 0)
         lbl.BackgroundTransparency = 1
         lbl.Text = name
-        lbl.TextColor3 = TXT
         lbl.Font = Enum.Font.GothamMedium
         lbl.TextSize = 12.5 * fm
         lbl.TextXAlignment = Enum.TextXAlignment.Left
+        trackText(lbl)
 
         local pill = Instance.new("Frame", row)
         pill.Size = UDim2.new(0, 44 * selectedScale, 0, 24 * selectedScale)
         pill.Position = UDim2.new(1, -54 * selectedScale, 0.5, -12 * selectedScale)
-        pill.BackgroundColor3 = state[key] and Color3.new(1, 1, 1) or Color3.fromRGB(32, 32, 32)
+        pill.BackgroundColor3 = state[key] and ACC or CARD
         Instance.new("UICorner", pill).CornerRadius = UDim.new(1, 0)
+        trackAccent(pill)
 
         local pI = Instance.new("Frame", pill)
         pI.Size = UDim2.new(1, -4 * selectedScale, 1, -4 * selectedScale)
         pI.Position = UDim2.new(0, 2 * selectedScale, 0, 2 * selectedScale)
-        pI.BackgroundColor3 = state[key] and Color3.new(1, 1, 1) or Color3.fromRGB(22, 22, 22)
+        pI.BackgroundColor3 = state[key] and ACC or CARD
         Instance.new("UICorner", pI).CornerRadius = UDim.new(1, 0)
+        trackAccent(pI)
 
         local dot = Instance.new("Frame", pill)
         dot.Size = UDim2.new(0, 16 * selectedScale, 0, 16 * selectedScale)
         dot.Position = state[key] and UDim2.new(1, -20 * selectedScale, 0.5, -8 * selectedScale)
                         or UDim2.new(0, 4 * selectedScale, 0.5, -8 * selectedScale)
-        dot.BackgroundColor3 = state[key] and Color3.new(0, 0, 0) or Color3.fromRGB(200, 200, 200)
+        dot.BackgroundColor3 = state[key] and CARD or TXT
         Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
 
         mainTgls[key] = {pill = pill, dot = dot, inner = pI}
@@ -1742,9 +1940,6 @@ buildUI = function(reb)
         attachRipple(hit)
         hit.MouseButton1Click:Connect(function()
             setToggleState(key, not state[key])
-            TweenService:Create(pI, TweenInfo.new(0.28), {
-                BackgroundColor3 = state[key] and Color3.new(1, 1, 1) or Color3.fromRGB(22, 22, 22)
-            }):Play()
         end)
     end
 
@@ -1756,16 +1951,17 @@ buildUI = function(reb)
         b.Text = ""
         b.ClipsDescendants = true
         Instance.new("UICorner", b).CornerRadius = R(10)
+        trackCard(b)
 
         local l = Instance.new("TextLabel", b)
         l.Size = UDim2.new(1, -12 * selectedScale, 1, 0)
         l.Position = UDim2.new(0, 12 * selectedScale, 0, 0)
         l.BackgroundTransparency = 1
         l.Text = name
-        l.TextColor3 = TXT
         l.Font = Enum.Font.GothamMedium
         l.TextSize = 12.5 * fm
         l.TextXAlignment = Enum.TextXAlignment.Left
+        trackText(l)
 
         b.MouseEnter:Connect(function()
             TweenService:Create(b, TweenInfo.new(0.25), {BackgroundColor3 = CH}):Play()
@@ -1773,7 +1969,7 @@ buildUI = function(reb)
         b.MouseLeave:Connect(function()
             TweenService:Create(b, TweenInfo.new(0.28), {BackgroundColor3 = CARD}):Play()
         end)
-        attachBounce(b); attachShine(b); attachRipple(b)
+        attachBounce(b); attachShine(b); attachRipple(b); attachHoverLift(b, 1.01)
         b.MouseButton1Click:Connect(cb)
     end
 
@@ -1799,23 +1995,24 @@ buildUI = function(reb)
         row.LayoutOrder = order
         row.BackgroundColor3 = CARD
         Instance.new("UICorner", row).CornerRadius = R(10)
+        trackCard(row)
 
         local lbl = Instance.new("TextLabel", row)
         lbl.Size = UDim2.new(0.6, 0, 0, 24 * selectedScale)
         lbl.Position = UDim2.new(0, 14 * selectedScale, 0, 4 * selectedScale)
         lbl.BackgroundTransparency = 1
         lbl.Text = label
-        lbl.TextColor3 = TXT
         lbl.Font = Enum.Font.GothamMedium
         lbl.TextSize = 11 * fm
         lbl.TextXAlignment = Enum.TextXAlignment.Left
+        trackText(lbl)
 
         local ib = Instance.new("TextBox", row)
         ib.Size = UDim2.new(0, 50 * selectedScale, 0, 24 * selectedScale)
         ib.Position = UDim2.new(1, -64 * selectedScale, 0, 4 * selectedScale)
         ib.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
         ib.Text = tostring(iv)
-        ib.TextColor3 = Color3.fromRGB(150, 200, 255)
+        ib.TextColor3 = ACC
         ib.Font = Enum.Font.Gotham
         ib.TextSize = 11 * fm
         ib.ClearTextOnFocus = false
@@ -1824,18 +2021,19 @@ buildUI = function(reb)
         local tr = Instance.new("Frame", row)
         tr.Size = UDim2.new(1, -28 * selectedScale, 0, 8 * selectedScale)
         tr.Position = UDim2.new(0, 14 * selectedScale, 1, -18 * selectedScale)
-        tr.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        tr.BackgroundColor3 = BORD
         Instance.new("UICorner", tr).CornerRadius = UDim.new(1, 0)
 
         local fl = Instance.new("Frame", tr)
         fl.Size = UDim2.new((iv - minV) / (maxV - minV), 0, 1, 0)
-        fl.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+        fl.BackgroundColor3 = ACC
         Instance.new("UICorner", fl).CornerRadius = UDim.new(1, 0)
+        trackAccent(fl)
 
         local kn = Instance.new("Frame", tr)
         kn.Size = UDim2.new(0, 16 * selectedScale, 0, 16 * selectedScale)
         kn.Position = UDim2.new((iv - minV) / (maxV - minV), 0, 0.5, -8 * selectedScale)
-        kn.BackgroundColor3 = Color3.new(1, 1, 1)
+        kn.BackgroundColor3 = TXT
         Instance.new("UICorner", kn).CornerRadius = UDim.new(1, 0)
 
         local drag = false
@@ -1888,25 +2086,136 @@ buildUI = function(reb)
         end)
     end
 
+    local function makeInput(page, order, ph, val, onC)
+        local box = Instance.new("TextBox", page)
+        box.Size = UDim2.new(1, 0, 0, 36 * selectedScale)
+        box.LayoutOrder = order
+        box.BackgroundColor3 = CARD
+        box.PlaceholderText = ph
+        box.PlaceholderColor3 = TXTD
+        box.Text = val or ""
+        box.TextColor3 = TXT
+        box.Font = Enum.Font.Gotham
+        box.TextSize = 12 * fm
+        box.ClearTextOnFocus = false
+        Instance.new("UICorner", box).CornerRadius = R(10)
+        trackCard(box)
+        box.FocusLost:Connect(function() onC(box.Text) end)
+        return box
+    end
+
+    -- Colour picker: 3 sliders + hex + preview
+    local function makeColorPicker(page, order, label, colorKey, onChange)
+        local row = Instance.new("Frame", page)
+        row.Size = UDim2.new(1, 0, 0, 104 * selectedScale)
+        row.LayoutOrder = order
+        row.BackgroundColor3 = CARD
+        Instance.new("UICorner", row).CornerRadius = R(10)
+        trackCard(row)
+
+        local title = Instance.new("TextLabel", row)
+        title.Size = UDim2.new(1, -60 * selectedScale, 0, 20 * selectedScale)
+        title.Position = UDim2.new(0, 12 * selectedScale, 0, 6 * selectedScale)
+        title.BackgroundTransparency = 1
+        title.Text = label
+        title.Font = Enum.Font.GothamBold
+        title.TextSize = 12 * fm
+        title.TextXAlignment = Enum.TextXAlignment.Left
+        trackText(title)
+
+        local preview = Instance.new("Frame", row)
+        preview.Size = UDim2.new(0, 40 * selectedScale, 0, 20 * selectedScale)
+        preview.Position = UDim2.new(1, -52 * selectedScale, 0, 6 * selectedScale)
+        preview.BackgroundColor3 = c3(settingsConfig[colorKey])
+        Instance.new("UICorner", preview).CornerRadius = R(6)
+
+        local function mkMini(y, ch, miniLabel)
+            local mini = Instance.new("Frame", row)
+            mini.Size = UDim2.new(1, -24 * selectedScale, 0, 14 * selectedScale)
+            mini.Position = UDim2.new(0, 12 * selectedScale, 0, y)
+            mini.BackgroundTransparency = 1
+
+            local ml = Instance.new("TextLabel", mini)
+            ml.Size = UDim2.new(0, 14 * selectedScale, 1, 0)
+            ml.BackgroundTransparency = 1
+            ml.Text = miniLabel
+            ml.Font = Enum.Font.GothamBold
+            ml.TextSize = 10 * fm
+            ml.TextColor3 = TXTD
+            ml.TextXAlignment = Enum.TextXAlignment.Left
+
+            local tr = Instance.new("Frame", mini)
+            tr.Size = UDim2.new(1, -22 * selectedScale, 0, 6 * selectedScale)
+            tr.Position = UDim2.new(0, 18 * selectedScale, 0.5, -3 * selectedScale)
+            tr.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+            Instance.new("UICorner", tr).CornerRadius = UDim.new(1, 0)
+
+            local curV = settingsConfig[colorKey][ch] or 0
+            local fl = Instance.new("Frame", tr)
+            fl.Size = UDim2.new(curV / 255, 0, 1, 0)
+            if ch == "r" then fl.BackgroundColor3 = Color3.fromRGB(curV, 0, 0)
+            elseif ch == "g" then fl.BackgroundColor3 = Color3.fromRGB(0, curV, 0)
+            else fl.BackgroundColor3 = Color3.fromRGB(0, 0, curV) end
+            Instance.new("UICorner", fl).CornerRadius = UDim.new(1, 0)
+
+            local drag = false
+            local function upd(inp)
+                local mx = inp.Position.X
+                local tp = tr.AbsolutePosition.X
+                local ts = tr.AbsoluteSize.X
+                if ts == 0 then return end
+                local p = math.clamp((mx - tp) / ts, 0, 1)
+                local v = math.floor(255 * p + 0.5)
+                settingsConfig[colorKey][ch] = v
+                fl.Size = UDim2.new(p, 0, 1, 0)
+                preview.BackgroundColor3 = c3(settingsConfig[colorKey])
+                if ch == "r" then fl.BackgroundColor3 = Color3.fromRGB(v, 0, 0)
+                elseif ch == "g" then fl.BackgroundColor3 = Color3.fromRGB(0, v, 0)
+                else fl.BackgroundColor3 = Color3.fromRGB(0, 0, v) end
+                if onChange then onChange() end
+                saveSettings()
+            end
+            tr.InputBegan:Connect(function(inp)
+                if inp.UserInputType == Enum.UserInputType.MouseButton1
+                    or inp.UserInputType == Enum.UserInputType.Touch then
+                    drag = true; upd(inp)
+                end
+            end)
+            UIS.InputChanged:Connect(function(inp)
+                if drag and (inp.UserInputType == Enum.UserInputType.MouseMovement
+                    or inp.UserInputType == Enum.UserInputType.Touch) then
+                    upd(inp)
+                end
+            end)
+            UIS.InputEnded:Connect(function(inp)
+                if inp.UserInputType == Enum.UserInputType.MouseButton1
+                    or inp.UserInputType == Enum.UserInputType.Touch then
+                    drag = false
+                end
+            end)
+        end
+        mkMini(32 * selectedScale, "r", "R")
+        mkMini(52 * selectedScale, "g", "G")
+        mkMini(72 * selectedScale, "b", "B")
+
+        return {preview = preview}
+    end
+
     -- ============ SECRET TAB ============
     addSect(pages["Secret"], "Movement", 1)
     tgg(pages["Secret"], "Fly (WASD/Joystick)", 2, "flyEnabled")
     makeSlider(pages["Secret"], "Fly Speed", 3, state.flySpeed or 50, 10, 300, "flySpeed")
     tgg(pages["Secret"], "Infinite Jump", 4, "infJumpEnabled")
-
     addSect(pages["Secret"], "Physics", 5)
     tgg(pages["Secret"], "Noclip", 6, "noclip")
     tgg(pages["Secret"], "Freeze (Anchor)", 7, "freeze")
-
     addSect(pages["Secret"], "Attributes", 8)
     tgg(pages["Secret"], "Speed Changer", 9, "speedEnabled")
     makeSlider(pages["Secret"], "Walk Speed", 10, state.speedValue or 16, 16, 500, "speedValue")
     tgg(pages["Secret"], "Jump Power", 11, "jumpEnabled")
     makeSlider(pages["Secret"], "Jump Power", 12, state.jumpValue or 50, 50, 500, "jumpValue")
-
     addSect(pages["Secret"], "Invisibility", 13)
     tgg(pages["Secret"], "Invisible (Ghost Mode)", 14, "invisibleEnabled")
-
     addSect(pages["Secret"], "Visuals", 15)
     tgg(pages["Secret"], "Fullbright", 16, "fullbright")
     tgg(pages["Secret"], "FOV Changer", 17, "fovEnabled")
@@ -1914,7 +2223,6 @@ buildUI = function(reb)
     tgg(pages["Secret"], "Camera Max Zoom", 19, "cameraZoomEnabled")
     makeSlider(pages["Secret"], "Max Zoom", 20, state.cameraMaxZoom or 500, 100, 2000, "cameraMaxZoom")
     tgg(pages["Secret"], "Info HUD", 21, "infoHudEnabled")
-
     addSect(pages["Secret"], "Utility", 22)
     tgg(pages["Secret"], "Instant Interact", 23, "instantInteract")
     tgg(pages["Secret"], "Click / Tap Teleport", 24, "clickTP")
@@ -1942,16 +2250,17 @@ buildUI = function(reb)
     pr.LayoutOrder = 8
     pr.BackgroundColor3 = CARD
     Instance.new("UICorner", pr).CornerRadius = R(10)
+    trackCard(pr)
 
     local prl = Instance.new("TextLabel", pr)
     prl.Size = UDim2.new(1, -60 * selectedScale, 1, 0)
     prl.Position = UDim2.new(0, 14 * selectedScale, 0, 0)
     prl.BackgroundTransparency = 1
     prl.Text = "Tap to open player list"
-    prl.TextColor3 = TXT
     prl.Font = Enum.Font.GothamMedium
     prl.TextSize = 12.5 * fm
     prl.TextXAlignment = Enum.TextXAlignment.Left
+    trackText(prl)
 
     local prh = Instance.new("TextButton", pr)
     prh.Size = UDim2.new(1, 0, 1, 0)
@@ -1964,19 +2273,21 @@ buildUI = function(reb)
     pc.BackgroundColor3 = CARD
     pc.ClipsDescendants = true
     Instance.new("UICorner", pc).CornerRadius = R(10)
+    trackCard(pc)
 
     local ps = Instance.new("ScrollingFrame", pc)
     ps.Size = UDim2.new(1, -8 * selectedScale, 1, -8 * selectedScale)
     ps.Position = UDim2.new(0, 4 * selectedScale, 0, 4 * selectedScale)
     ps.BackgroundTransparency = 1
     ps.ScrollBarThickness = 3 * selectedScale
+    ps.ScrollBarImageColor3 = BORD
     ps.CanvasSize = UDim2.new(0, 0, 0, 0)
 
-    local pl = Instance.new("UIListLayout", ps)
-    pl.SortOrder = Enum.SortOrder.LayoutOrder
-    pl.Padding = UDim.new(0, 4 * selectedScale)
-    pl:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        ps.CanvasSize = UDim2.new(0, 0, 0, pl.AbsoluteContentSize.Y + 4)
+    local pl2 = Instance.new("UIListLayout", ps)
+    pl2.SortOrder = Enum.SortOrder.LayoutOrder
+    pl2.Padding = UDim.new(0, 4 * selectedScale)
+    pl2:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        ps.CanvasSize = UDim2.new(0, 0, 0, pl2.AbsoluteContentSize.Y + 4)
     end)
 
     local pickExp = false
@@ -1994,6 +2305,7 @@ buildUI = function(reb)
     fld.BackgroundColor3 = CARD
     fld.ClipsDescendants = true
     Instance.new("UICorner", fld).CornerRadius = R(10)
+    trackCard(fld)
 
     local fli = Instance.new("Frame", fld)
     fli.Size = UDim2.new(1, -12 * selectedScale, 0, 0)
@@ -2016,6 +2328,7 @@ buildUI = function(reb)
     wld.BackgroundColor3 = CARD
     wld.ClipsDescendants = true
     Instance.new("UICorner", wld).CornerRadius = R(10)
+    trackCard(wld)
 
     local wli = Instance.new("Frame", wld)
     wli.Size = UDim2.new(1, -12 * selectedScale, 0, 0)
@@ -2044,7 +2357,7 @@ buildUI = function(reb)
 
     local function rebuildPicker()
         for _, c in ipairs(ps:GetChildren()) do
-            if c:IsA("GuiObject") and c ~= pl then c:Destroy() end
+            if c:IsA("GuiObject") and c ~= pl2 then c:Destroy() end
         end
         local o = 0
         for _, p in ipairs(Players:GetPlayers()) do
@@ -2053,7 +2366,7 @@ buildUI = function(reb)
                 local row = Instance.new("Frame", ps)
                 row.Size = UDim2.new(1, -4 * selectedScale, 0, 30 * selectedScale)
                 row.LayoutOrder = o
-                row.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+                row.BackgroundColor3 = CARD
                 Instance.new("UICorner", row).CornerRadius = R(7)
 
                 local nl = Instance.new("TextLabel", row)
@@ -2061,11 +2374,11 @@ buildUI = function(reb)
                 nl.Position = UDim2.new(0, 10 * selectedScale, 0, 0)
                 nl.BackgroundTransparency = 1
                 nl.Text = p.Name
-                nl.TextColor3 = TXT
                 nl.Font = Enum.Font.GothamMedium
                 nl.TextSize = 11.5 * fm
                 nl.TextXAlignment = Enum.TextXAlignment.Left
                 nl.TextTruncate = Enum.TextTruncate.AtEnd
+                trackText(nl)
 
                 local isF = isInList(settingsConfig.flingList, p.Name)
                 local isW = isInList(settingsConfig.whitelist, p.Name)
@@ -2073,7 +2386,7 @@ buildUI = function(reb)
                 local fb = Instance.new("TextButton", row)
                 fb.Size = UDim2.new(0, 60 * selectedScale, 0, 24 * selectedScale)
                 fb.Position = UDim2.new(1, -126 * selectedScale, 0.5, -12 * selectedScale)
-                fb.BackgroundColor3 = isF and Color3.fromRGB(140, 50, 200) or Color3.fromRGB(30, 30, 30)
+                fb.BackgroundColor3 = isF and Color3.fromRGB(140, 50, 200) or CARD
                 fb.Text = "Target"
                 fb.TextColor3 = Color3.new(1, 1, 1)
                 fb.Font = Enum.Font.GothamBold
@@ -2084,7 +2397,7 @@ buildUI = function(reb)
                 local wb = Instance.new("TextButton", row)
                 wb.Size = UDim2.new(0, 60 * selectedScale, 0, 24 * selectedScale)
                 wb.Position = UDim2.new(1, -62 * selectedScale, 0.5, -12 * selectedScale)
-                wb.BackgroundColor3 = isW and Color3.fromRGB(60, 140, 220) or Color3.fromRGB(30, 30, 30)
+                wb.BackgroundColor3 = isW and Color3.fromRGB(60, 140, 220) or CARD
                 wb.Text = "Safe"
                 wb.TextColor3 = Color3.new(1, 1, 1)
                 wb.Font = Enum.Font.GothamBold
@@ -2255,26 +2568,10 @@ buildUI = function(reb)
         saveSettings()
     end)
 
-    local function mkInput(page, order, ph, val, onC)
-        local box = Instance.new("TextBox", page)
-        box.Size = UDim2.new(1, 0, 0, 36 * selectedScale)
-        box.LayoutOrder = order
-        box.BackgroundColor3 = CARD
-        box.PlaceholderText = ph
-        box.PlaceholderColor3 = TXTD
-        box.Text = val or ""
-        box.TextColor3 = TXT
-        box.Font = Enum.Font.Gotham
-        box.TextSize = 12 * fm
-        box.ClearTextOnFocus = false
-        Instance.new("UICorner", box).CornerRadius = R(10)
-        box.FocusLost:Connect(function() onC(box.Text) end)
-        return box
-    end
-    mkInput(pages["Webhook"], 3, "Webhook URL...", settingsConfig.webhookUrl, function(t)
+    makeInput(pages["Webhook"], 3, "Webhook URL...", settingsConfig.webhookUrl, function(t)
         settingsConfig.webhookUrl = t; saveSettings()
     end)
-    mkInput(pages["Webhook"], 4, "Discord User ID...", settingsConfig.discordUserId, function(t)
+    makeInput(pages["Webhook"], 4, "Discord User ID...", settingsConfig.discordUserId, function(t)
         settingsConfig.discordUserId = t; saveSettings()
     end)
 
@@ -2288,7 +2585,7 @@ buildUI = function(reb)
     tgg(pages["Misc"], "Notify Map Name", 7, "notifyMapName")
     tgg(pages["Misc"], "Round Timer", 8, "showRoundTimerCountdown")
 
-    -- ============ UI TAB (with Quick Toggle Manager) ============
+    -- ============ UI TAB ============
     tgg(pages["UI"], "Show Quick Toggles Menu", 1, "quickTogglesVisible")
 
     local sr = Instance.new("Frame", pages["UI"])
@@ -2296,16 +2593,17 @@ buildUI = function(reb)
     sr.LayoutOrder = 2
     sr.BackgroundColor3 = CARD
     Instance.new("UICorner", sr).CornerRadius = R(10)
+    trackCard(sr)
 
     local srl = Instance.new("TextLabel", sr)
     srl.Size = UDim2.new(0.5, 0, 1, 0)
     srl.Position = UDim2.new(0, 14 * selectedScale, 0, 0)
     srl.BackgroundTransparency = 1
     srl.Text = "UI Scale"
-    srl.TextColor3 = TXT
     srl.Font = Enum.Font.GothamMedium
     srl.TextSize = 12.5 * fm
     srl.TextXAlignment = Enum.TextXAlignment.Left
+    trackText(srl)
 
     local smn = Instance.new("TextButton", sr)
     smn.Size = UDim2.new(0, 30 * selectedScale, 0, 26 * selectedScale)
@@ -2355,7 +2653,6 @@ buildUI = function(reb)
 
     addSect(pages["UI"], "Manage Quick Toggles", 3)
 
-    -- Search box
     local qsb = Instance.new("TextBox", pages["UI"])
     qsb.Size = UDim2.new(1, 0, 0, 34 * selectedScale)
     qsb.LayoutOrder = 4
@@ -2368,14 +2665,14 @@ buildUI = function(reb)
     qsb.TextSize = 12 * fm
     qsb.ClearTextOnFocus = false
     Instance.new("UICorner", qsb).CornerRadius = R(10)
+    trackCard(qsb)
 
-    -- Manager list
     local qms = Instance.new("ScrollingFrame", pages["UI"])
     qms.Size = UDim2.new(1, 0, 0, 220 * selectedScale)
     qms.LayoutOrder = 5
     qms.BackgroundTransparency = 1
     qms.ScrollBarThickness = 3 * selectedScale
-    qms.ScrollBarImageColor3 = Color3.fromRGB(60, 60, 60)
+    qms.ScrollBarImageColor3 = BORD
     qms.CanvasSize = UDim2.new(0, 0, 0, 0)
 
     local qml = Instance.new("UIListLayout", qms)
@@ -2416,16 +2713,17 @@ buildUI = function(reb)
                 row.Size = UDim2.new(1, 0, 0, 32 * selectedScale)
                 row.BackgroundColor3 = CARD
                 Instance.new("UICorner", row).CornerRadius = R(8)
+                trackCard(row)
 
                 local nl = Instance.new("TextLabel", row)
                 nl.Size = UDim2.new(0.62, 0, 1, 0)
                 nl.Position = UDim2.new(0, 10 * selectedScale, 0, 0)
                 nl.BackgroundTransparency = 1
                 nl.Text = fn
-                nl.TextColor3 = TXT
                 nl.Font = Enum.Font.GothamMedium
                 nl.TextSize = 11.5 * fm
                 nl.TextXAlignment = Enum.TextXAlignment.Left
+                trackText(nl)
 
                 local ab = Instance.new("TextButton", row)
                 ab.Size = UDim2.new(0, 62 * selectedScale, 0, 24 * selectedScale)
@@ -2459,107 +2757,117 @@ buildUI = function(reb)
     refreshManager("")
 
     -- ============ APPEARANCE TAB ============
-    addSect(pages["Appearance"], "Background Color (RGB)", 1)
-
-    local bgPreview = Instance.new("Frame", pages["Appearance"])
-    bgPreview.Size = UDim2.new(1, 0, 0, 40 * selectedScale)
-    bgPreview.LayoutOrder = 2
-    bgPreview.BackgroundColor3 = BG_COLOR
-    Instance.new("UICorner", bgPreview).CornerRadius = R(10)
-
-    local function applyBgColor()
-        local c = settingsConfig.bgColor
-        local col = Color3.fromRGB(c.r, c.g, c.b)
-        if bgFrame then bgFrame.BackgroundColor3 = col end
-        bgPreview.BackgroundColor3 = col
-        saveSettings()
-    end
-
-    makeSlider(pages["Appearance"], "Red", 3, settingsConfig.bgColor.r, 0, 255, "__r", function(v)
-        settingsConfig.bgColor.r = v; applyBgColor()
+    addSect(pages["Appearance"], "Text", 1)
+    makeColorPicker(pages["Appearance"], 2, "Text Color", "textColor", function()
+        applyTheme()
     end)
-    makeSlider(pages["Appearance"], "Green", 4, settingsConfig.bgColor.g, 0, 255, "__g", function(v)
-        settingsConfig.bgColor.g = v; applyBgColor()
+    makeColorPicker(pages["Appearance"], 3, "Text Stroke Color", "textStrokeColor", function()
+        applyTheme()
     end)
-    makeSlider(pages["Appearance"], "Blue", 5, settingsConfig.bgColor.b, 0, 255, "__b", function(v)
-        settingsConfig.bgColor.b = v; applyBgColor()
+    makeSlider(pages["Appearance"], "Text Stroke Thickness", 4, settingsConfig.textStrokeThickness or 0, 0, 5, "textStrokeThickness", function(v)
+        settingsConfig.textStrokeThickness = v
+        applyTheme()
     end)
 
-    local hexBox = mkInput(pages["Appearance"], 6, "Hex color (e.g. 060606)", 
-        string.format("%02x%02x%02x", settingsConfig.bgColor.r, settingsConfig.bgColor.g, settingsConfig.bgColor.b),
-        function(t)
-            local clean = t:gsub("#", "")
-            local r, g, b = clean:match("^(%x%x)(%x%x)(%x%x)$")
-            if r then
-                settingsConfig.bgColor.r = tonumber(r, 16)
-                settingsConfig.bgColor.g = tonumber(g, 16)
-                settingsConfig.bgColor.b = tonumber(b, 16)
-                applyBgColor()
-                buildUI(true)
-            end
-        end)
-
-    addSect(pages["Appearance"], "Background Image", 7)
-
-    local imgBox = mkInput(pages["Appearance"], 8, "Image Asset ID or URL...", settingsConfig.bgImage or "", function(t)
-        settingsConfig.bgImage = t
-        saveSettings()
+    addSect(pages["Appearance"], "Panels", 5)
+    makeColorPicker(pages["Appearance"], 6, "Panel Background", "bgColor", function()
+        applyTheme()
+    end)
+    makeColorPicker(pages["Appearance"], 7, "Card Color", "cardColor", function()
+        applyTheme()
+    end)
+    makeColorPicker(pages["Appearance"], 8, "Card Hover Color", "cardHoverColor", function()
+        applyTheme()
+    end)
+    makeColorPicker(pages["Appearance"], 9, "Border Color", "borderColor", function()
+        applyTheme()
+    end)
+    makeColorPicker(pages["Appearance"], 10, "Accent Color", "accentColor", function()
+        applyTheme()
     end)
 
-    local imgApplyRow = Instance.new("Frame", pages["Appearance"])
-    imgApplyRow.Size = UDim2.new(1, 0, 0, 38 * selectedScale)
-    imgApplyRow.LayoutOrder = 9
-    imgApplyRow.BackgroundColor3 = CARD
-    Instance.new("UICorner", imgApplyRow).CornerRadius = R(10)
-
-    local imgApply = Instance.new("TextButton", imgApplyRow)
-    imgApply.Size = UDim2.new(0.5, -4 * selectedScale, 1, -8 * selectedScale)
-    imgApply.Position = UDim2.new(0, 4 * selectedScale, 0, 4 * selectedScale)
-    imgApply.BackgroundColor3 = Color3.fromRGB(35, 140, 65)
-    imgApply.Text = "Apply Image"
-    imgApply.TextColor3 = Color3.new(1, 1, 1)
-    imgApply.Font = Enum.Font.GothamBold
-    imgApply.TextSize = 11.5 * fm
-    Instance.new("UICorner", imgApply).CornerRadius = R(8)
-    attachBounce(imgApply)
-
-    local imgClear = Instance.new("TextButton", imgApplyRow)
-    imgClear.Size = UDim2.new(0.5, -4 * selectedScale, 1, -8 * selectedScale)
-    imgClear.Position = UDim2.new(0.5, 0, 0, 4 * selectedScale)
-    imgClear.BackgroundColor3 = Color3.fromRGB(160, 40, 40)
-    imgClear.Text = "Clear Image"
-    imgClear.TextColor3 = Color3.new(1, 1, 1)
-    imgClear.Font = Enum.Font.GothamBold
-    imgClear.TextSize = 11.5 * fm
-    Instance.new("UICorner", imgClear).CornerRadius = R(8)
-    attachBounce(imgClear)
-
-    imgApply.MouseButton1Click:Connect(function()
-        local t = imgBox.Text
-        settingsConfig.bgImage = t
-        saveSettings()
-        if bgImage then
-            if t ~= "" then
-                local clean = t:match("^(%d+)$")
-                if clean then
-                    bgImage.Image = "rbxassetid://" .. clean
-                else
-                    bgImage.Image = t
-                end
-                bgImage.Visible = true
-            else
-                bgImage.Visible = false
-            end
-        end
+    addSect(pages["Appearance"], "Tabs & Buttons", 11)
+    makeColorPicker(pages["Appearance"], 12, "Tab Bar Background", "tabBgColor", function()
+        applyTheme()
     end)
-    imgClear.MouseButton1Click:Connect(function()
+    makeColorPicker(pages["Appearance"], 13, "Tab Text (Inactive)", "tabTextColor", function()
+        applyTheme()
+    end)
+    makeColorPicker(pages["Appearance"], 14, "Tab Text (Active)", "tabTextActiveColor", function()
+        applyTheme()
+    end)
+    makeColorPicker(pages["Appearance"], 15, "Open Button Color", "openBtnColor", function()
+        applyTheme()
+    end)
+    makeColorPicker(pages["Appearance"], 16, "Open Button Text", "openBtnTextColor", function()
+        applyTheme()
+    end)
+
+    addSect(pages["Appearance"], "Background Image (Folder)", 17)
+
+    local imgInfo = Instance.new("TextLabel", pages["Appearance"])
+    imgInfo.Size = UDim2.new(1, 0, 0, 78 * selectedScale)
+    imgInfo.LayoutOrder = 18
+    imgInfo.BackgroundColor3 = CARD
+    imgInfo.BackgroundTransparency = 0.4
+    imgInfo.Text = "  Drop a file named 'background.png' (or .jpg, .jpeg, .gif, .bmp)\n  into the ApplewareConfigs folder, then re-execute the script.\n\n  For background color: 'bgcolor.txt' with 'ff0055' or '255,0,85'."
+    imgInfo.TextColor3 = TXTD
+    imgInfo.Font = Enum.Font.Gotham
+    imgInfo.TextSize = 10.5 * fm
+    imgInfo.TextXAlignment = Enum.TextXAlignment.Left
+    imgInfo.TextWrapped = true
+    imgInfo.TextYAlignment = Enum.TextYAlignment.Top
+    Instance.new("UICorner", imgInfo).CornerRadius = R(10)
+    trackCard(imgInfo)
+
+    local imgStatus = Instance.new("TextLabel", pages["Appearance"])
+    imgStatus.Size = UDim2.new(1, 0, 0, 26 * selectedScale)
+    imgStatus.LayoutOrder = 19
+    imgStatus.BackgroundColor3 = CARD
+    imgStatus.Text = (settingsConfig.bgImage ~= "" and "  ✓ Background image loaded from folder"
+                      or "  ✗ No background image found in folder")
+    imgStatus.TextColor3 = (settingsConfig.bgImage ~= "" and Color3.fromRGB(90, 255, 140)
+                            or Color3.fromRGB(255, 90, 90))
+    imgStatus.Font = Enum.Font.GothamBold
+    imgStatus.TextSize = 11 * fm
+    imgStatus.TextXAlignment = Enum.TextXAlignment.Left
+    Instance.new("UICorner", imgStatus).CornerRadius = R(8)
+    trackCard(imgStatus)
+
+    local folderInfo = Instance.new("TextLabel", pages["Appearance"])
+    folderInfo.Size = UDim2.new(1, 0, 0, 24 * selectedScale)
+    folderInfo.LayoutOrder = 20
+    folderInfo.BackgroundTransparency = 1
+    folderInfo.Text = "  Folder: workspace/ApplewareConfigs/"
+    folderInfo.TextColor3 = TXTD
+    folderInfo.Font = Enum.Font.Gotham
+    folderInfo.TextSize = 10.5 * fm
+    folderInfo.TextXAlignment = Enum.TextXAlignment.Left
+
+    local clearRow = Instance.new("Frame", pages["Appearance"])
+    clearRow.Size = UDim2.new(1, 0, 0, 34 * selectedScale)
+    clearRow.LayoutOrder = 21
+    clearRow.BackgroundColor3 = CARD
+    Instance.new("UICorner", clearRow).CornerRadius = R(10)
+    trackCard(clearRow)
+
+    local clearBtn = Instance.new("TextButton", clearRow)
+    clearBtn.Size = UDim2.new(1, -8 * selectedScale, 1, -8 * selectedScale)
+    clearBtn.Position = UDim2.new(0, 4 * selectedScale, 0, 4 * selectedScale)
+    clearBtn.BackgroundColor3 = Color3.fromRGB(160, 40, 40)
+    clearBtn.Text = "Clear Background Image (keeps file in folder)"
+    clearBtn.TextColor3 = Color3.new(1, 1, 1)
+    clearBtn.Font = Enum.Font.GothamBold
+    clearBtn.TextSize = 11 * fm
+    Instance.new("UICorner", clearBtn).CornerRadius = R(8)
+    attachBounce(clearBtn)
+    clearBtn.MouseButton1Click:Connect(function()
         settingsConfig.bgImage = ""
+        settingsConfig.bgImageFile = ""
         saveSettings()
-        if bgImage then
-            bgImage.Image = ""
-            bgImage.Visible = false
-        end
-        imgBox.Text = ""
+        if bgImage then bgImage.Image = ""; bgImage.Visible = false end
+        imgStatus.Text = "  ✗ Background cleared"
+        imgStatus.TextColor3 = Color3.fromRGB(255, 90, 90)
     end)
 
     -- ============ VOTING TAB ============
@@ -2603,16 +2911,17 @@ buildUI = function(reb)
     local fb = Instance.new("TextButton", sg)
     fb.Size = UDim2.new(0, 78 * selectedScale, 0, 34 * selectedScale)
     fb.Position = UDim2.new(0, 14 * selectedScale, 0.28, 0)
-    fb.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+    fb.BackgroundColor3 = c3(cfg.openBtnColor)
     fb.Text = "Open"
-    fb.TextColor3 = Color3.new(1, 1, 1)
+    fb.TextColor3 = c3(cfg.openBtnTextColor)
     fb.Font = Enum.Font.GothamBold
     fb.TextSize = 12.5 * fm
     fb.ZIndex = 99999
     fb.Active = true
     fb.Draggable = true
     Instance.new("UICorner", fb).CornerRadius = R(9)
-    attachBounce(fb); attachShine(fb); attachRipple(fb)
+    attachBounce(fb); attachShine(fb); attachRipple(fb); attachHoverLift(fb, 1.05)
+    mainOpenBtn = fb
 
     local isOpen = false
     local function openUI()
@@ -2691,10 +3000,9 @@ buildUI = function(reb)
         local b = Instance.new("TextButton", qsc)
         b.Size = UDim2.new(1, 0, 0, 28 * selectedScale)
         b.LayoutOrder = order
-        b.BackgroundColor3 = isT and (state[sk] and Color3.new(1, 1, 1) or Color3.fromRGB(18, 18, 18))
-                              or Color3.fromRGB(18, 18, 18)
+        b.BackgroundColor3 = isT and (state[sk] and ACC or CARD) or CARD
         b.Text = name
-        b.TextColor3 = isT and (state[sk] and Color3.new(0, 0, 0) or TXT) or TXT
+        b.TextColor3 = isT and (state[sk] and CARD or TXT) or TXT
         b.Font = Enum.Font.GothamMedium
         b.TextSize = 10.5 * selectedScale
         Instance.new("UICorner", b).CornerRadius = R(7)
@@ -2892,7 +3200,7 @@ task.spawn(function()
     end
 end)
 
--- ============ AUTO STANDUP (skip while farming) ============
+-- ============ AUTO STANDUP ============
 task.spawn(function()
     while true do
         task.wait(0.15)
@@ -2948,7 +3256,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ============ CLICK TELEPORT ============
+-- ============ CLICK TP ============
 local function getTPScreen(x, y)
     local c = Workspace.CurrentCamera
     if not c then return nil end
