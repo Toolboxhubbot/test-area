@@ -1,6 +1,31 @@
-pcall(function()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/Toolboxhubbot/antifling/refs/heads/main/antifling"))()
-end)
+-- ============ SAFE ANTI-FLING LOADER ============
+do
+    local url = "https://raw.githubusercontent.com/Toolboxhubbot/antifling/refs/heads/main/antifling"
+    local ok1, err1 = pcall(function()
+        local src
+        if game.HttpGet then
+            src = game:HttpGet(url)
+        elseif httpget then
+            src = httpget(url)
+        elseif request then
+            src = request({Url = url, Method = "GET"}).Body
+        elseif syn and syn.request then
+            src = syn.request({Url = url, Method = "GET"}).Body
+        end
+        if not src or src == "" then error("empty response") end
+        local fn
+        if loadstring then
+            fn = loadstring(src)
+        elseif load then
+            fn = load(src)
+        end
+        if not fn then error("loadstring unavailable") end
+        pcall(fn)
+    end)
+    if not ok1 then
+        warn("[Appleware] Anti-fling failed to load: " .. tostring(err1))
+    end
+end
 
 LocalTeleportService = game:GetService("TeleportService")
 local Players = game:GetService("Players")
@@ -86,7 +111,6 @@ local function getFullPath()
     return CONFIG_FILE_NAME
 end
 
--- Forward declarations so buildUI closures can reference them
 local saveSettings, buildUI, st
 local saveCurrentPosition, loadPosition
 local savedPositions = {nil, nil, nil}
@@ -1434,7 +1458,6 @@ local function teleportToCustom()
     teleportToPlayer(target, "Custom")
 end
 
--- FIX: define saveCurrentPosition / loadPosition BEFORE buildUI
 function saveCurrentPosition(slot)
     local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if root then
@@ -1744,10 +1767,7 @@ local function applySmallHitbox()
     for _, part in ipairs(char:GetDescendants()) do
         if part:IsA("BasePart") then
             if not smallHitboxSaved[part] then
-                smallHitboxSaved[part] = {
-                    Size = part.Size,
-                    CanCollide = part.CanCollide,
-                }
+                smallHitboxSaved[part] = { Size = part.Size, CanCollide = part.CanCollide }
             end
             if part.Name ~= "HumanoidRootPart" then
                 local s = smallHitboxSaved[part].Size
@@ -3672,7 +3692,6 @@ task.spawn(function()
     end
 end)
 
--- FOV changer
 local savedOriginalFOV = nil
 task.spawn(function()
     task.wait(1)
