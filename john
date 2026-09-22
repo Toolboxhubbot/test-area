@@ -103,6 +103,12 @@ local state = {
     speedEnabled = false, speedValue = 16,
     jumpEnabled = false, jumpValue = 50,
     infJumpEnabled = false,
+    invisibleEnabled = false,
+    proneEnabled = false,
+    instantInteract = false,
+    cameraZoomEnabled = false,
+    cameraMaxZoom = 500,
+    infoHudEnabled = false,
     antiRagdoll = true,
     freeze = false,
     fullbright = false,
@@ -141,10 +147,14 @@ local toggleDisplayNames = {
     autoServerHop = "Auto Serverhop", autoPrestige = "Auto Prestige",
     espPlayers = "Player ESP (Roles)", espGunDrop = "Gun Drop ESP",
     quickTogglesVisible = "Quick Toggles Menu",
-    flyEnabled = "Fly", infJumpEnabled = "Infinite Jump",
+    flyEnabled = "Fly", infJumpEnabled = "Infinite Jump", invisibleEnabled = "Invisible (Ghost)",
     speedEnabled = "Speed Changer", jumpEnabled = "Jump Power",
     freeze = "Freeze (Anchor)", fullbright = "Fullbright",
     fovEnabled = "FOV Changer", clickTP = "Click / Tap Teleport",
+    proneEnabled = "Prone (Low Hitbox)",
+    instantInteract = "Instant Interact",
+    cameraZoomEnabled = "Camera Max Zoom",
+    infoHudEnabled = "Info HUD",
 }
 local notifyExcluded = {}
 
@@ -212,6 +222,73 @@ local function attachHoverTilt(btn, degrees)
     btn.MouseLeave:Connect(function() TweenService:Create(btn, TweenInfo.new(0.35, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out), {Rotation = savedRotation}):Play() end)
 end
 
+local function attachRipple(btn, color)
+    color = color or Color3.fromRGB(255, 255, 255)
+    btn.ClipsDescendants = true
+    btn.MouseButton1Down:Connect(function()
+        local m = UIS:GetMouseLocation()
+        local relX = m.X - btn.AbsolutePosition.X
+        local relY = m.Y - btn.AbsolutePosition.Y
+        local ripple = Instance.new("Frame")
+        ripple.Size = UDim2.new(0, 0, 0, 0)
+        ripple.Position = UDim2.new(0, relX, 0, relY)
+        ripple.AnchorPoint = Vector2.new(0.5, 0.5)
+        ripple.BackgroundColor3 = color
+        ripple.BackgroundTransparency = 0.55
+        ripple.BorderSizePixel = 0
+        ripple.ZIndex = (btn.ZIndex or 1) + 5
+        ripple.Parent = btn
+        Instance.new("UICorner", ripple).CornerRadius = UDim.new(1, 0)
+        local maxDim = math.max(btn.AbsoluteSize.X, btn.AbsoluteSize.Y) * 2.5
+        TweenService:Create(ripple, TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, maxDim, 0, maxDim),
+            BackgroundTransparency = 1
+        }):Play()
+        task.delay(0.6, function() if ripple and ripple.Parent then ripple:Destroy() end end)
+    end)
+end
+
+local function attachShine(btn, duration)
+    duration = duration or 0.55
+    btn.ClipsDescendants = true
+    local shine = Instance.new("Frame")
+    shine.Name = "AW_Shine"
+    shine.Size = UDim2.new(0, 28, 1.6, 0)
+    shine.Position = UDim2.new(-0.35, 0, -0.3, 0)
+    shine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    shine.BackgroundTransparency = 0.88
+    shine.Rotation = 14
+    shine.BorderSizePixel = 0
+    shine.ZIndex = (btn.ZIndex or 1) + 2
+    shine.Parent = btn
+    btn.MouseEnter:Connect(function()
+        shine.Position = UDim2.new(-0.35, 0, -0.3, 0)
+        TweenService:Create(shine, TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+            Position = UDim2.new(1.35, 0, -0.3, 0)
+        }):Play()
+    end)
+end
+
+local function attachAnimatedGradient(frame, color1, color2, speed)
+    speed = speed or 2
+    local grad = Instance.new("UIGradient")
+    grad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, color1),
+        ColorSequenceKeypoint.new(0.5, color2),
+        ColorSequenceKeypoint.new(1, color1)
+    })
+    grad.Parent = frame
+    task.spawn(function()
+        local t = 0
+        while grad.Parent do
+            t = t + 0.035
+            grad.Offset = Vector2.new(math.sin(t * speed) * 0.35, 0)
+            task.wait(0.035)
+        end
+    end)
+    return grad
+end
+
 local function staggerFadeIn(page)
     local children = {}
     for _, c in ipairs(page:GetChildren()) do if c:IsA("GuiObject") and c.Visible ~= false then table.insert(children, c) end end
@@ -219,17 +296,17 @@ local function staggerFadeIn(page)
         local savedBg = c.BackgroundTransparency
         local savedTextTr = nil
         local savedPos = c.Position
-        local offsetX = 20 * (settingsConfig.selectedScale or 1)
+        local offsetX = 24 * (settingsConfig.selectedScale or 1)
         if c:IsA("TextLabel") or c:IsA("TextButton") or c:IsA("TextBox") then savedTextTr = c.TextTransparency; c.TextTransparency = 1 end
         if c:IsA("Frame") or c:IsA("TextButton") or c:IsA("TextBox") then c.BackgroundTransparency = 1 end
         c.Position = UDim2.new(savedPos.X.Scale, savedPos.X.Offset + offsetX, savedPos.Y.Scale, savedPos.Y.Offset)
-        task.delay(i * 0.022, function()
+        task.delay(i * 0.024, function()
             if not c.Parent then return end
             if c:IsA("Frame") or c:IsA("TextButton") or c:IsA("TextBox") then
-                TweenService:Create(c, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {BackgroundTransparency = savedBg}):Play()
+                TweenService:Create(c, TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {BackgroundTransparency = savedBg}):Play()
             end
-            if savedTextTr ~= nil then TweenService:Create(c, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = savedTextTr}):Play() end
-            TweenService:Create(c, TweenInfo.new(0.38, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = savedPos}):Play()
+            if savedTextTr ~= nil then TweenService:Create(c, TweenInfo.new(0.42, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {TextTransparency = savedTextTr}):Play() end
+            TweenService:Create(c, TweenInfo.new(0.42, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position = savedPos}):Play()
         end)
     end
 end
@@ -238,7 +315,7 @@ local function startPulsingGlow(glowFrame, isOn)
     task.spawn(function()
         while glowFrame.Parent do
             if isOn() then
-                TweenService:Create(glowFrame, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {BackgroundTransparency = 0.6}):Play()
+                TweenService:Create(glowFrame, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {BackgroundTransparency = 0.55}):Play()
                 task.wait(1.2)
                 if not glowFrame.Parent then break end
                 TweenService:Create(glowFrame, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {BackgroundTransparency = 0.92}):Play()
@@ -416,6 +493,84 @@ rtValue.TextColor3 = Color3.fromRGB(255, 255, 255)
 rtValue.Font = Enum.Font.GothamBold; rtValue.TextSize = 22
 rtValue.TextStrokeTransparency = 1; rtValue.Parent = roundTimerFrame
 
+-- ==================== INFO HUD ====================
+local infoHudGui = Instance.new("ScreenGui")
+infoHudGui.Name = "ApplewareInfoHud"
+infoHudGui.Parent = getGuiParent()
+infoHudGui.ResetOnSpawn = false
+infoHudGui.DisplayOrder = 999996
+infoHudGui.IgnoreGuiInset = true
+
+local infoHudFrame = Instance.new("Frame")
+infoHudFrame.AnchorPoint = Vector2.new(1, 0)
+infoHudFrame.Position = UDim2.new(1, -14, 0, 14)
+infoHudFrame.Size = UDim2.new(0, 190, 0, 78)
+infoHudFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+infoHudFrame.BackgroundTransparency = 0.15
+infoHudFrame.Visible = false
+infoHudFrame.Parent = infoHudGui
+Instance.new("UICorner", infoHudFrame).CornerRadius = UDim.new(0, 10)
+local ihStroke = Instance.new("UIStroke", infoHudFrame)
+ihStroke.Color = Color3.fromRGB(60, 60, 60); ihStroke.Thickness = 1; ihStroke.Transparency = 0.35
+
+local function makeInfoRow(y, label)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(0.5, -8, 0, 22)
+    lbl.Position = UDim2.new(0, 10, 0, y)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = label
+    lbl.TextColor3 = Color3.fromRGB(150, 150, 150)
+    lbl.Font = Enum.Font.GothamMedium
+    lbl.TextSize = 11
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Parent = infoHudFrame
+    local val = Instance.new("TextLabel")
+    val.Size = UDim2.new(0.5, -8, 0, 22)
+    val.Position = UDim2.new(0.5, 0, 0, y)
+    val.BackgroundTransparency = 1
+    val.Text = "-"
+    val.TextColor3 = Color3.fromRGB(245, 245, 245)
+    val.Font = Enum.Font.GothamBold
+    val.TextSize = 11
+    val.TextXAlignment = Enum.TextXAlignment.Right
+    val.Parent = infoHudFrame
+    return val
+end
+
+local ihTime = makeInfoRow(6, "Session")
+local ihPlayers = makeInfoRow(28, "Players")
+local ihRole = makeInfoRow(50, "Role")
+
+local hudSessionStart = tick()
+task.spawn(function()
+    while true do
+        task.wait(0.25)
+        if state.infoHudEnabled then
+            if not infoHudFrame.Visible then infoHudFrame.Visible = true end
+            local elapsed = math.floor(tick() - hudSessionStart)
+            local h = math.floor(elapsed / 3600)
+            local m = math.floor((elapsed % 3600) / 60)
+            local s = elapsed % 60
+            ihTime.Text = string.format("%02d:%02d:%02d", h, m, s)
+            ihPlayers.Text = tostring(#Players:GetPlayers())
+            local role = "Innocent"
+            pcall(function()
+                if lpHasGun and lpHasGun() then role = "Sheriff"
+                else
+                    local bp, ch = LP:FindFirstChild("Backpack"), LP.Character
+                    if (bp and bp:FindFirstChild("Knife")) or (ch and ch:FindFirstChild("Knife")) then role = "Murderer" end
+                end
+            end)
+            ihRole.Text = role
+            if role == "Murderer" then ihRole.TextColor3 = Color3.fromRGB(255, 80, 80)
+            elseif role == "Sheriff" then ihRole.TextColor3 = Color3.fromRGB(80, 160, 255)
+            else ihRole.TextColor3 = Color3.fromRGB(120, 255, 140) end
+        else
+            if infoHudFrame.Visible then infoHudFrame.Visible = false end
+        end
+    end
+end)
+
 -- ==================== WATERPROOF ====================
 local table_insert = table.insert
 local nicolas = {}
@@ -485,19 +640,23 @@ local function updateAllToggleVisuals(key)
     if mainToggleButtons[key] then
         local data = mainToggleButtons[key]
         local on = state[key]
-        TweenService:Create(data.pill, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+        TweenService:Create(data.pill, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
             BackgroundColor3 = on and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(32, 32, 32)
         }):Play()
-        TweenService:Create(data.dot, TweenInfo.new(0.65, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out), {
+        TweenService:Create(data.dot, TweenInfo.new(0.7, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out), {
             Position = on and UDim2.new(1, -20 * selectedScale, 0.5, -8 * selectedScale) or UDim2.new(0, 4 * selectedScale, 0.5, -8 * selectedScale),
             BackgroundColor3 = on and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(200, 200, 200)
         }):Play()
-        if data.inner then TweenService:Create(data.inner, TweenInfo.new(0.3, Enum.EasingStyle.Quint), {
+        if data.inner then TweenService:Create(data.inner, TweenInfo.new(0.35, Enum.EasingStyle.Quint), {
             BackgroundColor3 = on and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(22, 22, 22)
         }):Play() end
-        if data.glow then TweenService:Create(data.glow, TweenInfo.new(0.3), {
-            BackgroundTransparency = on and 0.85 or 1
+        if data.glow then TweenService:Create(data.glow, TweenInfo.new(0.35), {
+            BackgroundTransparency = on and 0.78 or 1
         }):Play() end
+        if data.pillScale then
+            data.pillScale.Scale = 1.15
+            TweenService:Create(data.pillScale, TweenInfo.new(0.6, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        end
     end
     if quickToggleButtons[key] then
         local on = state[key]
@@ -1664,6 +1823,8 @@ buildUI = function(rebuilding)
             end)
         end
 
+        attachRipple(btn, Color3.fromRGB(255, 255, 255))
+
         makePage(name)
         if i == 1 then pageGroups[name].Visible = true end
 
@@ -1690,6 +1851,15 @@ buildUI = function(rebuilding)
     stAccent.BackgroundColor3 = ACCENT
     stAccent.Parent = st
     Instance.new("UICorner", stAccent).CornerRadius = UDim.new(1, 0)
+    task.spawn(function()
+        while stAccent.Parent do
+            TweenService:Create(stAccent, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {BackgroundTransparency = 0.4}):Play()
+            task.wait(1.5)
+            if not stAccent.Parent then break end
+            TweenService:Create(stAccent, TweenInfo.new(1.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {BackgroundTransparency = 0}):Play()
+            task.wait(1.5)
+        end
+    end)
 
     local function tgg(page, name, order, key)
         local row = Instance.new("Frame")
@@ -1715,7 +1885,7 @@ buildUI = function(rebuilding)
         glow.Size = UDim2.new(0, 48 * selectedScale, 0, 26 * selectedScale)
         glow.Position = UDim2.new(1, -56 * selectedScale, 0.5, -13 * selectedScale)
         glow.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-        glow.BackgroundTransparency = state[key] and 0.85 or 1
+        glow.BackgroundTransparency = state[key] and 0.78 or 1
         glow.Parent = row
         Instance.new("UICorner", glow).CornerRadius = UDim.new(1, 0)
 
@@ -1725,6 +1895,8 @@ buildUI = function(rebuilding)
         pill.BackgroundColor3 = state[key] and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(32, 32, 32)
         pill.Parent = row
         Instance.new("UICorner", pill).CornerRadius = UDim.new(1, 0)
+
+        local pillScale = Instance.new("UIScale", pill); pillScale.Scale = 1
 
         local pillInner = Instance.new("Frame")
         pillInner.Size = UDim2.new(1, -4 * selectedScale, 1, -4 * selectedScale)
@@ -1740,7 +1912,7 @@ buildUI = function(rebuilding)
         dot.Parent = pill
         Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
 
-        mainToggleButtons[key] = {pill = pill, dot = dot, glow = glow, inner = pillInner}
+        mainToggleButtons[key] = {pill = pill, dot = dot, glow = glow, inner = pillInner, pillScale = pillScale}
         startPulsingGlow(glow, function() return state[key] end)
 
         local hit = Instance.new("TextButton")
@@ -1750,13 +1922,13 @@ buildUI = function(rebuilding)
 
         hit.MouseEnter:Connect(function()
             TweenService:Create(row, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {BackgroundColor3 = CARD_HOVER}):Play()
-            TweenService:Create(rowStroke, TweenInfo.new(0.3), {Transparency = 0.15}):Play()
-            TweenService:Create(rowScale, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1.018}):Play()
-            TweenService:Create(row, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Rotation = 0.6}):Play()
+            TweenService:Create(rowStroke, TweenInfo.new(0.3), {Transparency = 0.12, Color = Color3.fromRGB(80, 80, 80)}):Play()
+            TweenService:Create(rowScale, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1.02}):Play()
+            TweenService:Create(row, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Rotation = 0.7}):Play()
         end)
         hit.MouseLeave:Connect(function()
             TweenService:Create(row, TweenInfo.new(0.28, Enum.EasingStyle.Quint), {BackgroundColor3 = CARD}):Play()
-            TweenService:Create(rowStroke, TweenInfo.new(0.3), {Transparency = 0.55}):Play()
+            TweenService:Create(rowStroke, TweenInfo.new(0.3), {Transparency = 0.55, Color = BORDER}):Play()
             TweenService:Create(rowScale, TweenInfo.new(0.42, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out), {Scale = 1}):Play()
             TweenService:Create(row, TweenInfo.new(0.42, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out), {Rotation = 0}):Play()
         end)
@@ -1764,8 +1936,9 @@ buildUI = function(rebuilding)
             TweenService:Create(rowScale, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.97}):Play()
         end)
         hit.MouseButton1Up:Connect(function()
-            TweenService:Create(rowScale, TweenInfo.new(0.5, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out), {Scale = 1.018}):Play()
+            TweenService:Create(rowScale, TweenInfo.new(0.5, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out), {Scale = 1.02}):Play()
         end)
+        attachRipple(hit, Color3.fromRGB(255, 255, 255))
         hit.MouseButton1Click:Connect(function()
             setToggleState(key, not state[key])
             if mainToggleButtons[key] then
@@ -1812,6 +1985,8 @@ buildUI = function(rebuilding)
         end)
 
         attachClickBounce(btn); attachHoverLift(btn, 1.025); attachHoverTilt(btn, -0.4)
+        attachShine(btn, 0.55)
+        attachRipple(btn, Color3.fromRGB(255, 255, 255))
         btn.MouseButton1Click:Connect(callback)
     end
 
@@ -1847,6 +2022,7 @@ buildUI = function(rebuilding)
         b.MouseEnter:Connect(function() TweenService:Create(b, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(50, 50, 50)}):Play() end)
         b.MouseLeave:Connect(function() TweenService:Create(b, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(28, 28, 28)}):Play() end)
         attachClickBounce(b)
+        attachRipple(b, Color3.fromRGB(255, 255, 255))
         return b
     end
 
@@ -1893,6 +2069,7 @@ buildUI = function(rebuilding)
         fill.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
         fill.Parent = track
         Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
+        attachAnimatedGradient(fill, Color3.fromRGB(0, 100, 255), Color3.fromRGB(120, 200, 255), 3)
 
         local knob = Instance.new("Frame")
         knob.Size = UDim2.new(0, 16 * selectedScale, 0, 16 * selectedScale)
@@ -1927,13 +2104,17 @@ buildUI = function(rebuilding)
         track.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 dragging = true; updateFromInput(input)
+                TweenService:Create(knob, TweenInfo.new(0.15), {Size = UDim2.new(0, 22 * selectedScale, 0, 22 * selectedScale), BackgroundColor3 = Color3.fromRGB(150, 200, 255)}):Play()
             end
         end)
         UIS.InputChanged:Connect(function(input)
             if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then updateFromInput(input) end
         end)
         UIS.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = false
+                TweenService:Create(knob, TweenInfo.new(0.35, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out), {Size = UDim2.new(0, 16 * selectedScale, 0, 16 * selectedScale), BackgroundColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+            end
         end)
         inputBox.FocusLost:Connect(function()
             local val = tonumber(inputBox.Text)
@@ -1945,28 +2126,49 @@ buildUI = function(rebuilding)
     addSection(pages["Secret"], "Movement", 1)
     tgg(pages["Secret"], "Fly (WASD / Joystick)", 2, "flyEnabled")
     makeSliderRow(pages["Secret"], "Fly Speed", 3, state.flySpeed or 50, 10, 300, "flySpeed")
+    tgg(pages["Secret"], "Infinite Jump", 4, "infJumpEnabled")
+    tgg(pages["Secret"], "Prone (Low Hitbox)", 5, "proneEnabled")
 
-    addSection(pages["Secret"], "Physics", 4)
-    tgg(pages["Secret"], "Noclip", 5, "noclip")
-    tgg(pages["Secret"], "Infinite Jump", 6, "infJumpEnabled")
-    tgg(pages["Secret"], "Freeze (Anchor)", 7, "freeze")
+    addSection(pages["Secret"], "Physics", 6)
+    tgg(pages["Secret"], "Noclip", 7, "noclip")
+    tgg(pages["Secret"], "Freeze (Anchor)", 8, "freeze")
 
-    addSection(pages["Secret"], "Attributes", 8)
-    tgg(pages["Secret"], "Speed Changer", 9, "speedEnabled")
-    makeSliderRow(pages["Secret"], "Walk Speed", 10, state.speedValue or 16, 16, 500, "speedValue")
-    tgg(pages["Secret"], "Jump Power", 11, "jumpEnabled")
-    makeSliderRow(pages["Secret"], "Jump Power", 12, state.jumpValue or 50, 50, 500, "jumpValue")
+    addSection(pages["Secret"], "Attributes", 9)
+    tgg(pages["Secret"], "Speed Changer", 10, "speedEnabled")
+    makeSliderRow(pages["Secret"], "Walk Speed", 11, state.speedValue or 16, 16, 500, "speedValue")
+    tgg(pages["Secret"], "Jump Power", 12, "jumpEnabled")
+    makeSliderRow(pages["Secret"], "Jump Power", 13, state.jumpValue or 50, 50, 500, "jumpValue")
 
-    addSection(pages["Secret"], "Visuals", 13)
-    tgg(pages["Secret"], "Fullbright", 15, "fullbright")
-    tgg(pages["Secret"], "FOV Changer", 16, "fovEnabled")
-    makeSliderRow(pages["Secret"], "Field of View", 17, state.fovValue or 70, 30, 120, "fovValue")
+    addSection(pages["Secret"], "Invisibility", 14)
+    tgg(pages["Secret"], "Invisible (Ghost Mode)", 15, "invisibleEnabled")
+    local invisHint = Instance.new("TextLabel")
+    invisHint.Size = UDim2.new(1, 0, 0, 44 * selectedScale)
+    invisHint.LayoutOrder = 16
+    invisHint.BackgroundTransparency = 1
+    invisHint.Text = "Clones your body into a ghost you control. Server scripts see the ghost's position as yours. Movement replicates to others normally."
+    invisHint.TextColor3 = TEXT_DIM
+    invisHint.Font = Enum.Font.Gotham
+    invisHint.TextSize = 10.5 * fontSizeMult
+    invisHint.TextXAlignment = Enum.TextXAlignment.Left
+    invisHint.TextWrapped = true
+    invisHint.Parent = pages["Secret"]
 
-    addSection(pages["Secret"], "Teleportation", 18)
-    tgg(pages["Secret"], "Click / Tap Teleport", 19, "clickTP")
+    addSection(pages["Secret"], "Visuals", 17)
+    tgg(pages["Secret"], "Fullbright", 18, "fullbright")
+    tgg(pages["Secret"], "FOV Changer", 19, "fovEnabled")
+    makeSliderRow(pages["Secret"], "Field of View", 20, state.fovValue or 70, 30, 120, "fovValue")
+    tgg(pages["Secret"], "Camera Max Zoom", 21, "cameraZoomEnabled")
+    makeSliderRow(pages["Secret"], "Max Zoom Distance", 22, state.cameraMaxZoom or 500, 100, 2000, "cameraMaxZoom")
+    tgg(pages["Secret"], "Info HUD", 23, "infoHudEnabled")
+
+    addSection(pages["Secret"], "Utility", 24)
+    tgg(pages["Secret"], "Instant Interact", 25, "instantInteract")
+
+    addSection(pages["Secret"], "Teleportation", 26)
+    tgg(pages["Secret"], "Click / Tap Teleport", 27, "clickTP")
     local tpHint = Instance.new("TextLabel")
     tpHint.Size = UDim2.new(1, 0, 0, 30 * selectedScale)
-    tpHint.LayoutOrder = 20
+    tpHint.LayoutOrder = 28
     tpHint.BackgroundTransparency = 1
     tpHint.Text = "PC: click anywhere | Mobile: tap anywhere. Disable before using the fly buttons."
     tpHint.TextColor3 = TEXT_DIM
@@ -1976,11 +2178,11 @@ buildUI = function(rebuilding)
     tpHint.TextWrapped = true
     tpHint.Parent = pages["Secret"]
 
-    addSection(pages["Secret"], "Saved Positions", 21)
+    addSection(pages["Secret"], "Saved Positions", 29)
     for i = 1, 3 do
         local row = Instance.new("Frame")
         row.Size = UDim2.new(1, 0, 0, 36 * selectedScale)
-        row.LayoutOrder = 21 + i
+        row.LayoutOrder = 29 + i
         row.BackgroundColor3 = CARD
         row.Parent = pages["Secret"]
         Instance.new("UICorner", row).CornerRadius = r(10)
@@ -2009,7 +2211,7 @@ buildUI = function(rebuilding)
         saveBtn.ClipsDescendants = true
         saveBtn.Parent = row
         Instance.new("UICorner", saveBtn).CornerRadius = r(6)
-        attachClickBounce(saveBtn)
+        attachClickBounce(saveBtn); attachRipple(saveBtn)
         saveBtn.MouseButton1Click:Connect(function() saveCurrentPosition(i) end)
 
         local tpBtn = Instance.new("TextButton")
@@ -2023,12 +2225,12 @@ buildUI = function(rebuilding)
         tpBtn.ClipsDescendants = true
         tpBtn.Parent = row
         Instance.new("UICorner", tpBtn).CornerRadius = r(6)
-        attachClickBounce(tpBtn)
+        attachClickBounce(tpBtn); attachRipple(tpBtn)
         tpBtn.MouseButton1Click:Connect(function() loadPosition(i) end)
     end
 
-    addSection(pages["Secret"], "Quick Actions", 25)
-    addActionButton(pages["Secret"], "Reset Character", 26, function()
+    addSection(pages["Secret"], "Quick Actions", 33)
+    addActionButton(pages["Secret"], "Reset Character", 34, function()
         local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
         if hum then hum.Health = 0 end
     end)
@@ -2282,7 +2484,7 @@ buildUI = function(rebuilding)
                 flingBtn.Font = Enum.Font.GothamBold; flingBtn.TextSize = 9.5 * fontSizeMult
                 flingBtn.ClipsDescendants = true; flingBtn.Parent = row
                 Instance.new("UICorner", flingBtn).CornerRadius = r(6)
-                attachClickBounce(flingBtn)
+                attachClickBounce(flingBtn); attachRipple(flingBtn)
 
                 local whiteBtn = Instance.new("TextButton")
                 whiteBtn.Size = UDim2.new(0, 60 * selectedScale, 0, 24 * selectedScale)
@@ -2292,7 +2494,7 @@ buildUI = function(rebuilding)
                 whiteBtn.Font = Enum.Font.GothamBold; whiteBtn.TextSize = 9.5 * fontSizeMult
                 whiteBtn.ClipsDescendants = true; whiteBtn.Parent = row
                 Instance.new("UICorner", whiteBtn).CornerRadius = r(6)
-                attachClickBounce(whiteBtn)
+                attachClickBounce(whiteBtn); attachRipple(whiteBtn)
 
                 flingBtn.MouseButton1Click:Connect(function()
                     if isInList(settingsConfig.flingList, plr.Name) then
@@ -2363,7 +2565,7 @@ buildUI = function(rebuilding)
             removeBtn.Font = Enum.Font.GothamBold; removeBtn.TextSize = 10 * fontSizeMult
             removeBtn.ClipsDescendants = true; removeBtn.Parent = row
             Instance.new("UICorner", removeBtn).CornerRadius = r(5)
-            attachClickBounce(removeBtn)
+            attachClickBounce(removeBtn); attachRipple(removeBtn)
             removeBtn.MouseButton1Click:Connect(function()
                 removeFromList(settingsConfig.flingList, name); saveSettings()
                 if refreshPlayerPickerFn then refreshPlayerPickerFn() end
@@ -2407,7 +2609,7 @@ buildUI = function(rebuilding)
             removeBtn.Font = Enum.Font.GothamBold; removeBtn.TextSize = 10 * fontSizeMult
             removeBtn.ClipsDescendants = true; removeBtn.Parent = row
             Instance.new("UICorner", removeBtn).CornerRadius = r(5)
-            attachClickBounce(removeBtn)
+            attachClickBounce(removeBtn); attachRipple(removeBtn)
             removeBtn.MouseButton1Click:Connect(function()
                 removeFromList(settingsConfig.whitelist, name); saveSettings()
                 if refreshPlayerPickerFn then refreshPlayerPickerFn() end
@@ -2500,7 +2702,7 @@ buildUI = function(rebuilding)
         TweenService:Create(timerBtn, TweenInfo.new(0.24), {BackgroundColor3 = CARD}):Play()
         TweenService:Create(timerStroke, TweenInfo.new(0.24), {Transparency = 0.55}):Play()
     end)
-    attachClickBounce(timerBtn)
+    attachClickBounce(timerBtn); attachShine(timerBtn); attachRipple(timerBtn)
     timerBtn.MouseButton1Click:Connect(function()
         currentIntervalIndex = currentIntervalIndex % #intervals + 1
         local selected = intervals[currentIntervalIndex]
@@ -2635,7 +2837,9 @@ buildUI = function(rebuilding)
         "Anti AFK", "Anti-Void", "Notify Map Name", "Round Timer",
         "Auto Grab Gun", "Auto Rejoin", "Auto Serverhop", "Auto Prestige",
         "Show Quick Toggles Menu", "Fly", "Noclip", "Infinite Jump",
-        "Speed Changer", "Jump Power",
+        "Speed Changer", "Jump Power", "Invisible (Ghost)",
+        "Prone (Low Hitbox)",
+        "Instant Interact", "Camera Max Zoom", "Info HUD",
         "Freeze (Anchor)",
         "Fullbright", "FOV Changer", "Click / Tap Teleport"
     }
@@ -2676,7 +2880,7 @@ buildUI = function(rebuilding)
                 actionBtn.Font = Enum.Font.GothamBold; actionBtn.TextSize = 10.5 * fontSizeMult
                 actionBtn.ClipsDescendants = true; actionBtn.Parent = row
                 Instance.new("UICorner", actionBtn).CornerRadius = r(6)
-                attachClickBounce(actionBtn)
+                attachClickBounce(actionBtn); attachRipple(actionBtn)
                 actionBtn.MouseButton1Click:Connect(function()
                     if isAlreadyAdded then
                         for idx, addedName in ipairs(settingsConfig.quickTogglesList) do
@@ -2747,6 +2951,7 @@ buildUI = function(rebuilding)
     local fbStroke = Instance.new("UIStroke", fb)
     fbStroke.Color = BORDER; fbStroke.Transparency = 0.3
     attachClickBounce(fb); attachHoverLift(fb, 1.05)
+    attachShine(fb, 0.6); attachRipple(fb)
 
     fb.MouseEnter:Connect(function()
         TweenService:Create(fbStroke, TweenInfo.new(0.24), {Transparency = 0}):Play()
@@ -2836,7 +3041,10 @@ buildUI = function(rebuilding)
             ["Auto Prestige"] = "autoPrestige", ["Show Quick Toggles Menu"] = "quickTogglesVisible",
             ["Notify Map Name"] = "notifyMapName", ["Round Timer"] = "showRoundTimerCountdown",
             ["Fly"] = "flyEnabled", ["Noclip"] = "noclip", ["Infinite Jump"] = "infJumpEnabled",
-            ["Speed Changer"] = "speedEnabled", ["Jump Power"] = "jumpEnabled",
+            ["Speed Changer"] = "speedEnabled", ["Jump Power"] = "jumpEnabled", ["Invisible (Ghost)"] = "invisibleEnabled",
+            ["Prone (Low Hitbox)"] = "proneEnabled",
+            ["Instant Interact"] = "instantInteract",
+            ["Camera Max Zoom"] = "cameraZoomEnabled", ["Info HUD"] = "infoHudEnabled",
             ["Freeze (Anchor)"] = "freeze", ["Fullbright"] = "fullbright",
             ["FOV Changer"] = "fovEnabled", ["Click / Tap Teleport"] = "clickTP",
         }
@@ -2865,7 +3073,7 @@ buildUI = function(rebuilding)
             end
             TweenService:Create(qStroke, TweenInfo.new(0.2), {Transparency = 0.55}):Play()
         end)
-        attachClickBounce(btn)
+        attachClickBounce(btn); attachRipple(btn)
         if isToggle then quickToggleButtons[stateKey] = btn end
         btn.MouseButton1Click:Connect(function()
             if isToggle then
@@ -2922,6 +3130,7 @@ task.spawn(function()
         btnUp.Font = Enum.Font.Gotham; btnUp.TextSize = 10
         btnUp.Visible = false; btnUp.Parent = sg
         Instance.new("UICorner", btnUp).CornerRadius = UDim.new(1, 0)
+        attachRipple(btnUp)
 
         local btnDown = Instance.new("TextButton")
         btnDown.Size = UDim2.new(0, 50, 0, 50)
@@ -2931,6 +3140,7 @@ task.spawn(function()
         btnDown.Font = Enum.Font.Gotham; btnDown.TextSize = 10
         btnDown.Visible = false; btnDown.Parent = sg
         Instance.new("UICorner", btnDown).CornerRadius = UDim.new(1, 0)
+        attachRipple(btnDown)
 
         btnUp.MouseButton1Down:Connect(function() flyUp = true end)
         btnUp.MouseButton1Up:Connect(function() flyUp = false end)
@@ -3091,11 +3301,68 @@ task.spawn(function()
     end
 end)
 
+-- ==================== PRONE (LOW HITBOX) ====================
+task.spawn(function()
+    while true do
+        task.wait(0.15)
+        if LP.Character then
+            local hum = LP.Character:FindFirstChildOfClass("Humanoid")
+            if hum and hum.Health > 0 then
+                if state.proneEnabled then
+                    if hum.HipHeight ~= -1.2 then hum.HipHeight = -1.2 end
+                else
+                    if hum.HipHeight ~= 2 and hum.HipHeight == -1.2 then hum.HipHeight = 2 end
+                end
+            end
+        end
+    end
+end)
+
+-- ==================== INSTANT INTERACT ====================
+task.spawn(function()
+    while true do
+        task.wait(0.15)
+        if state.instantInteract and LP.Character then
+            local root = LP.Character:FindFirstChild("HumanoidRootPart")
+            if root then
+                pcall(function()
+                    for _, obj in ipairs(Workspace:GetDescendants()) do
+                        if obj:IsA("ProximityPrompt") and obj.Enabled then
+                            local parent = obj.Parent
+                            if parent and (parent:IsA("BasePart") or parent:IsA("Attachment")) then
+                                local pos = parent:IsA("BasePart") and parent.Position or parent.WorldPosition
+                                if (pos - root.Position).Magnitude <= obj.MaxActivationDistance then
+                                    pcall(function() fireproximityprompt(obj) end)
+                                end
+                            end
+                        end
+                    end
+                end)
+            end
+        end
+    end
+end)
+
+-- ==================== CAMERA MAX ZOOM ====================
+task.spawn(function()
+    while true do
+        task.wait(0.3)
+        pcall(function()
+            if state.cameraZoomEnabled then
+                LP.CameraMaxZoomDistance = state.cameraMaxZoom or 500
+                LP.CameraMinZoomDistance = math.min(LP.CameraMinZoomDistance, 0.5)
+            else
+                LP.CameraMaxZoomDistance = 400
+            end
+        end)
+    end
+end)
+
 -- ==================== SECRET FEATURES ====================
 task.spawn(function()
     while true do
         task.wait(0.15)
-        if LP.Character and not state.flyEnabled then
+        if LP.Character and not state.flyEnabled and not state.invisibleEnabled then
             local hum = LP.Character:FindFirstChildOfClass("Humanoid")
             if hum and hum.Health > 0 and hum.PlatformStand and not next(activeResets) then
                 hum.PlatformStand = false
@@ -3220,6 +3487,173 @@ local function loadPosition(slot)
     end
 end
 
+-- ==================== INVISIBLE (GHOST MODE) ====================
+local invisActive = false
+local invisGhost = nil
+local invisLoop = nil
+local invisStaticPos = nil
+local invisLastSafeCFrame = nil
+local invisRealRoot = nil
+local invisGhostRoot = nil
+
+local _hookOK = false
+pcall(function() _hookOK = (hookmetamethod ~= nil and checkcaller ~= nil and debug and debug.info) end)
+
+if _hookOK then
+    local _oldIndex
+    _oldIndex = hookmetamethod(game, "__index", function(self, key)
+        if not invisActive or checkcaller() or self ~= invisRealRoot then
+            return _oldIndex(self, key)
+        end
+        if invisGhostRoot and (key == "CFrame" or key == "Position") then
+            if key == "CFrame" then return invisGhostRoot.CFrame
+            elseif key == "Position" then return invisGhostRoot.Position end
+        end
+        return _oldIndex(self, key)
+    end)
+
+    local _oldNewIndex
+    _oldNewIndex = hookmetamethod(game, "__newindex", function(self, key, value)
+        if not invisActive or checkcaller() or self ~= invisRealRoot then
+            return _oldNewIndex(self, key, value)
+        end
+        if invisGhostRoot and (key == "CFrame" or key == "Position") then
+            if key == "CFrame" then invisGhostRoot.CFrame = value
+            elseif key == "Position" then invisGhostRoot.Position = value end
+            return
+        end
+        return _oldNewIndex(self, key, value)
+    end)
+end
+
+local function invisStop()
+    if not invisActive and not invisGhost then return end
+    invisActive = false
+    local char = LP.Character
+    local r = char and char:FindFirstChild("HumanoidRootPart")
+    local h = char and char:FindFirstChildOfClass("Humanoid")
+    local targetCFrame = (invisGhostRoot and invisGhostRoot.CFrame) or invisLastSafeCFrame
+    if r and targetCFrame then
+        r.CFrame = targetCFrame
+        r.AssemblyLinearVelocity = Vector3.zero
+        r.AssemblyAngularVelocity = Vector3.zero
+    end
+    if char then
+        for _, v in char:GetChildren() do
+            if v:IsA("BasePart") and v.Name ~= "HumanoidRootPart" then v.CanCollide = true
+            elseif v:IsA("Accessory") then
+                local handle = v:FindFirstChild("Handle")
+                if handle then handle.CanCollide = false end
+            end
+        end
+    end
+    if h then
+        local cam = Workspace.CurrentCamera
+        if cam then cam.CameraSubject = h end
+        h.PlatformStand = false
+        h:SetStateEnabled(Enum.HumanoidStateType.Climbing, true)
+        h:SetStateEnabled(Enum.HumanoidStateType.FallingDown, true)
+        h:SetStateEnabled(Enum.HumanoidStateType.Running, true)
+        h.AutoRotate = true
+        h.Jump = false
+        h:ChangeState(Enum.HumanoidStateType.GettingUp)
+    end
+    if invisGhost then invisGhost:Destroy() invisGhost = nil end
+    if invisLoop then invisLoop:Disconnect() invisLoop = nil end
+    invisStaticPos = nil
+    invisLastSafeCFrame = nil
+    invisRealRoot = nil
+    invisGhostRoot = nil
+end
+
+local function invisStart()
+    if invisActive then return end
+    local char = LP.Character
+    if not char then return end
+    local r = char:FindFirstChild("HumanoidRootPart")
+    local h = char:FindFirstChildOfClass("Humanoid")
+    if not r or not h or h.Health <= 0 then return end
+
+    invisRealRoot = r
+    invisStaticPos = CFrame.new(0, Workspace.FallenPartsDestroyHeight + 100, 0)
+    invisLastSafeCFrame = r.CFrame
+
+    char.Archivable = true
+    invisGhost = char:Clone()
+    invisGhost.Parent = Workspace
+    char.Archivable = false
+
+    for _, v in invisGhost:GetDescendants() do
+        if v:IsA("BasePart") then v.Transparency = 0.5
+        elseif v:IsA("Accessory") then
+            local handle = v:FindFirstChild("Handle")
+            if handle and handle:IsA("BasePart") then handle.Transparency = 0.5 end
+        elseif v:IsA("LocalScript") or v:IsA("Script") then v:Destroy() end
+    end
+
+    local gh = invisGhost:FindFirstChild("Humanoid")
+    invisGhostRoot = invisGhost:FindFirstChild("HumanoidRootPart")
+    local cam = Workspace.CurrentCamera
+    if gh and cam then cam.CameraSubject = gh end
+    if gh then gh:SetStateEnabled(Enum.HumanoidStateType.Climbing, true) end
+
+    h.PlatformStand = true
+    r.CFrame = invisStaticPos
+    for _, v in char:GetDescendants() do
+        if v:IsA("BasePart") then v.CanCollide = false end
+    end
+
+    invisActive = true
+    setStatus("Invisible ON")
+
+    invisLoop = RunService.Heartbeat:Connect(function(dt)
+        local limit = Workspace.FallenPartsDestroyHeight + 35
+        if invisGhost and invisGhost.Parent == Workspace and gh and gh.Health > 0 and invisGhostRoot and invisGhostRoot.Position.Y > limit and h and h.Health > 0 then
+            if cam and cam.CameraSubject ~= gh then cam.CameraSubject = gh end
+            local currentState = gh:GetState()
+            if currentState ~= Enum.HumanoidStateType.Climbing then
+                invisLastSafeCFrame = invisGhostRoot.CFrame
+                if UIS.MouseBehavior == Enum.MouseBehavior.LockCenter then
+                    local look = cam.CFrame.LookVector
+                    local targetRot = CFrame.lookAt(invisGhostRoot.Position, invisGhostRoot.Position + Vector3.new(look.X, 0, look.Z))
+                    invisGhostRoot.CFrame = invisGhostRoot.CFrame:Lerp(targetRot, math.clamp(dt * 25, 0, 1))
+                end
+            end
+            gh:Move(h.MoveDirection, false)
+            gh.Jump = h.Jump
+            r.CFrame = invisStaticPos
+            local gv = invisGhostRoot.AssemblyLinearVelocity
+            if gv.Magnitude > 120 then gv = gv.Unit * 120 end
+            r.AssemblyLinearVelocity = gv
+            r.AssemblyAngularVelocity = invisGhostRoot.AssemblyAngularVelocity
+        else
+            invisStop()
+            state.invisibleEnabled = false
+            updateAllToggleVisuals("invisibleEnabled")
+        end
+    end)
+end
+
+task.spawn(function()
+    local last = false
+    while true do
+        task.wait(0.1)
+        local now = state.invisibleEnabled == true
+        if now ~= last then
+            if now then invisStart() else invisStop() end
+            last = now
+        end
+    end
+end)
+
+LP.CharacterRemoving:Connect(function()
+    if invisActive then
+        invisStop()
+        state.invisibleEnabled = false
+        updateAllToggleVisuals("invisibleEnabled")
+    end
+end)
+
 -- ==================== ROLE NOTIFICATIONS ====================
 local notifiedMurderer = false
 local notifiedSheriff = false
@@ -3290,7 +3724,7 @@ local lastAntiVoidFire = 0
 task.spawn(function()
     while true do
         task.wait(0.15)
-        if state.antiVoid and LP.Character then
+        if state.antiVoid and LP.Character and not invisActive then
             local root = LP.Character:FindFirstChild("HumanoidRootPart")
             if root and root.Position.Y < -400 then
                 local now = tick()
@@ -3410,10 +3844,11 @@ end)
 task.spawn(function()
     while true do
         task.wait(0.04)
+        if state.invisibleEnabled then cancelFarmTween() continue end
         if not alive() then cancelFarmTween() continue end
         local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-        local humanoid = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-        if not root or not humanoid then continue end
+        local humanoid = LP.Character ( and LProot.Character:FindFirstChildOfClass.P("Humanoid")
+osition        if not root or not humanoid - c then continue end
         if state.xpFarm then
             cancelFarmTween(); humanoid.PlatformStand = true; root.Anchored = true
             root.CFrame = HIDE_POS; root.AssemblyLinearVelocity = Vector3.zero; root.AssemblyAngularVelocity = Vector3.zero
@@ -3443,7 +3878,7 @@ task.spawn(function()
         if #coins == 0 then cancelFarmTween() continue end
         local closestCoin, shortest = nil, math.huge
         for _, c in ipairs(coins) do
-            local dist = (root.Position - c.Position).Magnitude
+            local dist =.Position).Magnitude
             if dist < shortest then shortest = dist closestCoin = c end
         end
         if not closestCoin then cancelFarmTween() continue end
@@ -3527,6 +3962,7 @@ end)
 local lastFarmNoclip = false
 RunService.Stepped:Connect(function()
     if not LP.Character then lastFarmNoclip = false; return end
+    if invisActive then return end
     local shouldNoclip = state.farm and not bagFull and not isExecutingAction and not isLobby() and not state.xpFarm and not next(activeResets)
     if shouldNoclip then
         for _, val in ipairs(LP.Character:GetDescendants()) do
@@ -3554,7 +3990,7 @@ end)
 task.spawn(function()
     while true do
         task.wait(0.15)
-        if state.gun and alive() and not isExecutingAction and not findTool("Gun") then
+        if state.gun and alive() and not isExecutingAction and not findTool("Gun") and not invisActive then
             local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
             if root then
                 for _, v in pairs(Workspace:GetDescendants()) do
