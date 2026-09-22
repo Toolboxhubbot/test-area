@@ -86,7 +86,10 @@ local function getFullPath()
     return CONFIG_FILE_NAME
 end
 
+-- Forward declarations so buildUI closures can reference them
 local saveSettings, buildUI, st
+local saveCurrentPosition, loadPosition
+local savedPositions = {nil, nil, nil}
 
 local state = {
     farm = false, xpFarm = false, noclip = false, gun = false, afk = false,
@@ -582,7 +585,6 @@ function nicolas:GiveTask(t)
     if self._destroyed then self:_cleanupTask(t) return end
     table_insert(self._tasks, t); return t
 end
-function nicolas:GiveTasks(...) for _, t in ipairs({...}) do self:GiveTask(t) end end
 function nicolas:_cleanupTask(t)
     local ty = typeof(t)
     if ty == "RBXScriptConnection" then t:Disconnect()
@@ -1432,6 +1434,27 @@ local function teleportToCustom()
     teleportToPlayer(target, "Custom")
 end
 
+-- FIX: define saveCurrentPosition / loadPosition BEFORE buildUI
+function saveCurrentPosition(slot)
+    local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    if root then
+        savedPositions[slot] = root.CFrame
+        setStatus("Position saved to slot " .. slot)
+    end
+end
+
+function loadPosition(slot)
+    local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    if root and savedPositions[slot] then
+        root.CFrame = savedPositions[slot]
+        root.AssemblyLinearVelocity = Vector3.zero
+        root.AssemblyAngularVelocity = Vector3.zero
+        setStatus("Teleported to saved slot " .. slot)
+    else
+        setStatus("No saved position in slot " .. slot)
+    end
+end
+
 task.spawn(function()
     while true do
         task.wait(0.5)
@@ -1726,14 +1749,12 @@ local function applySmallHitbox()
                     CanCollide = part.CanCollide,
                 }
             end
-            -- Skip HumanoidRootPart and Handle parts so movement stays intact
             if part.Name ~= "HumanoidRootPart" then
                 local s = smallHitboxSaved[part].Size
                 part.Size = Vector3.new(s.X * smallHitboxScale, s.Y * smallHitboxScale, s.Z * smallHitboxScale)
             end
         end
     end
-    -- Keep HRP small but not tiny so tweening still works
     local hrp = char:FindFirstChild("HumanoidRootPart")
     if hrp then
         if not smallHitboxSaved[hrp] then
@@ -3718,28 +3739,6 @@ UIS.TouchTap:Connect(function(positions, gpe)
     end
 end)
 
-local savedPositions = {nil, nil, nil}
-
-local function saveCurrentPosition(slot)
-    local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-    if root then
-        savedPositions[slot] = root.CFrame
-        setStatus("Position saved to slot " .. slot)
-    end
-end
-
-local function loadPosition(slot)
-    local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-    if root and savedPositions[slot] then
-        root.CFrame = savedPositions[slot]
-        root.AssemblyLinearVelocity = Vector3.zero
-        root.AssemblyAngularVelocity = Vector3.zero
-        setStatus("Teleported to saved slot " .. slot)
-    else
-        setStatus("No saved position in slot " .. slot)
-    end
-end
-
 -- ==================== ROLE NOTIFICATIONS ====================
 local notifiedMurderer = false
 local notifiedSheriff = false
@@ -3926,7 +3925,6 @@ task.spawn(function()
         if inRound and hasRoles and not roundFullyStarted then
             if (tick() - roundStartTime) > 6 then roundFullyStarted = true; setStatus("Round started") end
         end
-        -- Farm death-stuck detection: if farm is on but char has no Humanoid for > 3s, reset
         if state.farm and (not LP.Character or not LP.Character:FindFirstChildOfClass("Humanoid")) then
             if tick() - farmDeathCheckTime > 3 then
                 farmDeathCheckTime = tick()
@@ -3961,9 +3959,7 @@ task.spawn(function()
             end
             lastCoinFoundTime = tick(); continue
         end
-        -- Don't tween if already tweening — prevents tween pile-up
         if currentFarmTween and currentFarmTween.PlaybackState == Enum.PlaybackState.Playing then
-            -- velocity lock while tweening
             root.AssemblyLinearVelocity = Vector3.zero
             root.AssemblyAngularVelocity = Vector3.zero
             continue
