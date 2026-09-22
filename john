@@ -76,7 +76,7 @@ local function cfgPath()
     return CFl
 end
 
--- ============ ANIMATED LOADING SCREEN (BLOCKING) ============
+-- ============ ANIMATED LOADING SCREEN ============
 do
     local g = Instance.new("ScreenGui")
     g.Name = "AWLoad"; g.Parent = getGuiParent()
@@ -99,8 +99,7 @@ do
             while p.Parent do
                 p.Position = UDim2.new(p.Position.X.Scale, 0, 1.2, 0)
                 TweenService:Create(p, TweenInfo.new(dur, Enum.EasingStyle.Linear), {
-                    Position = UDim2.new(p.Position.X.Scale, 0, -0.2, 0),
-                    BackgroundTransparency = 1
+                    Position = UDim2.new(p.Position.X.Scale, 0, -0.2, 0), BackgroundTransparency = 1
                 }):Play()
                 task.wait(dur + 0.1)
             end
@@ -161,12 +160,12 @@ do
     task.spawn(function()
         while shine.Parent do
             shine.Position = UDim2.new(-0.35, 0, 0, 0)
-            TweenService:Create(shine, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = UDim2.new(1.05, 0, 0, 0)}):Play()
+            TweenService:Create(shine, TweenInfo.new(0.7, Enum.EasingStyle.Quad), {Position = UDim2.new(1.05, 0, 0, 0)}):Play()
             task.wait(0.85)
         end
     end)
 
-    TweenService:Create(barFill, TweenInfo.new(2.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 1, 0)}):Play()
+    TweenService:Create(barFill, TweenInfo.new(2.5, Enum.EasingStyle.Quad), {Size = UDim2.new(1, 0, 1, 0)}):Play()
     task.wait(2.8)
 
     TweenService:Create(bg, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
@@ -179,7 +178,7 @@ do
 end
 
 -- ============ STATE ============
-local saveSettings, buildUI, st, stopFarm, refreshPicker, refreshQuick, applyTheme
+local saveSettings, buildUI, st, stopFarm, refreshPicker, refreshQuick
 
 local state = {
     farm=false, xpFarm=false, noclip=false, gun=false, afk=false,
@@ -194,35 +193,35 @@ local state = {
     flyEnabled=false, flySpeed=50,
     speedEnabled=false, speedValue=16,
     jumpEnabled=false, jumpValue=50,
-    infJumpEnabled=false, invisibleEnabled=false, instantInteract=false,
+    infJumpEnabled=false, invisibleEnabled=false,
     cameraZoomEnabled=false, cameraMaxZoom=500, infoHudEnabled=false,
     antiRagdoll=true, freeze=false, fullbright=false,
     fovEnabled=false, fovValue=70, clickTP=false,
-    -- NEW Secret features
     killAura=false, flingAura=false, autoDodge=false, autoBlockGun=false,
-    antiBullet=false, bunnyHop=false, sprintShift=false,
-    antiFall=false, antiTP=false,
-    infiniteAmmo=false, fastReload=false,
+    bunnyHop=false,
     savedPosition=nil,
+    -- HUD element toggles
+    hudShowSession=true, hudShowPlayers=true, hudShowRole=true,
+    hudShowPing=true, hudShowFps=true, hudShowPlayerRoles=true,
 }
 
 local settingsConfig = {
     webhookUrl="", webhookCooldown=30, discordUserId="",
     tweenSpeed=25, selectedScale=1, roundLength=200,
     flingList={}, whitelist={},
-    bgColor={r=6, g=6, b=6},
+    bgColor={r=0, g=0, b=0},
     bgImage="", bgImageFile="",
-    textColor={r=245, g=245, b=245},
+    textColor={r=255, g=255, b=255},
     textStrokeColor={r=0, g=0, b=0},
     textStrokeThickness=0,
-    cardColor={r=14, g=14, b=14},
-    cardHoverColor={r=22, g=22, b=22},
-    borderColor={r=28, g=28, b=28},
+    cardColor={r=15, g=15, b=15},
+    cardHoverColor={r=35, g=35, b=35},
+    borderColor={r=60, g=60, b=60},
     accentColor={r=255, g=255, b=255},
-    tabBgColor={r=10, g=10, b=10},
-    tabTextColor={r=140, g=140, b=140},
-    tabTextActiveColor={r=245, g=245, b=245},
-    openBtnColor={r=12, g=12, b=12},
+    tabBgColor={r=0, g=0, b=0},
+    tabTextColor={r=170, g=170, b=170},
+    tabTextActiveColor={r=255, g=255, b=255},
+    openBtnColor={r=0, g=0, b=0},
     openBtnTextColor={r=255, g=255, b=255},
     secretRevealSeen=false,
     secretRevealNever=false,
@@ -266,13 +265,12 @@ local toggleDisplayNames = {
     speedEnabled="Speed Changer", jumpEnabled="Jump Power",
     freeze="Freeze (Anchor)", fullbright="Fullbright",
     fovEnabled="FOV Changer", clickTP="Click / Tap Teleport",
-    instantInteract="Instant Interact",
     cameraZoomEnabled="Camera Max Zoom", infoHudEnabled="Info HUD",
     killAura="Kill Aura", flingAura="Fling Aura", autoDodge="Auto Dodge",
-    autoBlockGun="Auto Block Gun", antiBullet="Anti-Bullet",
-    bunnyHop="Bunny Hop", sprintShift="Sprint (Shift)",
-    antiFall="Anti-Fall", antiTP="Anti-TP",
-    infiniteAmmo="Infinite Ammo", fastReload="Fast Reload",
+    autoBlockGun="Auto Block Gun", bunnyHop="Bunny Hop",
+    hudShowSession="HUD: Session Time", hudShowPlayers="HUD: Player Count",
+    hudShowRole="HUD: Your Role", hudShowPing="HUD: Ping",
+    hudShowFps="HUD: FPS", hudShowPlayerRoles="HUD: Player Role List",
 }
 local nExcl = {}
 
@@ -308,26 +306,26 @@ pcall(function()
     end
 end)
 
--- ============ FOLDER-FILE LOADERS ============
+-- ============ FORCE BLACK & WHITE THEME (overrides config) ============
+settingsConfig.bgColor = {r=0, g=0, b=0}
+settingsConfig.textColor = {r=255, g=255, b=255}
+settingsConfig.textStrokeColor = {r=0, g=0, b=0}
+settingsConfig.textStrokeThickness = 0
+settingsConfig.cardColor = {r=15, g=15, b=15}
+settingsConfig.cardHoverColor = {r=35, g=35, b=35}
+settingsConfig.borderColor = {r=60, g=60, b=60}
+settingsConfig.accentColor = {r=255, g=255, b=255}
+settingsConfig.tabBgColor = {r=0, g=0, b=0}
+settingsConfig.tabTextColor = {r=170, g=170, b=170}
+settingsConfig.tabTextActiveColor = {r=255, g=255, b=255}
+settingsConfig.openBtnColor = {r=0, g=0, b=0}
+settingsConfig.openBtnTextColor = {r=255, g=255, b=255}
+
+-- ============ FOLDER LOADERS ============
 pcall(function()
     if makefolder and isfolder then
         if not isfolder(CF) then makefolder(CF) end
         if not isfolder(CF .. "/Backgrounds") then makefolder(CF .. "/Backgrounds") end
-        if not isfolder(CF .. "/Themes") then makefolder(CF .. "/Themes") end
-        if not isfolder(CF .. "/Colors") then makefolder(CF .. "/Colors") end
-    end
-end)
-
-pcall(function()
-    if writefile and isfile then
-        local readmePath = CF .. "/README.txt"
-        if not isfile(readmePath) then
-            writefile(readmePath, "APPLEWARE CONFIG FOLDER\n=======================\n\n" ..
-                "  Backgrounds/  -> drop background.png/.jpg/.jpeg/.gif/.bmp\n" ..
-                "  Colors/       -> bgcolor.txt with 'ff0055' or '255,0,85'\n" ..
-                "  Themes/       -> theme .json with Surface/Primary/Secondary\n\n" ..
-                "Do NOT edit Appleware.json.\n")
-        end
     end
 end)
 
@@ -350,108 +348,8 @@ local function loadBgImageFromFolder()
     return tryBg(CF .. "/Backgrounds") or tryBg(CF)
 end
 
-local function loadBgColorFromFolder()
-    if not (isfile and readfile) then return false end
-    local function tryColor(path)
-        if not isfile(path) then return false end
-        local content = readfile(path); if not content then return false end
-        local clean = content:gsub("%s", ""):gsub("#", "")
-        local r, g, b = clean:match("^(%x%x)(%x%x)(%x%x)$")
-        if r then
-            settingsConfig.bgColor = {r = tonumber(r, 16), g = tonumber(g, 16), b = tonumber(b, 16)}
-            return true
-        end
-        local r2, g2, b2 = content:match("(%d+)%s*,%s*(%d+)%s*,%s*(%d+)")
-        if r2 then
-            settingsConfig.bgColor = {r = tonumber(r2), g = tonumber(g2), b = tonumber(b2)}
-            return true
-        end
-        return false
-    end
-    return tryColor(CF .. "/Colors/bgcolor.txt") or tryColor(CF .. "/bgcolor.txt")
-end
-
--- ============ THEME LOADER ============
-local loadedThemeName = ""
-local function hexToRgb(hex)
-    hex = tostring(hex):gsub("#", "")
-    local r, g, b = hex:match("^(%x%x)(%x%x)(%x%x)$")
-    if r then return {r=tonumber(r,16), g=tonumber(g,16), b=tonumber(b,16)} end
-    return nil
-end
-
-local function applyThemeJson(data)
-    local function grab(tbl, ...)
-        for _, key in ipairs({...}) do
-            if tbl[key] then local c = hexToRgb(tbl[key]); if c then return c end end
-        end
-        return nil
-    end
-    local surface = data["Surface"] or {}
-    local primary = data["Primary"] or {}
-    local secondary = data["Secondary"] or {}
-    local secVar = data["Secondary Variant"] or {}
-
-    local s1 = grab(surface, "#1. Surface Color", "1. Surface Color")
-    local s2 = grab(surface, "#2. Surface Color", "2. Surface Color")
-    local s3 = grab(surface, "#3. Surface Color", "3. Surface Color")
-    if s1 then settingsConfig.tabBgColor = s1 end
-    if s2 then settingsConfig.cardColor = s2 end
-    if s3 then settingsConfig.borderColor = s3 end
-
-    local btn  = grab(primary, "Button Element Color")
-    local txtb = grab(primary, "TextBox Element Color")
-    local slid = grab(primary, "Slider Fill Element Color")
-    local togOn = grab(primary, "Toggle On Element Color")
-    local drop = grab(primary, "Dropdown Element Color")
-    if btn then settingsConfig.cardHoverColor = btn end
-    if txtb then settingsConfig.openBtnColor = txtb end
-    if slid then settingsConfig.accentColor = slid end
-    if togOn then settingsConfig.tabTextActiveColor = togOn end
-    if drop then settingsConfig.openBtnTextColor = drop end
-
-    local sec1 = grab(secondary, "#1. Secondary Color", "1. Secondary Color")
-    local sec2 = grab(secondary, "#2. Secondary Color", "2. Secondary Color")
-    local sec3 = grab(secondary, "#3. Secondary Color", "3. Secondary Color")
-    if sec1 then settingsConfig.textColor = sec1 end
-    if sec2 then settingsConfig.bgColor = sec2 end
-    if sec3 then settingsConfig.tabTextColor = sec3 end
-
-    local v1 = grab(secVar, "#1. Secondary Variant Color", "1. Secondary Variant Color")
-    if v1 then settingsConfig.textStrokeColor = v1 end
-    saveSettings()
-end
-
-local function loadThemeFromFolder()
-    if not (listfiles and isfile and readfile) then return nil end
-    local themes = {}
-    local ok, files = pcall(listfiles, CF .. "/Themes")
-    if not ok or not files or #files == 0 then ok, files = pcall(listfiles, CF) end
-    if not ok or not files then return nil end
-    for _, path in ipairs(files) do
-        if type(path) == "string" and path:match("%.json$") and not path:match("Appleware%.json$") then
-            local ok2, content = pcall(readfile, path)
-            if ok2 and content and #content > 5 then
-                local ok3, data = pcall(function() return HttpService:JSONDecode(content) end)
-                if ok3 and type(data) == "table"
-                    and (data["Surface"] or data["Primary"] or data["Secondary"] or data["Secondary Variant"]) then
-                    table.insert(themes, {name = (path:match("([^/\\]+)%.json$") or path), data = data})
-                end
-            end
-        end
-    end
-    if #themes == 0 then return nil end
-    local chosen = themes[1]
-    for _, t in ipairs(themes) do if t.name:lower():find("theme") then chosen = t break end end
-    applyThemeJson(chosen.data)
-    loadedThemeName = chosen.name
-    return chosen.name
-end
-
 local folderBg = loadBgImageFromFolder()
 if folderBg then settingsConfig.bgImage = folderBg; settingsConfig.bgImageFile = "" end
-loadBgColorFromFolder()
-local themeFileName = loadThemeFromFolder()
 
 state.antiRagdoll = true
 
@@ -515,19 +413,6 @@ local function staggerFade(p)
             if stt then TweenService:Create(c, TweenInfo.new(0.4), {TextTransparency=stt}):Play() end
         end)
     end
-end
-local function startPulse(g, isOn)
-    task.spawn(function()
-        while g.Parent do
-            if isOn() then
-                TweenService:Create(g, TweenInfo.new(1.2, Enum.EasingStyle.Sine), {BackgroundTransparency=0.55}):Play()
-                task.wait(1.2)
-                if not g.Parent then break end
-                TweenService:Create(g, TweenInfo.new(1.2, Enum.EasingStyle.Sine), {BackgroundTransparency=0.92}):Play()
-                task.wait(1.2)
-            else task.wait(0.5) end
-        end
-    end)
 end
 
 -- ============ NOTIFICATIONS ============
@@ -599,7 +484,7 @@ local function notify(t)
     br.Size = UDim2.new(1, 0, 1, 0); br.BackgroundColor3 = c3(settingsConfig.accentColor)
     Instance.new("UICorner", br).CornerRadius = UDim.new(1, 0)
 
-    TweenService:Create(f, TweenInfo.new(0.65, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Position=UDim2.new(0,0,0,0), Size=UDim2.new(1,0,1,0)}):Play()
+    TweenService:Create(f, TweenInfo.new(0.65, Enum.EasingStyle.Back), {Position=UDim2.new(0,0,0,0), Size=UDim2.new(1,0,1,0)}):Play()
     TweenService:Create(ib, TweenInfo.new(0.65, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, false, 0.15), {Size=UDim2.new(0,26,0,26), Position=UDim2.new(0,16,0.5,-13)}):Play()
     TweenService:Create(il, TweenInfo.new(0.9, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, false, 0.15), {Rotation=0}):Play()
     TweenService:Create(ac, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, false, 0.1), {Size=UDim2.new(0,3,0,30)}):Play()
@@ -650,7 +535,7 @@ rtValue.BackgroundTransparency = 1; rtValue.Text = "0:00"
 rtValue.TextColor3 = Color3.new(1, 1, 1)
 rtValue.Font = Enum.Font.GothamBold; rtValue.TextSize = 22
 
--- ============ INFO HUD (with role color player list) ============
+-- ============ INFO HUD (with player role list) ============
 local ihGui = Instance.new("ScreenGui")
 ihGui.Name = "AWIH"; ihGui.Parent = getGuiParent()
 ihGui.ResetOnSpawn = false; ihGui.DisplayOrder = 999996; ihGui.IgnoreGuiInset = true
@@ -725,29 +610,6 @@ RunService.RenderStepped:Connect(function(dt)
         if #fpsSamples > 30 then table.remove(fpsSamples, 1) end
     end
 end)
-
--- ============ THEME REFERENCES ============
-local themed = { text = {}, textStroke = {}, card = {}, cardHover = {}, border = {}, accent = {}, tab = {}, openBtn = {}, openBtnText = {} }
-
-local function trackText(obj)
-    table.insert(themed.text, obj); obj.TextColor3 = c3(settingsConfig.textColor)
-    local st = Instance.new("UIStroke", obj)
-    st.Name = "AutoStroke"
-    st.Thickness = settingsConfig.textStrokeThickness or 0
-    st.Color = c3(settingsConfig.textStrokeColor); st.Transparency = 0
-    st.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
-    table.insert(themed.textStroke, st)
-    return obj
-end
-local function trackCard(obj)
-    table.insert(themed.card, obj); obj.BackgroundColor3 = c3(settingsConfig.cardColor); return obj
-end
-local function trackBorder(stroke)
-    table.insert(themed.border, stroke); stroke.Color = c3(settingsConfig.borderColor); return stroke
-end
-local function trackAccent(obj)
-    table.insert(themed.accent, obj); obj.BackgroundColor3 = c3(settingsConfig.accentColor); return obj
-end
 
 -- ============ GAME HELPERS ============
 local selectedScale = settingsConfig.selectedScale or 1
@@ -1217,7 +1079,7 @@ local function executeKillBehind(tp)
     end
 end
 
--- ============ NEW SECRET FEATURES ============
+-- ============ SECRET FEATURES ============
 local function getNearbyPlayers(radius)
     local list = {}
     local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
@@ -1232,33 +1094,6 @@ local function getNearbyPlayers(radius)
         end
     end
     return list
-end
-
-local function bringAllToMe()
-    local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-    if not myRoot then return end
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LP and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-            pcall(function() p.Character.HumanoidRootPart.CFrame = myRoot.CFrame * CFrame.new(0, 0, 3) end)
-        end
-    end
-    setStatus("Brought all players")
-end
-
-local function freezeAllNearby()
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LP and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-            pcall(function() p.Character.HumanoidRootPart.Anchored = true end)
-        end
-    end
-    setStatus("Froze all players")
-    task.delay(3, function()
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p ~= LP and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
-                pcall(function() p.Character.HumanoidRootPart.Anchored = false end)
-            end
-        end
-    end)
 end
 
 local function saveCurrentPos()
@@ -1337,117 +1172,10 @@ end)
 
 task.spawn(function()
     while true do
-        task.wait(0.2)
-        if state.antiBullet and alive() then
-            local s = getSheriff()
-            local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-            if s and s.Character and myRoot then
-                local sHead = s.Character:FindFirstChild("Head")
-                if sHead then
-                    local lookDir = sHead.CFrame.LookVector
-                    local toMe = (myRoot.Position - sHead.Position).Unit
-                    if lookDir:Dot(toMe) > 0.85 then
-                        local side = Vector3.new(math.random(-4,4), 0, math.random(-4,4))
-                        myRoot.CFrame = myRoot.CFrame + side
-                    end
-                end
-            end
-        end
-    end
-end)
-
-task.spawn(function()
-    while true do
         task.wait(0.05)
         if state.bunnyHop and LP.Character then
             local h = LP.Character:FindFirstChildOfClass("Humanoid")
             if h and h.Health > 0 and h.FloorMaterial ~= Enum.Material.Air then h.Jump = true end
-        end
-    end
-end)
-
-task.spawn(function()
-    while true do
-        task.wait(0.1)
-        if state.sprintShift and LP.Character then
-            local h = LP.Character:FindFirstChildOfClass("Humanoid")
-            if h then
-                if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then
-                    h.WalkSpeed = (state.speedValue or 16) * 1.8
-                elseif not state.speedEnabled then h.WalkSpeed = 16 end
-            end
-        end
-    end
-end)
-
-task.spawn(function()
-    while true do
-        task.wait(0.15)
-        if state.antiFall and LP.Character then
-            local r = LP.Character:FindFirstChild("HumanoidRootPart")
-            if r and r.Position.Y < 200 then
-                r.CFrame = CFrame.new(r.Position.X, 520, r.Position.Z)
-                r.AssemblyLinearVelocity = Vector3.zero
-            end
-        end
-    end
-end)
-
-local lastGoodPos = nil
-task.spawn(function()
-    while true do
-        task.wait(0.5)
-        if state.antiTP and LP.Character then
-            local r = LP.Character:FindFirstChild("HumanoidRootPart")
-            if r then lastGoodPos = r.CFrame end
-        end
-    end
-end)
-task.spawn(function()
-    while true do
-        task.wait(0.05)
-        if state.antiTP and LP.Character and lastGoodPos then
-            local r = LP.Character:FindFirstChild("HumanoidRootPart")
-            if r then
-                local movedDist = (r.Position - lastGoodPos.Position).Magnitude
-                if movedDist > 50 and not state.flyEnabled then r.CFrame = lastGoodPos end
-            end
-        end
-    end
-end)
-
-task.spawn(function()
-    while true do
-        task.wait(0.5)
-        if state.infiniteAmmo and LP.Character then
-            pcall(function()
-                local gun = findTool("Gun")
-                if gun then
-                    for _, v in ipairs(gun:GetDescendants()) do
-                        if v:IsA("IntValue") or v:IsA("NumberValue") then
-                            if string.lower(v.Name):find("ammo") or string.lower(v.Name):find("clip") then
-                                v.Value = 999
-                            end
-                        end
-                    end
-                end
-            end)
-        end
-    end
-end)
-
-task.spawn(function()
-    while true do
-        task.wait(0.15)
-        if state.fastReload and LP.Character then
-            pcall(function()
-                for _, v in ipairs(ReplicatedStorage:GetDescendants()) do
-                    if v:IsA("RemoteEvent") then
-                        local n = string.lower(v.Name)
-                        if n:find("reload") then pcall(function() v:FireServer() end) end
-                    end
-                end
-            end)
         end
     end
 end)
@@ -1557,7 +1285,7 @@ local function showSecretReveal()
         saveSettings(); dismiss()
     end)
 
-    TweenService:Create(box, TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = UDim2.new(0, 480, 0, 280)}):Play()
+    TweenService:Create(box, TweenInfo.new(0.6, Enum.EasingStyle.Back), {Size = UDim2.new(0, 480, 0, 280)}):Play()
 end
 
 -- ============ ACTIONS ============
@@ -1829,34 +1557,9 @@ local function resetX4(i)
         voting = false; isExecutingAction = false
     end)
 end
-
--- ============ THEME APPLIER ============
-applyTheme = function()
-    local cfg = settingsConfig
-    for _, o in ipairs(themed.text) do pcall(function() o.TextColor3 = c3(cfg.textColor) end) end
-    for _, s in ipairs(themed.textStroke) do
-        pcall(function() s.Color = c3(cfg.textStrokeColor); s.Thickness = cfg.textStrokeThickness or 0 end)
-    end
-    for _, o in ipairs(themed.card) do pcall(function() o.BackgroundColor3 = c3(cfg.cardColor) end) end
-    for _, s in ipairs(themed.border) do pcall(function() s.Color = c3(cfg.borderColor) end) end
-    for _, o in ipairs(themed.accent) do pcall(function() o.BackgroundColor3 = c3(cfg.accentColor) end) end
-    if bgFrame then bgFrame.BackgroundColor3 = c3(cfg.bgColor) end
-    if quickFrame then quickFrame.BackgroundColor3 = c3(cfg.bgColor) end
-    if mainOpenBtn then
-        mainOpenBtn.BackgroundColor3 = c3(cfg.openBtnColor)
-        mainOpenBtn.TextColor3 = c3(cfg.openBtnTextColor)
-    end
-    for _, b in ipairs(themed.tab) do
-        local isActive = (b:GetAttribute("Active") == true)
-        if isActive then b.TextColor3 = c3(cfg.tabTextActiveColor); b.BackgroundColor3 = c3(cfg.cardHoverColor)
-        else b.TextColor3 = c3(cfg.tabTextColor); b.BackgroundColor3 = c3(cfg.tabBgColor) end
-    end
-    saveSettings()
-end
 -- ============ MAIN UI ============
 buildUI = function(reb)
     mainTgls = {}; quickTgls = {}
-    themed = { text={}, textStroke={}, card={}, cardHover={}, border={}, accent={}, tab={}, openBtn={}, openBtnText={} }
 
     local parent = getGuiParent()
     pcall(function()
@@ -1906,18 +1609,6 @@ buildUI = function(reb)
     if imgSrc ~= "" then bgImage.Image = imgSrc; bgImage.Visible = true
     else bgImage.Visible = false end
 
-    if imgSrc ~= "" then
-        task.spawn(function()
-            while bgImage and bgImage.Parent do
-                TweenService:Create(bgImage, TweenInfo.new(6, Enum.EasingStyle.Sine), {ImageTransparency=0.25}):Play()
-                task.wait(6)
-                if not bgImage or not bgImage.Parent then break end
-                TweenService:Create(bgImage, TweenInfo.new(6, Enum.EasingStyle.Sine), {ImageTransparency=0}):Play()
-                task.wait(6)
-            end
-        end)
-    end
-
     blackScreen = Instance.new("Frame", sg)
     blackScreen.Size = UDim2.new(1, 0, 1, 0); blackScreen.BackgroundColor3 = Color3.new(0, 0, 0)
     blackScreen.Visible = state.disable3d; blackScreen.ZIndex = -2
@@ -1929,7 +1620,7 @@ buildUI = function(reb)
     main.ClipsDescendants = true; main.Visible = false
     Instance.new("UICorner", main).CornerRadius = R(14)
     local ms = Instance.new("UIStroke", main)
-    trackBorder(ms); ms.Transparency = 0.3
+    ms.Color = BORD; ms.Transparency = 0.3
     bgFrame = main
 
     local sb = Instance.new("Frame", main)
@@ -1940,9 +1631,9 @@ buildUI = function(reb)
     logo.Size = UDim2.new(1, -12 * selectedScale, 0, 48 * selectedScale)
     logo.Position = UDim2.new(0, 6 * selectedScale, 0, 4 * selectedScale)
     logo.BackgroundTransparency = 1; logo.Text = "Appleware"
+    logo.TextColor3 = TXT
     logo.Font = Enum.Font.GothamBold; logo.TextSize = 16 * fm
     logo.TextXAlignment = Enum.TextXAlignment.Left
-    trackText(logo)
 
     local tlb = Instance.new("Frame", sb)
     tlb.Size = UDim2.new(1, -12 * selectedScale, 1, -68 * selectedScale)
@@ -1956,7 +1647,7 @@ buildUI = function(reb)
     ct.Position = UDim2.new(0, sw + 10 * selectedScale, 0, 10 * selectedScale)
     ct.BackgroundTransparency = 1; ct.ClipsDescendants = true
 
-    local tabs = {"Farm","Combat","Teleport","ESP","Webhook","Misc","UI","Appearance","Voting","Secret"}
+    local tabs = {"Farm","Combat","Teleport","ESP","Webhook","Misc","UI","Voting","Secret"}
     local pages, pageGs, btns = {}, {}, {}
     local curTab = "Farm"; local switching = false
 
@@ -2025,12 +1716,7 @@ buildUI = function(reb)
         b.TextXAlignment = Enum.TextXAlignment.Left; b.AutoButtonColor = false
         b:SetAttribute("Active", i == 1)
         Instance.new("UICorner", b).CornerRadius = R(8)
-        local bStroke = Instance.new("UIStroke", b)
-        bStroke.Thickness = settingsConfig.textStrokeThickness or 0
-        bStroke.Color = c3(settingsConfig.textStrokeColor)
-        bStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
-        table.insert(themed.textStroke, bStroke)
-        btns[n] = b; table.insert(themed.tab, b)
+        btns[n] = b
         attachRipple(b, ACC)
         makePage(n)
         if i == 1 then pageGs[n].Visible = true end
@@ -2041,32 +1727,32 @@ buildUI = function(reb)
     st.Size = UDim2.new(1, -sw - 20 * selectedScale, 0, 30 * selectedScale)
     st.Position = UDim2.new(0, sw + 10 * selectedScale, 1, -40 * selectedScale)
     st.BackgroundColor3 = CARD; st.Text = "  Ready"
+    st.TextColor3 = TXT
     st.Font = Enum.Font.GothamMedium; st.TextSize = 11.5 * fm
     st.TextXAlignment = Enum.TextXAlignment.Left; st.TextTruncate = Enum.TextTruncate.AtEnd
     Instance.new("UICorner", st).CornerRadius = R(8)
-    trackText(st); trackCard(st)
 
     local function tgg(page, name, order, key)
         local row = Instance.new("Frame", page)
         row.Size = UDim2.new(1, 0, 0, 40 * selectedScale)
         row.LayoutOrder = order; row.BackgroundColor3 = CARD
-        Instance.new("UICorner", row).CornerRadius = R(10); trackCard(row)
+        Instance.new("UICorner", row).CornerRadius = R(10)
         local lbl = Instance.new("TextLabel", row)
         lbl.Size = UDim2.new(1, -64 * selectedScale, 1, 0)
         lbl.Position = UDim2.new(0, 14 * selectedScale, 0, 0)
-        lbl.BackgroundTransparency = 1; lbl.Text = name
+        lbl.BackgroundTransparency = 1; lbl.Text = name; lbl.TextColor3 = TXT
         lbl.Font = Enum.Font.GothamMedium; lbl.TextSize = 12.5 * fm
-        lbl.TextXAlignment = Enum.TextXAlignment.Left; trackText(lbl)
+        lbl.TextXAlignment = Enum.TextXAlignment.Left
         local pill = Instance.new("Frame", row)
         pill.Size = UDim2.new(0, 44 * selectedScale, 0, 24 * selectedScale)
         pill.Position = UDim2.new(1, -54 * selectedScale, 0.5, -12 * selectedScale)
         pill.BackgroundColor3 = state[key] and ACC or CARD
-        Instance.new("UICorner", pill).CornerRadius = UDim.new(1, 0); trackAccent(pill)
+        Instance.new("UICorner", pill).CornerRadius = UDim.new(1, 0)
         local pI = Instance.new("Frame", pill)
         pI.Size = UDim2.new(1, -4 * selectedScale, 1, -4 * selectedScale)
         pI.Position = UDim2.new(0, 2 * selectedScale, 0, 2 * selectedScale)
         pI.BackgroundColor3 = state[key] and ACC or CARD
-        Instance.new("UICorner", pI).CornerRadius = UDim.new(1, 0); trackAccent(pI)
+        Instance.new("UICorner", pI).CornerRadius = UDim.new(1, 0)
         local dot = Instance.new("Frame", pill)
         dot.Size = UDim2.new(0, 16 * selectedScale, 0, 16 * selectedScale)
         dot.Position = state[key] and UDim2.new(1, -20 * selectedScale, 0.5, -8 * selectedScale)
@@ -2088,13 +1774,13 @@ buildUI = function(reb)
         b.Size = UDim2.new(1, 0, 0, 38 * selectedScale)
         b.LayoutOrder = order; b.BackgroundColor3 = CARD; b.Text = ""
         b.ClipsDescendants = true
-        Instance.new("UICorner", b).CornerRadius = R(10); trackCard(b)
+        Instance.new("UICorner", b).CornerRadius = R(10)
         local l = Instance.new("TextLabel", b)
         l.Size = UDim2.new(1, -12 * selectedScale, 1, 0)
         l.Position = UDim2.new(0, 12 * selectedScale, 0, 0)
-        l.BackgroundTransparency = 1; l.Text = name
+        l.BackgroundTransparency = 1; l.Text = name; l.TextColor3 = TXT
         l.Font = Enum.Font.GothamMedium; l.TextSize = 12.5 * fm
-        l.TextXAlignment = Enum.TextXAlignment.Left; trackText(l)
+        l.TextXAlignment = Enum.TextXAlignment.Left
         b.MouseEnter:Connect(function() TweenService:Create(b, TweenInfo.new(0.25), {BackgroundColor3 = CH}):Play() end)
         b.MouseLeave:Connect(function() TweenService:Create(b, TweenInfo.new(0.28), {BackgroundColor3 = CARD}):Play() end)
         attachBounce(b); attachShine(b); attachRipple(b); attachHoverLift(b, 1.01)
@@ -2117,13 +1803,13 @@ buildUI = function(reb)
         local row = Instance.new("Frame", page)
         row.Size = UDim2.new(1, 0, 0, 56 * selectedScale)
         row.LayoutOrder = order; row.BackgroundColor3 = CARD
-        Instance.new("UICorner", row).CornerRadius = R(10); trackCard(row)
+        Instance.new("UICorner", row).CornerRadius = R(10)
         local lbl = Instance.new("TextLabel", row)
         lbl.Size = UDim2.new(0.6, 0, 0, 24 * selectedScale)
         lbl.Position = UDim2.new(0, 14 * selectedScale, 0, 4 * selectedScale)
-        lbl.BackgroundTransparency = 1; lbl.Text = label
+        lbl.BackgroundTransparency = 1; lbl.Text = label; lbl.TextColor3 = TXT
         lbl.Font = Enum.Font.GothamMedium; lbl.TextSize = 11 * fm
-        lbl.TextXAlignment = Enum.TextXAlignment.Left; trackText(lbl)
+        lbl.TextXAlignment = Enum.TextXAlignment.Left
         local ib = Instance.new("TextBox", row)
         ib.Size = UDim2.new(0, 50 * selectedScale, 0, 24 * selectedScale)
         ib.Position = UDim2.new(1, -64 * selectedScale, 0, 4 * selectedScale)
@@ -2139,7 +1825,7 @@ buildUI = function(reb)
         local fl = Instance.new("Frame", tr)
         fl.Size = UDim2.new((iv - minV) / (maxV - minV), 0, 1, 0)
         fl.BackgroundColor3 = ACC
-        Instance.new("UICorner", fl).CornerRadius = UDim.new(1, 0); trackAccent(fl)
+        Instance.new("UICorner", fl).CornerRadius = UDim.new(1, 0)
         local kn = Instance.new("Frame", tr)
         kn.Size = UDim2.new(0, 16 * selectedScale, 0, 16 * selectedScale)
         kn.Position = UDim2.new((iv - minV) / (maxV - minV), 0, 0.5, -8 * selectedScale)
@@ -2185,130 +1871,57 @@ buildUI = function(reb)
         box.Text = val or ""; box.TextColor3 = TXT
         box.Font = Enum.Font.Gotham; box.TextSize = 12 * fm
         box.ClearTextOnFocus = false
-        Instance.new("UICorner", box).CornerRadius = R(10); trackCard(box)
+        Instance.new("UICorner", box).CornerRadius = R(10)
         box.FocusLost:Connect(function() onC(box.Text) end)
         return box
     end
 
-    local function makeColorPicker(page, order, label, colorKey, onChange)
-        local row = Instance.new("Frame", page)
-        row.Size = UDim2.new(1, 0, 0, 104 * selectedScale)
-        row.LayoutOrder = order; row.BackgroundColor3 = CARD
-        Instance.new("UICorner", row).CornerRadius = R(10); trackCard(row)
-        local title = Instance.new("TextLabel", row)
-        title.Size = UDim2.new(1, -60 * selectedScale, 0, 20 * selectedScale)
-        title.Position = UDim2.new(0, 12 * selectedScale, 0, 6 * selectedScale)
-        title.BackgroundTransparency = 1; title.Text = label
-        title.Font = Enum.Font.GothamBold; title.TextSize = 12 * fm
-        title.TextXAlignment = Enum.TextXAlignment.Left; trackText(title)
-        local preview = Instance.new("Frame", row)
-        preview.Size = UDim2.new(0, 40 * selectedScale, 0, 20 * selectedScale)
-        preview.Position = UDim2.new(1, -52 * selectedScale, 0, 6 * selectedScale)
-        preview.BackgroundColor3 = c3(settingsConfig[colorKey])
-        Instance.new("UICorner", preview).CornerRadius = R(6)
-        local function mkMini(y, ch, miniLabel)
-            local mini = Instance.new("Frame", row)
-            mini.Size = UDim2.new(1, -24 * selectedScale, 0, 14 * selectedScale)
-            mini.Position = UDim2.new(0, 12 * selectedScale, 0, y)
-            mini.BackgroundTransparency = 1
-            local ml = Instance.new("TextLabel", mini)
-            ml.Size = UDim2.new(0, 14 * selectedScale, 1, 0)
-            ml.BackgroundTransparency = 1; ml.Text = miniLabel
-            ml.Font = Enum.Font.GothamBold; ml.TextSize = 10 * fm
-            ml.TextColor3 = TXTD; ml.TextXAlignment = Enum.TextXAlignment.Left
-            local tr = Instance.new("Frame", mini)
-            tr.Size = UDim2.new(1, -22 * selectedScale, 0, 6 * selectedScale)
-            tr.Position = UDim2.new(0, 18 * selectedScale, 0.5, -3 * selectedScale)
-            tr.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-            Instance.new("UICorner", tr).CornerRadius = UDim.new(1, 0)
-            local curV = settingsConfig[colorKey][ch] or 0
-            local fl = Instance.new("Frame", tr)
-            fl.Size = UDim2.new(curV / 255, 0, 1, 0)
-            if ch == "r" then fl.BackgroundColor3 = Color3.fromRGB(curV, 0, 0)
-            elseif ch == "g" then fl.BackgroundColor3 = Color3.fromRGB(0, curV, 0)
-            else fl.BackgroundColor3 = Color3.fromRGB(0, 0, curV) end
-            Instance.new("UICorner", fl).CornerRadius = UDim.new(1, 0)
-            local drag = false
-            local function upd(inp)
-                local mx = inp.Position.X; local tp = tr.AbsolutePosition.X
-                local ts = tr.AbsoluteSize.X; if ts == 0 then return end
-                local p = math.clamp((mx - tp) / ts, 0, 1)
-                local v = math.floor(255 * p + 0.5)
-                settingsConfig[colorKey][ch] = v
-                fl.Size = UDim2.new(p, 0, 1, 0)
-                preview.BackgroundColor3 = c3(settingsConfig[colorKey])
-                if ch == "r" then fl.BackgroundColor3 = Color3.fromRGB(v, 0, 0)
-                elseif ch == "g" then fl.BackgroundColor3 = Color3.fromRGB(0, v, 0)
-                else fl.BackgroundColor3 = Color3.fromRGB(0, 0, v) end
-                if onChange then onChange() end; saveSettings()
-            end
-            tr.InputBegan:Connect(function(inp)
-                if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
-                    drag = true; upd(inp)
-                end
-            end)
-            UIS.InputChanged:Connect(function(inp)
-                if drag and (inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch) then upd(inp) end
-            end)
-            UIS.InputEnded:Connect(function(inp)
-                if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then drag = false end
-            end)
-        end
-        mkMini(32 * selectedScale, "r", "R")
-        mkMini(52 * selectedScale, "g", "G")
-        mkMini(72 * selectedScale, "b", "B")
-        return {preview = preview}
-    end
-
-    -- SECRET TAB (existing + new)
+    -- SECRET TAB
     addSect(pages["Secret"], "Movement", 1)
     tgg(pages["Secret"], "Fly (WASD/Joystick)", 2, "flyEnabled")
     makeSlider(pages["Secret"], "Fly Speed", 3, state.flySpeed or 50, 10, 300, "flySpeed")
     tgg(pages["Secret"], "Infinite Jump", 4, "infJumpEnabled")
     tgg(pages["Secret"], "Bunny Hop", 5, "bunnyHop")
-    tgg(pages["Secret"], "Sprint (Hold Shift)", 6, "sprintShift")
 
-    addSect(pages["Secret"], "Physics", 7)
-    tgg(pages["Secret"], "Noclip", 8, "noclip")
-    tgg(pages["Secret"], "Freeze (Anchor)", 9, "freeze")
-    tgg(pages["Secret"], "Anti-Fall", 10, "antiFall")
-    tgg(pages["Secret"], "Anti-TP", 11, "antiTP")
+    addSect(pages["Secret"], "Physics", 6)
+    tgg(pages["Secret"], "Noclip", 7, "noclip")
+    tgg(pages["Secret"], "Freeze (Anchor)", 8, "freeze")
 
-    addSect(pages["Secret"], "Attributes", 12)
-    tgg(pages["Secret"], "Speed Changer", 13, "speedEnabled")
-    makeSlider(pages["Secret"], "Walk Speed", 14, state.speedValue or 16, 16, 500, "speedValue")
-    tgg(pages["Secret"], "Jump Power", 15, "jumpEnabled")
-    makeSlider(pages["Secret"], "Jump Power", 16, state.jumpValue or 50, 50, 500, "jumpValue")
+    addSect(pages["Secret"], "Attributes", 9)
+    tgg(pages["Secret"], "Speed Changer", 10, "speedEnabled")
+    makeSlider(pages["Secret"], "Walk Speed", 11, state.speedValue or 16, 16, 500, "speedValue")
+    tgg(pages["Secret"], "Jump Power", 12, "jumpEnabled")
+    makeSlider(pages["Secret"], "Jump Power", 13, state.jumpValue or 50, 50, 500, "jumpValue")
 
-    addSect(pages["Secret"], "Combat Aura", 17)
-    tgg(pages["Secret"], "Kill Aura", 18, "killAura")
-    tgg(pages["Secret"], "Fling Aura", 19, "flingAura")
-    tgg(pages["Secret"], "Auto Dodge (Murderer)", 20, "autoDodge")
-    tgg(pages["Secret"], "Auto Block Gun", 21, "autoBlockGun")
-    tgg(pages["Secret"], "Anti-Bullet", 22, "antiBullet")
+    addSect(pages["Secret"], "Combat Aura", 14)
+    tgg(pages["Secret"], "Kill Aura", 15, "killAura")
+    tgg(pages["Secret"], "Fling Aura", 16, "flingAura")
+    tgg(pages["Secret"], "Auto Dodge (Murderer)", 17, "autoDodge")
+    tgg(pages["Secret"], "Auto Block Gun", 18, "autoBlockGun")
 
-    addSect(pages["Secret"], "Weapons", 23)
-    tgg(pages["Secret"], "Infinite Ammo", 24, "infiniteAmmo")
-    tgg(pages["Secret"], "Fast Reload", 25, "fastReload")
+    addSect(pages["Secret"], "Invisibility", 19)
+    tgg(pages["Secret"], "Invisible (Ghost Mode)", 20, "invisibleEnabled")
 
-    addSect(pages["Secret"], "Invisibility", 26)
-    tgg(pages["Secret"], "Invisible (Ghost Mode)", 27, "invisibleEnabled")
+    addSect(pages["Secret"], "Visuals", 21)
+    tgg(pages["Secret"], "Fullbright", 22, "fullbright")
+    tgg(pages["Secret"], "FOV Changer", 23, "fovEnabled")
+    makeSlider(pages["Secret"], "Field of View", 24, state.fovValue or 70, 30, 120, "fovValue")
+    tgg(pages["Secret"], "Camera Max Zoom", 25, "cameraZoomEnabled")
+    makeSlider(pages["Secret"], "Max Zoom", 26, state.cameraMaxZoom or 500, 100, 2000, "cameraMaxZoom")
+    tgg(pages["Secret"], "Info HUD", 27, "infoHudEnabled")
 
-    addSect(pages["Secret"], "Visuals", 28)
-    tgg(pages["Secret"], "Fullbright", 29, "fullbright")
-    tgg(pages["Secret"], "FOV Changer", 30, "fovEnabled")
-    makeSlider(pages["Secret"], "Field of View", 31, state.fovValue or 70, 30, 120, "fovValue")
-    tgg(pages["Secret"], "Camera Max Zoom", 32, "cameraZoomEnabled")
-    makeSlider(pages["Secret"], "Max Zoom", 33, state.cameraMaxZoom or 500, 100, 2000, "cameraMaxZoom")
-    tgg(pages["Secret"], "Info HUD", 34, "infoHudEnabled")
+    addSect(pages["Secret"], "HUD Contents (visible when HUD on)", 28)
+    tgg(pages["Secret"], "Show Session Time", 29, "hudShowSession")
+    tgg(pages["Secret"], "Show Player Count", 30, "hudShowPlayers")
+    tgg(pages["Secret"], "Show Your Role", 31, "hudShowRole")
+    tgg(pages["Secret"], "Show Ping", 32, "hudShowPing")
+    tgg(pages["Secret"], "Show FPS", 33, "hudShowFps")
+    tgg(pages["Secret"], "Show Player Role List", 34, "hudShowPlayerRoles")
 
     addSect(pages["Secret"], "Utility", 35)
-    tgg(pages["Secret"], "Instant Interact", 36, "instantInteract")
-    tgg(pages["Secret"], "Click / Tap Teleport", 37, "clickTP")
-    addBtn(pages["Secret"], "Save Position", 38, saveCurrentPos)
-    addBtn(pages["Secret"], "Return to Saved Position", 39, loadSavedPos)
-    addBtn(pages["Secret"], "Bring All Players To Me", 40, bringAllToMe)
-    addBtn(pages["Secret"], "Freeze All Players (3s)", 41, freezeAllNearby)
+    tgg(pages["Secret"], "Click / Tap Teleport", 36, "clickTP")
+    addBtn(pages["Secret"], "Save Position", 37, saveCurrentPos)
+    addBtn(pages["Secret"], "Return to Saved Position", 38, loadSavedPos)
 
     -- FARM TAB
     tgg(pages["Farm"], "Farm (Safe)", 1, "farm")
@@ -2330,19 +1943,19 @@ buildUI = function(reb)
     local pr = Instance.new("Frame", pages["Combat"])
     pr.Size = UDim2.new(1, 0, 0, 38 * selectedScale); pr.LayoutOrder = 8
     pr.BackgroundColor3 = CARD
-    Instance.new("UICorner", pr).CornerRadius = R(10); trackCard(pr)
+    Instance.new("UICorner", pr).CornerRadius = R(10)
     local prl = Instance.new("TextLabel", pr)
     prl.Size = UDim2.new(1, -60 * selectedScale, 1, 0)
     prl.Position = UDim2.new(0, 14 * selectedScale, 0, 0)
     prl.BackgroundTransparency = 1; prl.Text = "Tap to open player list"
-    prl.Font = Enum.Font.GothamMedium; prl.TextSize = 12.5 * fm
-    prl.TextXAlignment = Enum.TextXAlignment.Left; trackText(prl)
+    prl.TextColor3 = TXT; prl.Font = Enum.Font.GothamMedium; prl.TextSize = 12.5 * fm
+    prl.TextXAlignment = Enum.TextXAlignment.Left
     local prh = Instance.new("TextButton", pr)
     prh.Size = UDim2.new(1, 0, 1, 0); prh.BackgroundTransparency = 1; prh.Text = ""
     local pc = Instance.new("Frame", pages["Combat"])
     pc.Size = UDim2.new(1, 0, 0, 0); pc.LayoutOrder = 9
     pc.BackgroundColor3 = CARD; pc.ClipsDescendants = true
-    Instance.new("UICorner", pc).CornerRadius = R(10); trackCard(pc)
+    Instance.new("UICorner", pc).CornerRadius = R(10)
     local ps = Instance.new("ScrollingFrame", pc)
     ps.Size = UDim2.new(1, -8 * selectedScale, 1, -8 * selectedScale)
     ps.Position = UDim2.new(0, 4 * selectedScale, 0, 4 * selectedScale)
@@ -2363,7 +1976,7 @@ buildUI = function(reb)
     local fld = Instance.new("Frame", pages["Combat"])
     fld.Size = UDim2.new(1, 0, 0, 30 * selectedScale); fld.LayoutOrder = 11
     fld.BackgroundColor3 = CARD; fld.ClipsDescendants = true
-    Instance.new("UICorner", fld).CornerRadius = R(10); trackCard(fld)
+    Instance.new("UICorner", fld).CornerRadius = R(10)
     local fli = Instance.new("Frame", fld)
     fli.Size = UDim2.new(1, -12 * selectedScale, 0, 0)
     fli.Position = UDim2.new(0, 6 * selectedScale, 0, 6 * selectedScale)
@@ -2379,7 +1992,7 @@ buildUI = function(reb)
     local wld = Instance.new("Frame", pages["Combat"])
     wld.Size = UDim2.new(1, 0, 0, 30 * selectedScale); wld.LayoutOrder = 13
     wld.BackgroundColor3 = CARD; wld.ClipsDescendants = true
-    Instance.new("UICorner", wld).CornerRadius = R(10); trackCard(wld)
+    Instance.new("UICorner", wld).CornerRadius = R(10)
     local wli = Instance.new("Frame", wld)
     wli.Size = UDim2.new(1, -12 * selectedScale, 0, 0)
     wli.Position = UDim2.new(0, 6 * selectedScale, 0, 6 * selectedScale)
@@ -2413,9 +2026,8 @@ buildUI = function(reb)
                 nl.Size = UDim2.new(1, -130 * selectedScale, 1, 0)
                 nl.Position = UDim2.new(0, 10 * selectedScale, 0, 0)
                 nl.BackgroundTransparency = 1; nl.Text = p.Name
-                nl.Font = Enum.Font.GothamMedium; nl.TextSize = 11.5 * fm
+                nl.TextColor3 = TXT; nl.Font = Enum.Font.GothamMedium; nl.TextSize = 11.5 * fm
                 nl.TextXAlignment = Enum.TextXAlignment.Left; nl.TextTruncate = Enum.TextTruncate.AtEnd
-                trackText(nl)
                 local isF = isInList(settingsConfig.flingList, p.Name)
                 local isW = isInList(settingsConfig.whitelist, p.Name)
                 local fb = Instance.new("TextButton", row)
@@ -2528,7 +2140,7 @@ buildUI = function(reb)
     addBtn(pages["Teleport"], "Teleport to Sheriff", 6, teleportToSheriff)
     addBtn(pages["Teleport"], "Teleport to Custom", 7, teleportToCustom)
 
-    -- ESP (unchanged — Gun Drop ESP preserved)
+    -- ESP
     tgg(pages["ESP"], "Player ESP (Roles)", 1, "espPlayers")
     tgg(pages["ESP"], "Gun Drop ESP", 2, "espGunDrop")
 
@@ -2555,7 +2167,7 @@ buildUI = function(reb)
         settingsConfig.discordUserId = t; saveSettings()
     end)
 
-    -- MISC (unchanged — Auto Grab Gun preserved)
+    -- MISC
     tgg(pages["Misc"], "Anti AFK", 1, "afk")
     tgg(pages["Misc"], "Auto Grab Gun", 2, "gun")
     tgg(pages["Misc"], "Auto Rejoin", 3, "autoRejoin")
@@ -2565,17 +2177,17 @@ buildUI = function(reb)
     tgg(pages["Misc"], "Notify Map Name", 7, "notifyMapName")
     tgg(pages["Misc"], "Round Timer", 8, "showRoundTimerCountdown")
 
-    -- UI (unchanged)
+    -- UI
     tgg(pages["UI"], "Show Quick Toggles Menu", 1, "quickTogglesVisible")
     local sr = Instance.new("Frame", pages["UI"])
     sr.Size = UDim2.new(1, 0, 0, 40 * selectedScale); sr.LayoutOrder = 2
     sr.BackgroundColor3 = CARD
-    Instance.new("UICorner", sr).CornerRadius = R(10); trackCard(sr)
+    Instance.new("UICorner", sr).CornerRadius = R(10)
     local srl = Instance.new("TextLabel", sr)
     srl.Size = UDim2.new(0.5, 0, 1, 0); srl.Position = UDim2.new(0, 14 * selectedScale, 0, 0)
     srl.BackgroundTransparency = 1; srl.Text = "UI Scale"
-    srl.Font = Enum.Font.GothamMedium; srl.TextSize = 12.5 * fm
-    srl.TextXAlignment = Enum.TextXAlignment.Left; trackText(srl)
+    srl.TextColor3 = TXT; srl.Font = Enum.Font.GothamMedium; srl.TextSize = 12.5 * fm
+    srl.TextXAlignment = Enum.TextXAlignment.Left
     local smn = Instance.new("TextButton", sr)
     smn.Size = UDim2.new(0, 30 * selectedScale, 0, 26 * selectedScale)
     smn.Position = UDim2.new(1, -100 * selectedScale, 0.5, -13 * selectedScale)
@@ -2614,7 +2226,7 @@ buildUI = function(reb)
     qsb.BackgroundColor3 = CARD; qsb.PlaceholderText = "Search feature..."
     qsb.PlaceholderColor3 = TXTD; qsb.Text = ""; qsb.TextColor3 = TXT
     qsb.Font = Enum.Font.Gotham; qsb.TextSize = 12 * fm; qsb.ClearTextOnFocus = false
-    Instance.new("UICorner", qsb).CornerRadius = R(10); trackCard(qsb)
+    Instance.new("UICorner", qsb).CornerRadius = R(10)
     local qms = Instance.new("ScrollingFrame", pages["UI"])
     qms.Size = UDim2.new(1, 0, 0, 220 * selectedScale); qms.LayoutOrder = 5
     qms.BackgroundTransparency = 1; qms.ScrollBarThickness = 3 * selectedScale
@@ -2649,13 +2261,13 @@ buildUI = function(reb)
                 local row = Instance.new("Frame", qms)
                 row.Size = UDim2.new(1, 0, 0, 32 * selectedScale)
                 row.BackgroundColor3 = CARD
-                Instance.new("UICorner", row).CornerRadius = R(8); trackCard(row)
+                Instance.new("UICorner", row).CornerRadius = R(8)
                 local nl = Instance.new("TextLabel", row)
                 nl.Size = UDim2.new(0.62, 0, 1, 0)
                 nl.Position = UDim2.new(0, 10 * selectedScale, 0, 0)
                 nl.BackgroundTransparency = 1; nl.Text = fn
-                nl.Font = Enum.Font.GothamMedium; nl.TextSize = 11.5 * fm
-                nl.TextXAlignment = Enum.TextXAlignment.Left; trackText(nl)
+                nl.TextColor3 = TXT; nl.Font = Enum.Font.GothamMedium; nl.TextSize = 11.5 * fm
+                nl.TextXAlignment = Enum.TextXAlignment.Left
                 local ab = Instance.new("TextButton", row)
                 ab.Size = UDim2.new(0, 62 * selectedScale, 0, 24 * selectedScale)
                 ab.Position = UDim2.new(1, -70 * selectedScale, 0.5, -12 * selectedScale)
@@ -2681,72 +2293,6 @@ buildUI = function(reb)
     end
     qsb:GetPropertyChangedSignal("Text"):Connect(function() refreshManager(qsb.Text) end)
     refreshManager("")
-
-    -- APPEARANCE (unchanged)
-    addSect(pages["Appearance"], "Text", 1)
-    makeColorPicker(pages["Appearance"], 2, "Text Color", "textColor", function() applyTheme() end)
-    makeColorPicker(pages["Appearance"], 3, "Text Stroke Color", "textStrokeColor", function() applyTheme() end)
-    makeSlider(pages["Appearance"], "Text Stroke Thickness", 4, settingsConfig.textStrokeThickness or 0, 0, 5, "textStrokeThickness", function(v)
-        settingsConfig.textStrokeThickness = v; applyTheme()
-    end)
-
-    addSect(pages["Appearance"], "Panels", 5)
-    makeColorPicker(pages["Appearance"], 6, "Panel Background", "bgColor", function() applyTheme() end)
-    makeColorPicker(pages["Appearance"], 7, "Card Color", "cardColor", function() applyTheme() end)
-    makeColorPicker(pages["Appearance"], 8, "Card Hover Color", "cardHoverColor", function() applyTheme() end)
-    makeColorPicker(pages["Appearance"], 9, "Border Color", "borderColor", function() applyTheme() end)
-    makeColorPicker(pages["Appearance"], 10, "Accent Color", "accentColor", function() applyTheme() end)
-
-    addSect(pages["Appearance"], "Tabs & Buttons", 11)
-    makeColorPicker(pages["Appearance"], 12, "Tab Bar Background", "tabBgColor", function() applyTheme() end)
-    makeColorPicker(pages["Appearance"], 13, "Tab Text (Inactive)", "tabTextColor", function() applyTheme() end)
-    makeColorPicker(pages["Appearance"], 14, "Tab Text (Active)", "tabTextActiveColor", function() applyTheme() end)
-    makeColorPicker(pages["Appearance"], 15, "Open Button Color", "openBtnColor", function() applyTheme() end)
-    makeColorPicker(pages["Appearance"], 16, "Open Button Text", "openBtnTextColor", function() applyTheme() end)
-
-    addSect(pages["Appearance"], "Background Image (Folder)", 17)
-    local imgInfo = Instance.new("TextLabel", pages["Appearance"])
-    imgInfo.Size = UDim2.new(1, 0, 0, 78 * selectedScale); imgInfo.LayoutOrder = 18
-    imgInfo.BackgroundColor3 = CARD; imgInfo.BackgroundTransparency = 0.4
-    imgInfo.Text = "  Drop a file named 'background.png' (or .jpg, .jpeg, .gif, .bmp)\n  into the ApplewareConfigs folder, then re-execute the script.\n\n  For background color: 'bgcolor.txt' with 'ff0055' or '255,0,85'."
-    imgInfo.TextColor3 = TXTD; imgInfo.Font = Enum.Font.Gotham; imgInfo.TextSize = 10.5 * fm
-    imgInfo.TextXAlignment = Enum.TextXAlignment.Left; imgInfo.TextWrapped = true
-    imgInfo.TextYAlignment = Enum.TextYAlignment.Top
-    Instance.new("UICorner", imgInfo).CornerRadius = R(10); trackCard(imgInfo)
-
-    local imgStatus = Instance.new("TextLabel", pages["Appearance"])
-    imgStatus.Size = UDim2.new(1, 0, 0, 26 * selectedScale); imgStatus.LayoutOrder = 19
-    imgStatus.BackgroundColor3 = CARD
-    imgStatus.Text = (settingsConfig.bgImage ~= "" and "  Background image loaded from folder" or "  No background image found in folder")
-    imgStatus.TextColor3 = (settingsConfig.bgImage ~= "" and Color3.fromRGB(90, 255, 140) or Color3.fromRGB(255, 90, 90))
-    imgStatus.Font = Enum.Font.GothamBold; imgStatus.TextSize = 11 * fm
-    imgStatus.TextXAlignment = Enum.TextXAlignment.Left
-    Instance.new("UICorner", imgStatus).CornerRadius = R(8); trackCard(imgStatus)
-
-    local folderInfo = Instance.new("TextLabel", pages["Appearance"])
-    folderInfo.Size = UDim2.new(1, 0, 0, 24 * selectedScale); folderInfo.LayoutOrder = 20
-    folderInfo.BackgroundTransparency = 1; folderInfo.Text = "  Folder: workspace/ApplewareConfigs/"
-    folderInfo.TextColor3 = TXTD; folderInfo.Font = Enum.Font.Gotham
-    folderInfo.TextSize = 10.5 * fm; folderInfo.TextXAlignment = Enum.TextXAlignment.Left
-
-    local clearRow = Instance.new("Frame", pages["Appearance"])
-    clearRow.Size = UDim2.new(1, 0, 0, 34 * selectedScale); clearRow.LayoutOrder = 21
-    clearRow.BackgroundColor3 = CARD
-    Instance.new("UICorner", clearRow).CornerRadius = R(10); trackCard(clearRow)
-    local clearBtn = Instance.new("TextButton", clearRow)
-    clearBtn.Size = UDim2.new(1, -8 * selectedScale, 1, -8 * selectedScale)
-    clearBtn.Position = UDim2.new(0, 4 * selectedScale, 0, 4 * selectedScale)
-    clearBtn.BackgroundColor3 = Color3.fromRGB(160, 40, 40)
-    clearBtn.Text = "Clear Background Image (keeps file in folder)"
-    clearBtn.TextColor3 = Color3.new(1, 1, 1)
-    clearBtn.Font = Enum.Font.GothamBold; clearBtn.TextSize = 11 * fm
-    Instance.new("UICorner", clearBtn).CornerRadius = R(8); attachBounce(clearBtn)
-    clearBtn.MouseButton1Click:Connect(function()
-        settingsConfig.bgImage = ""; settingsConfig.bgImageFile = ""; saveSettings()
-        if bgImage then bgImage.Image = ""; bgImage.Visible = false end
-        imgStatus.Text = "  Background cleared"
-        imgStatus.TextColor3 = Color3.fromRGB(255, 90, 90)
-    end)
 
     -- VOTING
     local function mkSpotLbl(order, text)
@@ -2930,7 +2476,7 @@ task.spawn(function()
                     if UIS:IsKeyDown(Enum.KeyCode.A) then md = md - cc.RightVector end
                     if UIS:IsKeyDown(Enum.KeyCode.D) then md = md + cc.RightVector end
                     if UIS:IsKeyDown(Enum.KeyCode.Space) then md = md + Vector3.new(0, 1, 0) end
-                    if UIS:IsKeyDown(Enum.KeyCode.LeftShift) and not state.sprintShift then md = md - Vector3.new(0, 1, 0) end
+                    if UIS:IsKeyDown(Enum.KeyCode.LeftShift) then md = md - Vector3.new(0, 1, 0) end
                 end
                 if UIS.TouchEnabled then
                     local pm = LP.PlayerScripts:FindFirstChild("PlayerModule")
@@ -2974,35 +2520,9 @@ task.spawn(function()
         if LP.Character then
             local h = LP.Character:FindFirstChildOfClass("Humanoid")
             if h then
-                if state.speedEnabled then h.WalkSpeed = state.speedValue or 16
-                elseif not state.sprintShift then h.WalkSpeed = 16 end
+                if state.speedEnabled then h.WalkSpeed = state.speedValue or 16 else h.WalkSpeed = 16 end
                 if state.jumpEnabled then h.UseJumpPower = true; h.JumpPower = state.jumpValue or 50
                 else h.UseJumpPower = false end
-            end
-        end
-    end
-end)
-
--- ============ INSTANT INTERACT ============
-task.spawn(function()
-    while true do
-        task.wait(0.15)
-        if state.instantInteract and LP.Character then
-            local r = LP.Character:FindFirstChild("HumanoidRootPart")
-            if r then
-                pcall(function()
-                    for _, o in ipairs(Workspace:GetDescendants()) do
-                        if o:IsA("ProximityPrompt") and o.Enabled then
-                            local p = o.Parent
-                            if p and (p:IsA("BasePart") or p:IsA("Attachment")) then
-                                local pos = p:IsA("BasePart") and p.Position or p.WorldPosition
-                                if (pos - r.Position).Magnitude <= o.MaxActivationDistance then
-                                    pcall(function() fireproximityprompt(o) end)
-                                end
-                            end
-                        end
-                    end
-                end)
             end
         end
     end
@@ -3216,52 +2736,79 @@ task.spawn(function()
     end
 end)
 
--- ============ INFO HUD UPDATE (with player role list) ============
+-- ============ INFO HUD UPDATE (with sub-toggles) ============
 task.spawn(function()
     while true do
         task.wait(0.35)
         if state.infoHudEnabled then
             if not infoHudFrame.Visible then infoHudFrame.Visible = true end
-            local el = math.floor(tick() - hudStart)
-            local hh = math.floor(el / 3600); local mm = math.floor((el % 3600) / 60); local ss = el % 60
-            ihTime.Text = string.format("%02d:%02d:%02d", hh, mm, ss)
-            ihPlayers.Text = tostring(#Players:GetPlayers())
 
-            local role = "Innocent"
-            if lpHasGun() then role = "Sheriff"
+            if state.hudShowSession then
+                ihTime.Visible = true
+                local el = math.floor(tick() - hudStart)
+                local hh = math.floor(el / 3600); local mm = math.floor((el % 3600) / 60); local ss = el % 60
+                ihTime.Text = string.format("%02d:%02d:%02d", hh, mm, ss)
+            else ihTime.Visible = false end
+
+            if state.hudShowPlayers then
+                ihPlayers.Visible = true
+                ihPlayers.Text = tostring(#Players:GetPlayers())
+            else ihPlayers.Visible = false end
+
+            if state.hudShowRole then
+                ihRole.Visible = true
+                local role = "Innocent"
+                if lpHasGun() then role = "Sheriff"
+                else
+                    local bp, ch = LP:FindFirstChild("Backpack"), LP.Character
+                    if (bp and bp:FindFirstChild("Knife")) or (ch and ch:FindFirstChild("Knife")) then role = "Murderer" end
+                end
+                ihRole.Text = role
+                ihRole.TextColor3 = roleColor(role)
+            else ihRole.Visible = false end
+
+            if state.hudShowPing then
+                ihPing.Visible = true
+                pcall(function()
+                    ihPing.Text = math.floor(StatsService.Network.ServerStatsItem["Data Ping"]:GetValue()) .. " ms"
+                end)
+            else ihPing.Visible = false end
+
+            if state.hudShowFps then
+                ihFps.Visible = true
+                if #fpsSamples > 0 then
+                    local s = 0; for _, v in ipairs(fpsSamples) do s = s + v end
+                    curFps = math.floor(s / #fpsSamples + 0.5)
+                end
+                ihFps.Text = tostring(curFps)
+            else ihFps.Visible = false end
+
+            if state.hudShowPlayerRoles then
+                ihSep.Visible = true
+                ihListTitle.Visible = true
+                ihPlayerList.Visible = true
+                for _, c in ipairs(ihPlayerList:GetChildren()) do
+                    if c:IsA("TextLabel") then c:Destroy() end
+                end
+                local order = 0
+                for _, p in ipairs(Players:GetPlayers()) do
+                    order = order + 1
+                    local pRole = getPlayerRole(p)
+                    local pl = Instance.new("TextLabel", ihPlayerList)
+                    pl.Size = UDim2.new(1, -4, 0, 16)
+                    pl.LayoutOrder = order
+                    pl.BackgroundTransparency = 1
+                    pl.Text = "  " .. p.Name
+                    pl.TextColor3 = roleColor(pRole)
+                    pl.Font = Enum.Font.GothamMedium
+                    pl.TextSize = 10
+                    pl.TextXAlignment = Enum.TextXAlignment.Left
+                    pl.TextTruncate = Enum.TextTruncate.AtEnd
+                end
             else
-                local bp, ch = LP:FindFirstChild("Backpack"), LP.Character
-                if (bp and bp:FindFirstChild("Knife")) or (ch and ch:FindFirstChild("Knife")) then role = "Murderer" end
-            end
-            ihRole.Text = role
-            ihRole.TextColor3 = roleColor(role)
-
-            pcall(function()
-                ihPing.Text = math.floor(StatsService.Network.ServerStatsItem["Data Ping"]:GetValue()) .. " ms"
-            end)
-            if #fpsSamples > 0 then
-                local s = 0; for _, v in ipairs(fpsSamples) do s = s + v end
-                curFps = math.floor(s / #fpsSamples + 0.5)
-            end
-            ihFps.Text = tostring(curFps)
-
-            for _, c in ipairs(ihPlayerList:GetChildren()) do
-                if c:IsA("TextLabel") then c:Destroy() end
-            end
-            local order = 0
-            for _, p in ipairs(Players:GetPlayers()) do
-                order = order + 1
-                local pRole = p == LP and role or getPlayerRole(p)
-                local pl = Instance.new("TextLabel", ihPlayerList)
-                pl.Size = UDim2.new(1, -4, 0, 16)
-                pl.LayoutOrder = order
-                pl.BackgroundTransparency = 1
-                pl.Text = "  " .. p.Name
-                pl.TextColor3 = roleColor(pRole)
-                pl.Font = Enum.Font.GothamMedium
-                pl.TextSize = 10
-                pl.TextXAlignment = Enum.TextXAlignment.Left
-                pl.TextTruncate = Enum.TextTruncate.AtEnd
+                ihSep.Visible = false
+                ihListTitle.Visible = false
+                ihPlayerList.Visible = false
             end
         else
             if infoHudFrame.Visible then infoHudFrame.Visible = false end
@@ -3515,7 +3062,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- ============ ESP (with Gun Drop ESP) ============
+-- ============ ESP ============
 local espF = Instance.new("Folder", getGuiParent())
 espF.Name = "AW_ESP"
 local espCache = {}
@@ -3567,7 +3114,6 @@ task.spawn(function()
         else
             for _, p in ipairs(Players:GetPlayers()) do if p.Character then clearESP(p.Character) end end
         end
-        -- Gun Drop ESP
         if state.espGunDrop then
             local found = nil
             for _, v in pairs(Workspace:GetDescendants()) do
