@@ -76,7 +76,7 @@ local function cfgPath()
     return CFl
 end
 
--- ============ ANIMATED LOADING SCREEN (BLOCKING) ============
+-- ============ LOADING SCREEN (BLOCKING) ============
 do
     local g = Instance.new("ScreenGui")
     g.Name = "AWLoad"
@@ -96,7 +96,6 @@ do
         NumberSequenceKeypoint.new(1, 0.1),
     })
 
-    -- floating particles
     for i = 1, 14 do
         local p = Instance.new("Frame", bg)
         local sz = math.random(3, 8)
@@ -324,7 +323,7 @@ pcall(function()
     end
 end)
 
--- ============ FOLDER-FILE LOADERS ============
+-- ============ FOLDER FILE LOADERS ============
 local function loadBgImageFromFolder()
     if not (isfile and readfile) then return nil end
     pcall(function()
@@ -364,6 +363,112 @@ local function loadBgColorFromFolder()
     return false
 end
 
+-- ============ THEME JSON AUTO-LOADER ============
+local loadedThemeName = ""
+
+local function hexToRgb(hex)
+    hex = tostring(hex):gsub("#", "")
+    local r, g, b = hex:match("^(%x%x)(%x%x)(%x%x)$")
+    if r then
+        return {r = tonumber(r, 16), g = tonumber(g, 16), b = tonumber(b, 16)}
+    end
+    return nil
+end
+
+local function scanThemeFiles()
+    if not (listfiles and isfile and readfile) then return {} end
+    local themes = {}
+    local ok, files = pcall(listfiles, CF)
+    if not ok or not files then return themes end
+    for _, path in ipairs(files) do
+        if type(path) == "string" and path:match("%.json$")
+           and not path:match("Appleware%.json$") then
+            local ok2, content = pcall(readfile, path)
+            if ok2 and content and #content > 5 then
+                local ok3, data = pcall(function()
+                    return HttpService:JSONDecode(content)
+                end)
+                if ok3 and type(data) == "table"
+                   and (data["Surface"] or data["Primary"] or data["Secondary"] or data["Secondary Variant"]) then
+                    table.insert(themes, {
+                        path = path,
+                        name = (path:match("([^/\\]+)%.json$") or path),
+                        data = data
+                    })
+                end
+            end
+        end
+    end
+    return themes
+end
+
+local function applyThemeJson(data)
+    local function grab(tbl, ...)
+        for _, key in ipairs({...}) do
+            if tbl[key] then
+                local c = hexToRgb(tbl[key])
+                if c then return c end
+            end
+        end
+        return nil
+    end
+
+    local surface = data["Surface"] or {}
+    local primary = data["Primary"] or {}
+    local secondary = data["Secondary"] or {}
+    local secVar = data["Secondary Variant"] or {}
+
+    local s1 = grab(surface, "#1. Surface Color", "1. Surface Color")
+    local s2 = grab(surface, "#2. Surface Color", "2. Surface Color")
+    local s3 = grab(surface, "#3. Surface Color", "3. Surface Color")
+    if s1 then settingsConfig.tabBgColor = s1 end
+    if s2 then settingsConfig.cardColor = s2 end
+    if s3 then settingsConfig.borderColor = s3 end
+
+    local btn  = grab(primary, "Button Element Color")
+    local txtb = grab(primary, "TextBox Element Color")
+    local slid = grab(primary, "Slider Fill Element Color")
+    local togOn = grab(primary, "Toggle On Element Color")
+    local drop = grab(primary, "Dropdown Element Color")
+    if btn then settingsConfig.cardHoverColor = btn end
+    if txtb then settingsConfig.openBtnColor = txtb end
+    if slid then settingsConfig.accentColor = slid end
+    if togOn then settingsConfig.tabTextActiveColor = togOn end
+    if drop then settingsConfig.openBtnTextColor = drop end
+
+    local sec1 = grab(secondary, "#1. Secondary Color", "1. Secondary Color")
+    local sec2 = grab(secondary, "#2. Secondary Color", "2. Secondary Color")
+    local sec3 = grab(secondary, "#3. Secondary Color", "3. Secondary Color")
+    if sec1 then settingsConfig.textColor = sec1 end
+    if sec2 then settingsConfig.bgColor = sec2 end
+    if sec3 then settingsConfig.tabTextColor = sec3 end
+
+    local v1 = grab(secVar, "#1. Secondary Variant Color", "1. Secondary Variant Color")
+    if v1 then settingsConfig.textStrokeColor = v1 end
+
+    saveSettings()
+end
+
+local function loadThemeFromFolder()
+    local themes = scanThemeFiles()
+    if #themes == 0 then return nil end
+    local chosen = nil
+    for _, t in ipairs(themes) do
+        if t.name:lower():find("theme") then
+            chosen = t
+            break
+        end
+    end
+    if not chosen then chosen = themes[1] end
+    if chosen then
+        applyThemeJson(chosen.data)
+        loadedThemeName = chosen.name
+        return chosen.name
+    end
+    return nil
+end
+
+-- ============ RUN FOLDER LOADERS ============
 pcall(function()
     if makefolder and isfolder and not isfolder(CF) then makefolder(CF) end
 end)
@@ -373,6 +478,7 @@ if folderBg then
     settingsConfig.bgImageFile = ""
 end
 loadBgColorFromFolder()
+local themeFileName = loadThemeFromFolder()
 
 state.antiRagdoll = true
 
@@ -459,19 +565,6 @@ local function staggerFade(p)
             if stt then TweenService:Create(c, TweenInfo.new(0.4), {TextTransparency=stt}):Play() end
         end)
     end
-end
-local function startPulse(g, isOn)
-    task.spawn(function()
-        while g.Parent do
-            if isOn() then
-                TweenService:Create(g, TweenInfo.new(1.2, Enum.EasingStyle.Sine), {BackgroundTransparency=0.55}):Play()
-                task.wait(1.2)
-                if not g.Parent then break end
-                TweenService:Create(g, TweenInfo.new(1.2, Enum.EasingStyle.Sine), {BackgroundTransparency=0.92}):Play()
-                task.wait(1.2)
-            else task.wait(0.5) end
-        end
-    end)
 end
 
 -- ============ NOTIFICATIONS ============
@@ -717,7 +810,7 @@ RunService.RenderStepped:Connect(function(dt)
     end
 end)
 
--- ============ THEME REFERENCES ============
+-- ============ THEME REFS ============
 local themed = { text = {}, textStroke = {}, card = {}, cardHover = {}, border = {}, accent = {}, tab = {}, openBtn = {}, openBtnText = {} }
 
 local function trackText(obj)
@@ -1675,7 +1768,6 @@ buildUI = function(reb)
     sg.DisplayOrder = 999999
     sg.IgnoreGuiInset = true
 
-    -- Background image
     bgImage = Instance.new("ImageLabel", sg)
     bgImage.Size = UDim2.new(1, 0, 1, 0)
     bgImage.BackgroundTransparency = 1
@@ -2104,7 +2196,6 @@ buildUI = function(reb)
         return box
     end
 
-    -- Colour picker: 3 sliders + hex + preview
     local function makeColorPicker(page, order, label, colorKey, onChange)
         local row = Instance.new("Frame", page)
         row.Size = UDim2.new(1, 0, 0, 104 * selectedScale)
@@ -2757,118 +2848,87 @@ buildUI = function(reb)
     refreshManager("")
 
     -- ============ APPEARANCE TAB ============
-    addSect(pages["Appearance"], "Text", 1)
-    makeColorPicker(pages["Appearance"], 2, "Text Color", "textColor", function()
-        applyTheme()
-    end)
-    makeColorPicker(pages["Appearance"], 3, "Text Stroke Color", "textStrokeColor", function()
-        applyTheme()
-    end)
-    makeSlider(pages["Appearance"], "Text Stroke Thickness", 4, settingsConfig.textStrokeThickness or 0, 0, 5, "textStrokeThickness", function(v)
-        settingsConfig.textStrokeThickness = v
-        applyTheme()
-    end)
+    addSect(pages["Appearance"], "Active Theme", 1)
 
-    addSect(pages["Appearance"], "Panels", 5)
-    makeColorPicker(pages["Appearance"], 6, "Panel Background", "bgColor", function()
-        applyTheme()
-    end)
-    makeColorPicker(pages["Appearance"], 7, "Card Color", "cardColor", function()
-        applyTheme()
-    end)
-    makeColorPicker(pages["Appearance"], 8, "Card Hover Color", "cardHoverColor", function()
-        applyTheme()
-    end)
-    makeColorPicker(pages["Appearance"], 9, "Border Color", "borderColor", function()
-        applyTheme()
-    end)
-    makeColorPicker(pages["Appearance"], 10, "Accent Color", "accentColor", function()
-        applyTheme()
-    end)
+    local themeStatus = Instance.new("TextLabel", pages["Appearance"])
+    themeStatus.Size = UDim2.new(1, 0, 0, 40 * selectedScale)
+    themeStatus.LayoutOrder = 2
+    themeStatus.BackgroundColor3 = CARD
+    themeStatus.Text = themeFileName and ("  Theme loaded: " .. themeFileName)
+                        or "  No theme .json found in folder"
+    themeStatus.TextColor3 = themeFileName and Color3.fromRGB(90, 255, 140)
+                             or Color3.fromRGB(255, 90, 90)
+    themeStatus.Font = Enum.Font.GothamBold
+    themeStatus.TextSize = 12 * fm
+    themeStatus.TextXAlignment = Enum.TextXAlignment.Left
+    themeStatus.TextTruncate = Enum.TextTruncate.AtEnd
+    Instance.new("UICorner", themeStatus).CornerRadius = R(10)
+    trackCard(themeStatus)
 
-    addSect(pages["Appearance"], "Tabs & Buttons", 11)
-    makeColorPicker(pages["Appearance"], 12, "Tab Bar Background", "tabBgColor", function()
-        applyTheme()
-    end)
-    makeColorPicker(pages["Appearance"], 13, "Tab Text (Inactive)", "tabTextColor", function()
-        applyTheme()
-    end)
-    makeColorPicker(pages["Appearance"], 14, "Tab Text (Active)", "tabTextActiveColor", function()
-        applyTheme()
-    end)
-    makeColorPicker(pages["Appearance"], 15, "Open Button Color", "openBtnColor", function()
-        applyTheme()
-    end)
-    makeColorPicker(pages["Appearance"], 16, "Open Button Text", "openBtnTextColor", function()
-        applyTheme()
-    end)
+    addSect(pages["Appearance"], "How to change theme", 3)
 
-    addSect(pages["Appearance"], "Background Image (Folder)", 17)
+    local themeInfo = Instance.new("TextLabel", pages["Appearance"])
+    themeInfo.Size = UDim2.new(1, 0, 0, 130 * selectedScale)
+    themeInfo.LayoutOrder = 4
+    themeInfo.BackgroundColor3 = CARD
+    themeInfo.BackgroundTransparency = 0.4
+    themeInfo.Text = "  1. Drop any theme .json file into ApplewareConfigs/\n"
+                  .. "  2. Re-execute the script\n"
+                  .. "  3. Colors are applied automatically\n\n"
+                  .. "  Theme .json must have 'Surface', 'Primary',\n"
+                  .. "  'Secondary' or 'Secondary Variant' sections."
+    themeInfo.TextColor3 = TXTD
+    themeInfo.Font = Enum.Font.Gotham
+    themeInfo.TextSize = 11 * fm
+    themeInfo.TextXAlignment = Enum.TextXAlignment.Left
+    themeInfo.TextYAlignment = Enum.TextYAlignment.Top
+    themeInfo.TextWrapped = true
+    Instance.new("UICorner", themeInfo).CornerRadius = R(10)
+    trackCard(themeInfo)
 
-    local imgInfo = Instance.new("TextLabel", pages["Appearance"])
-    imgInfo.Size = UDim2.new(1, 0, 0, 78 * selectedScale)
-    imgInfo.LayoutOrder = 18
-    imgInfo.BackgroundColor3 = CARD
-    imgInfo.BackgroundTransparency = 0.4
-    imgInfo.Text = "  Drop a file named 'background.png' (or .jpg, .jpeg, .gif, .bmp)\n  into the ApplewareConfigs folder, then re-execute the script.\n\n  For background color: 'bgcolor.txt' with 'ff0055' or '255,0,85'."
-    imgInfo.TextColor3 = TXTD
-    imgInfo.Font = Enum.Font.Gotham
-    imgInfo.TextSize = 10.5 * fm
-    imgInfo.TextXAlignment = Enum.TextXAlignment.Left
-    imgInfo.TextWrapped = true
-    imgInfo.TextYAlignment = Enum.TextYAlignment.Top
-    Instance.new("UICorner", imgInfo).CornerRadius = R(10)
-    trackCard(imgInfo)
+    addSect(pages["Appearance"], "Background Image (File)", 5)
 
-    local imgStatus = Instance.new("TextLabel", pages["Appearance"])
-    imgStatus.Size = UDim2.new(1, 0, 0, 26 * selectedScale)
-    imgStatus.LayoutOrder = 19
-    imgStatus.BackgroundColor3 = CARD
-    imgStatus.Text = (settingsConfig.bgImage ~= "" and "  ✓ Background image loaded from folder"
-                      or "  ✗ No background image found in folder")
-    imgStatus.TextColor3 = (settingsConfig.bgImage ~= "" and Color3.fromRGB(90, 255, 140)
-                            or Color3.fromRGB(255, 90, 90))
-    imgStatus.Font = Enum.Font.GothamBold
-    imgStatus.TextSize = 11 * fm
-    imgStatus.TextXAlignment = Enum.TextXAlignment.Left
-    Instance.new("UICorner", imgStatus).CornerRadius = R(8)
-    trackCard(imgStatus)
+    local bgInfo = Instance.new("TextLabel", pages["Appearance"])
+    bgInfo.Size = UDim2.new(1, 0, 0, 80 * selectedScale)
+    bgInfo.LayoutOrder = 6
+    bgInfo.BackgroundColor3 = CARD
+    bgInfo.BackgroundTransparency = 0.4
+    bgInfo.Text = "  Drop 'background.png' (or .jpg/.jpeg/.gif/.bmp)\n"
+               .. "  into ApplewareConfigs/ and re-execute.\n\n"
+               .. "  For solid background color instead:\n"
+               .. "  drop 'bgcolor.txt' with 'ff0055' or '255,0,85'."
+    bgInfo.TextColor3 = TXTD
+    bgInfo.Font = Enum.Font.Gotham
+    bgInfo.TextSize = 11 * fm
+    bgInfo.TextXAlignment = Enum.TextXAlignment.Left
+    bgInfo.TextYAlignment = Enum.TextYAlignment.Top
+    bgInfo.TextWrapped = true
+    Instance.new("UICorner", bgInfo).CornerRadius = R(10)
+    trackCard(bgInfo)
 
-    local folderInfo = Instance.new("TextLabel", pages["Appearance"])
-    folderInfo.Size = UDim2.new(1, 0, 0, 24 * selectedScale)
-    folderInfo.LayoutOrder = 20
-    folderInfo.BackgroundTransparency = 1
-    folderInfo.Text = "  Folder: workspace/ApplewareConfigs/"
-    folderInfo.TextColor3 = TXTD
-    folderInfo.Font = Enum.Font.Gotham
-    folderInfo.TextSize = 10.5 * fm
-    folderInfo.TextXAlignment = Enum.TextXAlignment.Left
+    local bgStatus = Instance.new("TextLabel", pages["Appearance"])
+    bgStatus.Size = UDim2.new(1, 0, 0, 26 * selectedScale)
+    bgStatus.LayoutOrder = 7
+    bgStatus.BackgroundColor3 = CARD
+    bgStatus.Text = (settingsConfig.bgImage ~= "" and "  Background image loaded"
+                     or "  No background image found")
+    bgStatus.TextColor3 = (settingsConfig.bgImage ~= "" and Color3.fromRGB(90, 255, 140)
+                           or Color3.fromRGB(255, 90, 90))
+    bgStatus.Font = Enum.Font.GothamBold
+    bgStatus.TextSize = 11 * fm
+    bgStatus.TextXAlignment = Enum.TextXAlignment.Left
+    Instance.new("UICorner", bgStatus).CornerRadius = R(8)
+    trackCard(bgStatus)
 
-    local clearRow = Instance.new("Frame", pages["Appearance"])
-    clearRow.Size = UDim2.new(1, 0, 0, 34 * selectedScale)
-    clearRow.LayoutOrder = 21
-    clearRow.BackgroundColor3 = CARD
-    Instance.new("UICorner", clearRow).CornerRadius = R(10)
-    trackCard(clearRow)
-
-    local clearBtn = Instance.new("TextButton", clearRow)
-    clearBtn.Size = UDim2.new(1, -8 * selectedScale, 1, -8 * selectedScale)
-    clearBtn.Position = UDim2.new(0, 4 * selectedScale, 0, 4 * selectedScale)
-    clearBtn.BackgroundColor3 = Color3.fromRGB(160, 40, 40)
-    clearBtn.Text = "Clear Background Image (keeps file in folder)"
-    clearBtn.TextColor3 = Color3.new(1, 1, 1)
-    clearBtn.Font = Enum.Font.GothamBold
-    clearBtn.TextSize = 11 * fm
-    Instance.new("UICorner", clearBtn).CornerRadius = R(8)
-    attachBounce(clearBtn)
-    clearBtn.MouseButton1Click:Connect(function()
-        settingsConfig.bgImage = ""
-        settingsConfig.bgImageFile = ""
-        saveSettings()
-        if bgImage then bgImage.Image = ""; bgImage.Visible = false end
-        imgStatus.Text = "  ✗ Background cleared"
-        imgStatus.TextColor3 = Color3.fromRGB(255, 90, 90)
-    end)
+    local folderPath = Instance.new("TextLabel", pages["Appearance"])
+    folderPath.Size = UDim2.new(1, 0, 0, 24 * selectedScale)
+    folderPath.LayoutOrder = 8
+    folderPath.BackgroundTransparency = 1
+    folderPath.Text = "  Folder: workspace/ApplewareConfigs/"
+    folderPath.TextColor3 = TXTD
+    folderPath.Font = Enum.Font.Gotham
+    folderPath.TextSize = 10.5 * fm
+    folderPath.TextXAlignment = Enum.TextXAlignment.Left
 
     -- ============ VOTING TAB ============
     local function mkSpotLbl(order, text)
@@ -3049,10 +3109,8 @@ if state.fpsBoost then pcall(function() applyFpsBoost(true) end) end
 -- ============ FLY ============
 local flyBV, flyBG = nil, nil
 local wasFlying = false
-local flyUp, flyDown = false, false
 
 local function cleanupFly()
-    flyUp = false; flyDown = false
     if flyBV then pcall(function() flyBV:Destroy() end); flyBV = nil end
     if flyBG then pcall(function() flyBG:Destroy() end); flyBG = nil end
     if wasFlying and LP.Character then
