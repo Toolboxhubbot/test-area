@@ -76,7 +76,7 @@ local function cfgPath()
     return CFl
 end
 
--- ============ LOADING SCREEN (BLOCKING) ============
+-- ============ LOADING SCREEN ============
 do
     local g = Instance.new("ScreenGui")
     g.Name = "AWLoad"
@@ -226,15 +226,16 @@ local state = {
     cameraZoomEnabled=false, cameraMaxZoom=500, infoHudEnabled=false,
     antiRagdoll=true, freeze=false, fullbright=false,
     fovEnabled=false, fovValue=70, clickTP=false,
+    noAnimations=false,
 }
 
 local settingsConfig = {
     webhookUrl="", webhookCooldown=30, discordUserId="",
     tweenSpeed=25, selectedScale=1, roundLength=200,
     flingList={}, whitelist={},
-    bgColor={r=6, g=6, b=6},
+    bgColor={r=0, g=0, b=0},
     bgImage="", bgImageFile="",
-    textColor={r=245, g=245, b=245},
+    textColor={r=255, g=255, b=255},
     textStrokeColor={r=0, g=0, b=0},
     textStrokeThickness=0,
     cardColor={r=14, g=14, b=14},
@@ -243,7 +244,7 @@ local settingsConfig = {
     accentColor={r=255, g=255, b=255},
     tabBgColor={r=10, g=10, b=10},
     tabTextColor={r=140, g=140, b=140},
-    tabTextActiveColor={r=245, g=245, b=245},
+    tabTextActiveColor={r=255, g=255, b=255},
     openBtnColor={r=12, g=12, b=12},
     openBtnTextColor={r=255, g=255, b=255},
     quickTogglesList={
@@ -288,6 +289,7 @@ local toggleDisplayNames = {
     fovEnabled="FOV Changer", clickTP="Click / Tap Teleport",
     instantInteract="Instant Interact",
     cameraZoomEnabled="Camera Max Zoom", infoHudEnabled="Info HUD",
+    noAnimations="No Animations",
 }
 local nExcl = {}
 
@@ -323,44 +325,80 @@ pcall(function()
     end
 end)
 
--- ============ FOLDER FILE LOADERS ============
-local function loadBgImageFromFolder()
-    if not (isfile and readfile) then return nil end
-    pcall(function()
-        if makefolder and isfolder and not isfolder(CF) then makefolder(CF) end
-    end)
-    local extensions = {".png", ".jpg", ".jpeg", ".gif", ".bmp"}
-    for _, ext in ipairs(extensions) do
-        local path = CF .. "/background" .. ext
-        if isfile(path) then
-            if getcustomasset then
-                local ok, asset = pcall(getcustomasset, path)
-                if ok and asset then return asset end
-            end
-            return path
+-- ============ AUTO-CREATE FOLDERS + README ============
+pcall(function()
+    if makefolder and isfolder then
+        if not isfolder(CF) then makefolder(CF) end
+        if not isfolder(CF .. "/Backgrounds") then makefolder(CF .. "/Backgrounds") end
+        if not isfolder(CF .. "/Themes") then makefolder(CF .. "/Themes") end
+        if not isfolder(CF .. "/Colors") then makefolder(CF .. "/Colors") end
+    end
+end)
+
+pcall(function()
+    if writefile and isfile then
+        local readmePath = CF .. "/README.txt"
+        if not isfile(readmePath) then
+            writefile(readmePath, "APPLEWARE CONFIG FOLDER\n" ..
+                "=======================\n\n" ..
+                "Put files in the correct sub-folder and re-run the script.\n\n" ..
+                "  Backgrounds/\n" ..
+                "    - Drop ONE image file here (background.png, .jpg, .jpeg, .gif, .bmp)\n" ..
+                "    - This becomes the background image\n\n" ..
+                "  Colors/\n" ..
+                "    - bgcolor.txt\n" ..
+                "      Hex like '0a0a0a' or RGB like '10,10,10'\n" ..
+                "      Sets the panel background color\n\n" ..
+                "  Themes/\n" ..
+                "    - Any theme .json (with Surface/Primary/Secondary keys)\n" ..
+                "    - Example: Nate higgers.json\n" ..
+                "    - Applied automatically on run\n\n" ..
+                "Do NOT edit Appleware.json (that's the script's state save).\n")
         end
     end
-    return nil
+end)
+
+-- ============ FOLDER LOADERS ============
+local function loadBgImageFromFolder()
+    if not (isfile and readfile) then return nil end
+    local function tryBg(dir)
+        if not isfile then return nil end
+        local extensions = {".png", ".jpg", ".jpeg", ".gif", ".bmp"}
+        for _, ext in ipairs(extensions) do
+            local path = dir .. "/background" .. ext
+            if isfile(path) then
+                if getcustomasset then
+                    local ok, asset = pcall(getcustomasset, path)
+                    if ok and asset then return asset end
+                end
+                return path
+            end
+        end
+        return nil
+    end
+    return tryBg(CF .. "/Backgrounds") or tryBg(CF)
 end
 
 local function loadBgColorFromFolder()
     if not (isfile and readfile) then return false end
-    local path = CF .. "/bgcolor.txt"
-    if not isfile(path) then return false end
-    local content = readfile(path)
-    if not content then return false end
-    local clean = content:gsub("%s", ""):gsub("#", "")
-    local r, g, b = clean:match("^(%x%x)(%x%x)(%x%x)$")
-    if r then
-        settingsConfig.bgColor = {r = tonumber(r, 16), g = tonumber(g, 16), b = tonumber(b, 16)}
-        return true
+    local function tryColor(path)
+        if not isfile(path) then return false end
+        local content = readfile(path)
+        if not content then return false end
+        local clean = content:gsub("%s", ""):gsub("#", "")
+        local r, g, b = clean:match("^(%x%x)(%x%x)(%x%x)$")
+        if r then
+            settingsConfig.bgColor = {r = tonumber(r, 16), g = tonumber(g, 16), b = tonumber(b, 16)}
+            return true
+        end
+        local r2, g2, b2 = content:match("(%d+)%s*,%s*(%d+)%s*,%s*(%d+)")
+        if r2 then
+            settingsConfig.bgColor = {r = tonumber(r2), g = tonumber(g2), b = tonumber(b2)}
+            return true
+        end
+        return false
     end
-    local r2, g2, b2 = content:match("(%d+)%s*,%s*(%d+)%s*,%s*(%d+)")
-    if r2 then
-        settingsConfig.bgColor = {r = tonumber(r2), g = tonumber(g2), b = tonumber(b2)}
-        return true
-    end
-    return false
+    return tryColor(CF .. "/Colors/bgcolor.txt") or tryColor(CF .. "/bgcolor.txt")
 end
 
 -- ============ THEME JSON AUTO-LOADER ============
@@ -378,7 +416,10 @@ end
 local function scanThemeFiles()
     if not (listfiles and isfile and readfile) then return {} end
     local themes = {}
-    local ok, files = pcall(listfiles, CF)
+    local ok, files = pcall(listfiles, CF .. "/Themes")
+    if not ok or not files or #files == 0 then
+        ok, files = pcall(listfiles, CF)
+    end
     if not ok or not files then return themes end
     for _, path in ipairs(files) do
         if type(path) == "string" and path:match("%.json$")
@@ -469,9 +510,6 @@ local function loadThemeFromFolder()
 end
 
 -- ============ RUN FOLDER LOADERS ============
-pcall(function()
-    if makefolder and isfolder and not isfolder(CF) then makefolder(CF) end
-end)
 local folderBg = loadBgImageFromFolder()
 if folderBg then
     settingsConfig.bgImage = folderBg
@@ -482,26 +520,30 @@ local themeFileName = loadThemeFromFolder()
 
 state.antiRagdoll = true
 
--- helper to convert config color tables
 local function c3(t)
     return Color3.fromRGB(t.r or 0, t.g or 0, t.b or 0)
 end
 
--- ============ UI HELPERS ============
+-- ============ ANIMATION HELPERS (respect noAnimations) ============
 local function attachBounce(b)
+    if state.noAnimations then return end
     local s = Instance.new("UIScale", b)
     b.MouseButton1Down:Connect(function()
+        if state.noAnimations then return end
         TweenService:Create(s, TweenInfo.new(0.08), {Scale=0.92}):Play()
     end)
     local function r()
+        if state.noAnimations then return end
         TweenService:Create(s, TweenInfo.new(0.45, Enum.EasingStyle.Elastic), {Scale=1}):Play()
     end
     b.MouseButton1Up:Connect(r); b.MouseLeave:Connect(r)
 end
 local function attachRipple(b, c)
+    if state.noAnimations then return end
     c = c or Color3.new(1,1,1)
     b.ClipsDescendants = true
     b.MouseButton1Down:Connect(function()
+        if state.noAnimations then return end
         local pos = b.AbsolutePosition
         local m = UIS:GetMouseLocation()
         local f = Instance.new("Frame", b)
@@ -521,6 +563,7 @@ local function attachRipple(b, c)
     end)
 end
 local function attachShine(b)
+    if state.noAnimations then return end
     b.ClipsDescendants = true
     local s = Instance.new("Frame", b)
     s.Size = UDim2.new(0, 28, 1.6, 0)
@@ -531,6 +574,7 @@ local function attachShine(b)
     s.BorderSizePixel = 0
     s.ZIndex = (b.ZIndex or 1) + 2
     b.MouseEnter:Connect(function()
+        if state.noAnimations then return end
         s.Position = UDim2.new(-0.35, 0, -0.3, 0)
         TweenService:Create(s, TweenInfo.new(0.55), {
             Position = UDim2.new(1.35, 0, -0.3, 0)
@@ -538,16 +582,20 @@ local function attachShine(b)
     end)
 end
 local function attachHoverLift(b, amount)
+    if state.noAnimations then return end
     amount = amount or 1.03
     local s = Instance.new("UIScale", b)
     b.MouseEnter:Connect(function()
+        if state.noAnimations then return end
         TweenService:Create(s, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale=amount}):Play()
     end)
     b.MouseLeave:Connect(function()
+        if state.noAnimations then return end
         TweenService:Create(s, TweenInfo.new(0.35, Enum.EasingStyle.Elastic), {Scale=1}):Play()
     end)
 end
 local function staggerFade(p)
+    if state.noAnimations then return end
     local children = {}
     for _, c in ipairs(p:GetChildren()) do
         if c:IsA("GuiObject") and c.Visible ~= false then table.insert(children, c) end
@@ -565,6 +613,21 @@ local function staggerFade(p)
             if stt then TweenService:Create(c, TweenInfo.new(0.4), {TextTransparency=stt}):Play() end
         end)
     end
+end
+local function startPulse(g, isOn)
+    if state.noAnimations then return end
+    task.spawn(function()
+        while g.Parent do
+            if state.noAnimations then break end
+            if isOn() then
+                TweenService:Create(g, TweenInfo.new(1.2, Enum.EasingStyle.Sine), {BackgroundTransparency=0.55}):Play()
+                task.wait(1.2)
+                if not g.Parent then break end
+                TweenService:Create(g, TweenInfo.new(1.2, Enum.EasingStyle.Sine), {BackgroundTransparency=0.92}):Play()
+                task.wait(1.2)
+            else task.wait(0.5) end
+        end
+    end)
 end
 
 -- ============ NOTIFICATIONS ============
@@ -671,21 +734,38 @@ local function notify(t)
     br.BackgroundColor3 = c3(settingsConfig.accentColor)
     Instance.new("UICorner", br).CornerRadius = UDim.new(1, 0)
 
-    TweenService:Create(f, TweenInfo.new(0.65, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-        Position=UDim2.new(0,0,0,0), Size=UDim2.new(1,0,1,0)
-    }):Play()
-    TweenService:Create(ib, TweenInfo.new(0.65, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, false, 0.15), {
-        Size=UDim2.new(0,26,0,26), Position=UDim2.new(0,16,0.5,-13)
-    }):Play()
-    TweenService:Create(il, TweenInfo.new(0.9, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, false, 0.15), {Rotation=0}):Play()
-    TweenService:Create(ac, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, false, 0.1), {Size=UDim2.new(0,3,0,30)}):Play()
-    TweenService:Create(tt, TweenInfo.new(0.4), {TextTransparency=0}):Play()
-    bd.Position = UDim2.new(0, 52, 0, 38)
-    TweenService:Create(bd, TweenInfo.new(0.45, Enum.EasingStyle.Back), {TextTransparency=0, Position=UDim2.new(0,52,0,30)}):Play()
+    if state.noAnimations then
+        f.Position = UDim2.new(0, 0, 0, 0)
+        f.Size = UDim2.new(1, 0, 1, 0)
+        ib.Size = UDim2.new(0, 26, 0, 26)
+        ib.Position = UDim2.new(0, 16, 0.5, -13)
+        il.Rotation = 0
+        ac.Size = UDim2.new(0, 3, 0, 30)
+        tt.TextTransparency = 0
+        bd.TextTransparency = 0
+        bd.Position = UDim2.new(0, 52, 0, 30)
+    else
+        TweenService:Create(f, TweenInfo.new(0.65, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Position=UDim2.new(0,0,0,0), Size=UDim2.new(1,0,1,0)
+        }):Play()
+        TweenService:Create(ib, TweenInfo.new(0.65, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, false, 0.15), {
+            Size=UDim2.new(0,26,0,26), Position=UDim2.new(0,16,0.5,-13)
+        }):Play()
+        TweenService:Create(il, TweenInfo.new(0.9, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, false, 0.15), {Rotation=0}):Play()
+        TweenService:Create(ac, TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, false, 0.1), {Size=UDim2.new(0,3,0,30)}):Play()
+        TweenService:Create(tt, TweenInfo.new(0.4), {TextTransparency=0}):Play()
+        bd.Position = UDim2.new(0, 52, 0, 38)
+        TweenService:Create(bd, TweenInfo.new(0.45, Enum.EasingStyle.Back), {TextTransparency=0, Position=UDim2.new(0,52,0,30)}):Play()
+    end
     TweenService:Create(br, TweenInfo.new(NOTE_DURATION, Enum.EasingStyle.Linear, Enum.EasingDirection.Out), {Size=UDim2.new(0,0,1,0)}):Play()
 
     task.delay(NOTE_DURATION, function()
         if not w.Parent then return end
+        if state.noAnimations then
+            w:Destroy()
+            nCount = math.max(0, nCount - 1)
+            return
+        end
         for _, o in ipairs({f, tt, bd, ib, il, ac, br, bg2, sk}) do
             pcall(function()
                 TweenService:Create(o, TweenInfo.new(0.3), {BackgroundTransparency=1, TextTransparency=1, Transparency=1}):Play()
@@ -856,21 +936,33 @@ local function updateViz(key)
     if mainTgls[key] then
         local d = mainTgls[key]
         local on = state[key]
-        TweenService:Create(d.pill, TweenInfo.new(0.35), {
-            BackgroundColor3 = on and Color3.new(1,1,1) or c3(settingsConfig.cardColor)
-        }):Play()
-        TweenService:Create(d.dot, TweenInfo.new(0.7, Enum.EasingStyle.Elastic), {
-            Position = on and UDim2.new(1, -20*selectedScale, 0.5, -8*selectedScale)
-                          or UDim2.new(0, 4*selectedScale, 0.5, -8*selectedScale),
-            BackgroundColor3 = on and c3(settingsConfig.cardColor) or c3(settingsConfig.textColor)
-        }):Play()
+        if state.noAnimations then
+            d.pill.BackgroundColor3 = on and Color3.new(1,1,1) or c3(settingsConfig.cardColor)
+            d.dot.Position = on and UDim2.new(1, -20*selectedScale, 0.5, -8*selectedScale)
+                            or UDim2.new(0, 4*selectedScale, 0.5, -8*selectedScale)
+            d.dot.BackgroundColor3 = on and c3(settingsConfig.cardColor) or c3(settingsConfig.textColor)
+        else
+            TweenService:Create(d.pill, TweenInfo.new(0.35), {
+                BackgroundColor3 = on and Color3.new(1,1,1) or c3(settingsConfig.cardColor)
+            }):Play()
+            TweenService:Create(d.dot, TweenInfo.new(0.7, Enum.EasingStyle.Elastic), {
+                Position = on and UDim2.new(1, -20*selectedScale, 0.5, -8*selectedScale)
+                              or UDim2.new(0, 4*selectedScale, 0.5, -8*selectedScale),
+                BackgroundColor3 = on and c3(settingsConfig.cardColor) or c3(settingsConfig.textColor)
+            }):Play()
+        end
     end
     if quickTgls[key] then
         local on = state[key]
-        TweenService:Create(quickTgls[key], TweenInfo.new(0.3), {
-            BackgroundColor3 = on and Color3.new(1,1,1) or c3(settingsConfig.cardColor),
-            TextColor3 = on and c3(settingsConfig.cardColor) or c3(settingsConfig.textColor)
-        }):Play()
+        if state.noAnimations then
+            quickTgls[key].BackgroundColor3 = on and Color3.new(1,1,1) or c3(settingsConfig.cardColor)
+            quickTgls[key].TextColor3 = on and c3(settingsConfig.cardColor) or c3(settingsConfig.textColor)
+        else
+            TweenService:Create(quickTgls[key], TweenInfo.new(0.3), {
+                BackgroundColor3 = on and Color3.new(1,1,1) or c3(settingsConfig.cardColor),
+                TextColor3 = on and c3(settingsConfig.cardColor) or c3(settingsConfig.textColor)
+            }):Play()
+        end
     end
 end
 
@@ -878,11 +970,13 @@ local function setStatus(msg)
     if not st then return end
     st.Text = "  " .. tostring(msg)
     st.TextColor3 = c3(settingsConfig.textColor)
-    task.spawn(function()
-        TweenService:Create(st, TweenInfo.new(0.1), {TextColor3 = Color3.fromRGB(180,180,180)}):Play()
-        task.wait(0.1)
-        if st then TweenService:Create(st, TweenInfo.new(0.25), {TextColor3 = c3(settingsConfig.textColor)}):Play() end
-    end)
+    if not state.noAnimations then
+        task.spawn(function()
+            TweenService:Create(st, TweenInfo.new(0.1), {TextColor3 = Color3.fromRGB(180,180,180)}):Play()
+            task.wait(0.1)
+            if st then TweenService:Create(st, TweenInfo.new(0.25), {TextColor3 = c3(settingsConfig.textColor)}):Play() end
+        end)
+    end
 end
 
 local function setToggleState(key, value)
@@ -909,7 +1003,15 @@ local function setToggleState(key, value)
 
     updateViz(key)
 
-    if key == "disable3d" then
+    if key == "noAnimations" then
+        if state.noAnimations then
+            for _, d in pairs(mainTgls) do
+                if d.pill then
+                    d.pill.BackgroundColor3 = c3(settingsConfig.cardColor)
+                end
+            end
+        end
+    elseif key == "disable3d" then
         applyLowDeviceOptimizations(state.disable3d)
     elseif key == "fullbright" then
         pcall(function()
@@ -1797,7 +1899,7 @@ buildUI = function(reb)
         bgImage.Visible = false
     end
 
-    if imgSrc ~= "" then
+    if imgSrc ~= "" and not state.noAnimations then
         task.spawn(function()
             while bgImage and bgImage.Parent do
                 TweenService:Create(bgImage, TweenInfo.new(6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {ImageTransparency=0.25}):Play()
@@ -1901,6 +2003,20 @@ buildUI = function(reb)
         if switching or n == curTab then return end
         switching = true
         local o = curTab; curTab = n
+        if state.noAnimations then
+            for nm, b in pairs(btns) do
+                local ia = (nm == n)
+                b:SetAttribute("Active", ia)
+                b.BackgroundTransparency = ia and 0 or 1
+                b.BackgroundColor3 = ia and CH or TABBG
+                b.TextColor3 = (nm == "Secret") and ((ia) and TXT or Color3.new(0,0,0))
+                                 or (ia and TXTA or TXTD)
+            end
+            if pageGs[o] then pageGs[o].Visible = false end
+            if pageGs[n] then pageGs[n].Visible = true end
+            switching = false
+            return
+        end
         for nm, b in pairs(btns) do
             local ia = (nm == n)
             b:SetAttribute("Active", ia)
@@ -1976,7 +2092,6 @@ buildUI = function(reb)
     trackText(st)
     trackCard(st)
 
-    -- ============ COMPONENT BUILDERS ============
     local function tgg(page, name, order, key)
         local row = Instance.new("Frame", page)
         row.Size = UDim2.new(1, 0, 0, 40 * selectedScale)
@@ -2024,10 +2139,18 @@ buildUI = function(reb)
         hit.Text = ""
         hit.AutoButtonColor = false
         hit.MouseEnter:Connect(function()
-            TweenService:Create(row, TweenInfo.new(0.25), {BackgroundColor3 = CH}):Play()
+            if state.noAnimations then
+                row.BackgroundColor3 = CH
+            else
+                TweenService:Create(row, TweenInfo.new(0.25), {BackgroundColor3 = CH}):Play()
+            end
         end)
         hit.MouseLeave:Connect(function()
-            TweenService:Create(row, TweenInfo.new(0.28), {BackgroundColor3 = CARD}):Play()
+            if state.noAnimations then
+                row.BackgroundColor3 = CARD
+            else
+                TweenService:Create(row, TweenInfo.new(0.28), {BackgroundColor3 = CARD}):Play()
+            end
         end)
         attachRipple(hit)
         hit.MouseButton1Click:Connect(function()
@@ -2056,10 +2179,18 @@ buildUI = function(reb)
         trackText(l)
 
         b.MouseEnter:Connect(function()
-            TweenService:Create(b, TweenInfo.new(0.25), {BackgroundColor3 = CH}):Play()
+            if state.noAnimations then
+                b.BackgroundColor3 = CH
+            else
+                TweenService:Create(b, TweenInfo.new(0.25), {BackgroundColor3 = CH}):Play()
+            end
         end)
         b.MouseLeave:Connect(function()
-            TweenService:Create(b, TweenInfo.new(0.28), {BackgroundColor3 = CARD}):Play()
+            if state.noAnimations then
+                b.BackgroundColor3 = CARD
+            else
+                TweenService:Create(b, TweenInfo.new(0.28), {BackgroundColor3 = CARD}):Play()
+            end
         end)
         attachBounce(b); attachShine(b); attachRipple(b); attachHoverLift(b, 1.01)
         b.MouseButton1Click:Connect(cb)
@@ -2196,102 +2327,6 @@ buildUI = function(reb)
         return box
     end
 
-    local function makeColorPicker(page, order, label, colorKey, onChange)
-        local row = Instance.new("Frame", page)
-        row.Size = UDim2.new(1, 0, 0, 104 * selectedScale)
-        row.LayoutOrder = order
-        row.BackgroundColor3 = CARD
-        Instance.new("UICorner", row).CornerRadius = R(10)
-        trackCard(row)
-
-        local title = Instance.new("TextLabel", row)
-        title.Size = UDim2.new(1, -60 * selectedScale, 0, 20 * selectedScale)
-        title.Position = UDim2.new(0, 12 * selectedScale, 0, 6 * selectedScale)
-        title.BackgroundTransparency = 1
-        title.Text = label
-        title.Font = Enum.Font.GothamBold
-        title.TextSize = 12 * fm
-        title.TextXAlignment = Enum.TextXAlignment.Left
-        trackText(title)
-
-        local preview = Instance.new("Frame", row)
-        preview.Size = UDim2.new(0, 40 * selectedScale, 0, 20 * selectedScale)
-        preview.Position = UDim2.new(1, -52 * selectedScale, 0, 6 * selectedScale)
-        preview.BackgroundColor3 = c3(settingsConfig[colorKey])
-        Instance.new("UICorner", preview).CornerRadius = R(6)
-
-        local function mkMini(y, ch, miniLabel)
-            local mini = Instance.new("Frame", row)
-            mini.Size = UDim2.new(1, -24 * selectedScale, 0, 14 * selectedScale)
-            mini.Position = UDim2.new(0, 12 * selectedScale, 0, y)
-            mini.BackgroundTransparency = 1
-
-            local ml = Instance.new("TextLabel", mini)
-            ml.Size = UDim2.new(0, 14 * selectedScale, 1, 0)
-            ml.BackgroundTransparency = 1
-            ml.Text = miniLabel
-            ml.Font = Enum.Font.GothamBold
-            ml.TextSize = 10 * fm
-            ml.TextColor3 = TXTD
-            ml.TextXAlignment = Enum.TextXAlignment.Left
-
-            local tr = Instance.new("Frame", mini)
-            tr.Size = UDim2.new(1, -22 * selectedScale, 0, 6 * selectedScale)
-            tr.Position = UDim2.new(0, 18 * selectedScale, 0.5, -3 * selectedScale)
-            tr.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-            Instance.new("UICorner", tr).CornerRadius = UDim.new(1, 0)
-
-            local curV = settingsConfig[colorKey][ch] or 0
-            local fl = Instance.new("Frame", tr)
-            fl.Size = UDim2.new(curV / 255, 0, 1, 0)
-            if ch == "r" then fl.BackgroundColor3 = Color3.fromRGB(curV, 0, 0)
-            elseif ch == "g" then fl.BackgroundColor3 = Color3.fromRGB(0, curV, 0)
-            else fl.BackgroundColor3 = Color3.fromRGB(0, 0, curV) end
-            Instance.new("UICorner", fl).CornerRadius = UDim.new(1, 0)
-
-            local drag = false
-            local function upd(inp)
-                local mx = inp.Position.X
-                local tp = tr.AbsolutePosition.X
-                local ts = tr.AbsoluteSize.X
-                if ts == 0 then return end
-                local p = math.clamp((mx - tp) / ts, 0, 1)
-                local v = math.floor(255 * p + 0.5)
-                settingsConfig[colorKey][ch] = v
-                fl.Size = UDim2.new(p, 0, 1, 0)
-                preview.BackgroundColor3 = c3(settingsConfig[colorKey])
-                if ch == "r" then fl.BackgroundColor3 = Color3.fromRGB(v, 0, 0)
-                elseif ch == "g" then fl.BackgroundColor3 = Color3.fromRGB(0, v, 0)
-                else fl.BackgroundColor3 = Color3.fromRGB(0, 0, v) end
-                if onChange then onChange() end
-                saveSettings()
-            end
-            tr.InputBegan:Connect(function(inp)
-                if inp.UserInputType == Enum.UserInputType.MouseButton1
-                    or inp.UserInputType == Enum.UserInputType.Touch then
-                    drag = true; upd(inp)
-                end
-            end)
-            UIS.InputChanged:Connect(function(inp)
-                if drag and (inp.UserInputType == Enum.UserInputType.MouseMovement
-                    or inp.UserInputType == Enum.UserInputType.Touch) then
-                    upd(inp)
-                end
-            end)
-            UIS.InputEnded:Connect(function(inp)
-                if inp.UserInputType == Enum.UserInputType.MouseButton1
-                    or inp.UserInputType == Enum.UserInputType.Touch then
-                    drag = false
-                end
-            end)
-        end
-        mkMini(32 * selectedScale, "r", "R")
-        mkMini(52 * selectedScale, "g", "G")
-        mkMini(72 * selectedScale, "b", "B")
-
-        return {preview = preview}
-    end
-
     -- ============ SECRET TAB ============
     addSect(pages["Secret"], "Movement", 1)
     tgg(pages["Secret"], "Fly (WASD/Joystick)", 2, "flyEnabled")
@@ -2384,9 +2419,12 @@ buildUI = function(reb)
     local pickExp = false
     prh.MouseButton1Click:Connect(function()
         pickExp = not pickExp
-        TweenService:Create(pc, TweenInfo.new(0.5, Enum.EasingStyle.Back), {
-            Size = UDim2.new(1, 0, 0, pickExp and 200 * selectedScale or 0)
-        }):Play()
+        local targetSize = UDim2.new(1, 0, 0, pickExp and 200 * selectedScale or 0)
+        if state.noAnimations then
+            pc.Size = targetSize
+        else
+            TweenService:Create(pc, TweenInfo.new(0.5, Enum.EasingStyle.Back), {Size = targetSize}):Play()
+        end
     end)
 
     addSect(pages["Combat"], "Custom Targets", 10)
@@ -2678,10 +2716,12 @@ buildUI = function(reb)
 
     -- ============ UI TAB ============
     tgg(pages["UI"], "Show Quick Toggles Menu", 1, "quickTogglesVisible")
+    tgg(pages["UI"], "No Animations (Performance Mode)", 2, "noAnimations")
+    addSect(pages["UI"], "Rig UI scale & toggles", 3)
 
     local sr = Instance.new("Frame", pages["UI"])
     sr.Size = UDim2.new(1, 0, 0, 40 * selectedScale)
-    sr.LayoutOrder = 2
+    sr.LayoutOrder = 4
     sr.BackgroundColor3 = CARD
     Instance.new("UICorner", sr).CornerRadius = R(10)
     trackCard(sr)
@@ -2742,11 +2782,11 @@ buildUI = function(reb)
         end
     end)
 
-    addSect(pages["UI"], "Manage Quick Toggles", 3)
+    addSect(pages["UI"], "Manage Quick Toggles", 5)
 
     local qsb = Instance.new("TextBox", pages["UI"])
     qsb.Size = UDim2.new(1, 0, 0, 34 * selectedScale)
-    qsb.LayoutOrder = 4
+    qsb.LayoutOrder = 6
     qsb.BackgroundColor3 = CARD
     qsb.PlaceholderText = "Search feature..."
     qsb.PlaceholderColor3 = TXTD
@@ -2760,7 +2800,7 @@ buildUI = function(reb)
 
     local qms = Instance.new("ScrollingFrame", pages["UI"])
     qms.Size = UDim2.new(1, 0, 0, 220 * selectedScale)
-    qms.LayoutOrder = 5
+    qms.LayoutOrder = 7
     qms.BackgroundTransparency = 1
     qms.ScrollBarThickness = 3 * selectedScale
     qms.ScrollBarImageColor3 = BORD
@@ -2872,7 +2912,8 @@ buildUI = function(reb)
     themeInfo.LayoutOrder = 4
     themeInfo.BackgroundColor3 = CARD
     themeInfo.BackgroundTransparency = 0.4
-    themeInfo.Text = "  1. Drop any theme .json file into ApplewareConfigs/\n"
+    themeInfo.Text = "  1. Drop any theme .json file into\n"
+                  .. "     ApplewareConfigs/Themes/\n"
                   .. "  2. Re-execute the script\n"
                   .. "  3. Colors are applied automatically\n\n"
                   .. "  Theme .json must have 'Surface', 'Primary',\n"
@@ -2886,17 +2927,19 @@ buildUI = function(reb)
     Instance.new("UICorner", themeInfo).CornerRadius = R(10)
     trackCard(themeInfo)
 
-    addSect(pages["Appearance"], "Background Image (File)", 5)
+    addSect(pages["Appearance"], "Background Image & Color", 5)
 
     local bgInfo = Instance.new("TextLabel", pages["Appearance"])
-    bgInfo.Size = UDim2.new(1, 0, 0, 80 * selectedScale)
+    bgInfo.Size = UDim2.new(1, 0, 0, 100 * selectedScale)
     bgInfo.LayoutOrder = 6
     bgInfo.BackgroundColor3 = CARD
     bgInfo.BackgroundTransparency = 0.4
-    bgInfo.Text = "  Drop 'background.png' (or .jpg/.jpeg/.gif/.bmp)\n"
-               .. "  into ApplewareConfigs/ and re-execute.\n\n"
-               .. "  For solid background color instead:\n"
-               .. "  drop 'bgcolor.txt' with 'ff0055' or '255,0,85'."
+    bgInfo.Text = "  Background image:\n"
+               .. "    Drop 'background.png' (or .jpg/.jpeg/.gif/.bmp)\n"
+               .. "    into ApplewareConfigs/Backgrounds/\n\n"
+               .. "  Solid background color:\n"
+               .. "    Drop 'bgcolor.txt' into ApplewareConfigs/Colors/\n"
+               .. "    Contents: 'ff0055' (hex) or '255,0,85' (RGB)"
     bgInfo.TextColor3 = TXTD
     bgInfo.Font = Enum.Font.Gotham
     bgInfo.TextSize = 11 * fm
@@ -2910,8 +2953,8 @@ buildUI = function(reb)
     bgStatus.Size = UDim2.new(1, 0, 0, 26 * selectedScale)
     bgStatus.LayoutOrder = 7
     bgStatus.BackgroundColor3 = CARD
-    bgStatus.Text = (settingsConfig.bgImage ~= "" and "  Background image loaded"
-                     or "  No background image found")
+    bgStatus.Text = (settingsConfig.bgImage ~= "" and "  Background image loaded")
+                     or "  No background image found"
     bgStatus.TextColor3 = (settingsConfig.bgImage ~= "" and Color3.fromRGB(90, 255, 140)
                            or Color3.fromRGB(255, 90, 90))
     bgStatus.Font = Enum.Font.GothamBold
@@ -2987,17 +3030,26 @@ buildUI = function(reb)
     local function openUI()
         isOpen = true
         main.Visible = true
-        main.Size = UDim2.new(0, 0, 0, 0)
         main.Position = UDim2.new(0.5, 0, 0.5, 0)
-        main.BackgroundTransparency = 0.6
-        TweenService:Create(main, TweenInfo.new(0.6, Enum.EasingStyle.Back), {Size=UDim2.new(0,bw,0,bh)}):Play()
-        TweenService:Create(main, TweenInfo.new(0.5), {BackgroundTransparency=0}):Play()
+        if state.noAnimations then
+            main.Size = UDim2.new(0, bw, 0, bh)
+            main.BackgroundTransparency = 0
+        else
+            main.Size = UDim2.new(0, 0, 0, 0)
+            main.BackgroundTransparency = 0.6
+            TweenService:Create(main, TweenInfo.new(0.6, Enum.EasingStyle.Back), {Size=UDim2.new(0,bw,0,bh)}):Play()
+            TweenService:Create(main, TweenInfo.new(0.5), {BackgroundTransparency=0}):Play()
+        end
         fb.Text = "Close"
     end
     local function closeUI()
         isOpen = false
-        TweenService:Create(main, TweenInfo.new(0.4, Enum.EasingStyle.Back), {Size=UDim2.new(0,0,0,0)}):Play()
-        task.delay(0.4, function() if not isOpen then main.Visible = false end end)
+        if state.noAnimations then
+            main.Visible = false
+        else
+            TweenService:Create(main, TweenInfo.new(0.4, Enum.EasingStyle.Back), {Size=UDim2.new(0,0,0,0)}):Play()
+            task.delay(0.4, function() if not isOpen then main.Visible = false end end)
+        end
         fb.Text = "Open"
     end
     if reb then openUI() end
