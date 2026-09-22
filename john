@@ -109,6 +109,7 @@ local state = {
     fullbright = false,
     fovEnabled = false, fovValue = 70,
     clickTP = false,
+    desyncPlatform = false,
 }
 
 local settingsConfig = {
@@ -146,6 +147,7 @@ local toggleDisplayNames = {
     speedEnabled = "Speed Changer", jumpEnabled = "Jump Power",
     freeze = "Freeze (Anchor)", fullbright = "Fullbright",
     fovEnabled = "FOV Changer", clickTP = "Click / Tap Teleport",
+    desyncPlatform = "Desync Platform",
 }
 local notifyExcluded = {}
 
@@ -2035,6 +2037,9 @@ buildUI = function(rebuilding)
         if hum then hum.Health = 0 end
     end)
 
+    addSection(pages["Secret"], "Desync", 27)
+    tgg(pages["Secret"], "Desync Platform (10, 5000, 20)", 28, "desyncPlatform")
+
     -- ==================== FARM ====================
     tgg(pages["Farm"], "Farm (Safe)", 1, "farm")
     tgg(pages["Farm"], "XP Farm", 2, "xpFarm")
@@ -3826,6 +3831,119 @@ RunService.RenderStepped:Connect(function()
     local targetPart = char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
     if not targetPart then return end
     Workspace.CurrentCamera.CFrame = CFrame.lookAt(Workspace.CurrentCamera.CFrame.Position, targetPart.Position)
+end)
+
+-- ==================== DESYNC PLATFORM ====================
+-- Body teleports to (10, 5000, 20) and anchors there (server sees you there).
+-- A local neon platform is spawned so you have something to "stand" on visually.
+-- Camera locks at your previous view so you can still aim / watch the map.
+-- Toggle off restores you to where you were.
+
+local DESYNC_POS = Vector3.new(10, 5000, 20)
+local desyncActive = false
+local desyncSavedCFrame = nil
+local desyncSavedCamCFrame = nil
+local desyncPlatformPart = nil
+
+local function _aimbotHasTarget()
+    if state.aimbotMurderer then
+        local m = getMurd()
+        return m and m.Character and m.Character:FindFirstChildOfClass("Humanoid") and m.Character.Humanoid.Health > 0
+    elseif state.aimbotSheriff then
+        local s = getGunHolder()
+        return s and s.Character and s.Character:FindFirstChildOfClass("Humanoid") and s.Character.Humanoid.Health > 0
+    end
+    return false
+end
+
+local function _spawnDesyncPlatform()
+    if desyncPlatformPart and desyncPlatformPart.Parent then return end
+    local p = Instance.new("Part")
+    p.Name = "AW_DesyncPlatform"
+    p.Size = Vector3.new(40, 1, 40)
+    p.Position = DESYNC_POS
+    p.Anchored = true
+    p.CanCollide = true
+    p.Material = Enum.Material.Neon
+    p.Color = Color3.fromRGB(90, 130, 255)
+    p.Transparency = 0.25
+    p.TopSurface = Enum.SurfaceType.Smooth
+    p.BottomSurface = Enum.SurfaceType.Smooth
+    p.Parent = Workspace
+    desyncPlatformPart = p
+end
+
+local function _startDesync()
+    if desyncActive then return end
+    if not LP.Character then return end
+    local root = LP.Character:FindFirstChild("HumanoidRootPart")
+    local hum = LP.Character:FindFirstChildOfClass("Humanoid")
+    if not root or not hum or hum.Health <= 0 then return end
+
+    desyncSavedCFrame = root.CFrame
+    desyncSavedCamCFrame = Workspace.CurrentCamera and Workspace.CurrentCamera.CFrame or nil
+    _spawnDesyncPlatform()
+
+    hum.PlatformStand = true
+    root.Anchored = true
+    root.CFrame = CFrame.new(DESYNC_POS + Vector3.new(0, 3.5, 0))
+    root.AssemblyLinearVelocity = Vector3.zero
+    root.AssemblyAngularVelocity = Vector3.zero
+    desyncActive = true
+    setStatus("Desync ON — body hidden at platform")
+end
+
+local function _stopDesync()
+    if not desyncActive then return end
+    desyncActive = false
+    local root = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+    if root then
+        root.Anchored = false
+        if desyncSavedCFrame then root.CFrame = desyncSavedCFrame end
+        root.AssemblyLinearVelocity = Vector3.zero
+        root.AssemblyAngularVelocity = Vector3.zero
+    end
+    if hum then
+        hum.PlatformStand = false
+        hum:ChangeState(Enum.HumanoidStateType.GettingUp)
+    end
+    if desyncPlatformPart then desyncPlatformPart:Destroy() desyncPlatformPart = nil end
+    desyncSavedCFrame = nil
+    desyncSavedCamCFrame = nil
+    setStatus("Desync OFF")
+end
+
+task.spawn(function()
+    local last = false
+    while true do
+        task.wait(0.1)
+        local now = state.desyncPlatform == true
+        if now ~= last then
+            if now then _startDesync() else _stopDesync() end
+            last = now
+        end
+    end
+end)
+
+RunService.RenderStepped:Connect(function()
+    if not desyncActive then return end
+    if _aimbotHasTarget() then return end
+    local cam = Workspace.CurrentCamera
+    if cam and desyncSavedCamCFrame then
+        cam.CFrame = desyncSavedCamCFrame
+    end
+end)
+
+LP.CharacterAdded:Connect(function()
+    if desyncActive then
+        desyncActive = false
+        if desyncPlatformPart then desyncPlatformPart:Destroy() desyncPlatformPart = nil end
+        desyncSavedCFrame = nil
+        desyncSavedCamCFrame = nil
+        state.desyncPlatform = false
+        updateAllToggleVisuals("desyncPlatform")
+    end
 end)
 
 print("Appleware loaded - enjoy my script, love you though (made by p04j on discord)")
