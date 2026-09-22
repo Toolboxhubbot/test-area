@@ -1,5 +1,3 @@
-local _ok, _err = pcall(function()
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -175,6 +173,7 @@ do
 end
 
 local saveSettings, buildUI, st, stopFarm, refreshPicker, refreshQuick
+local updateViz
 
 local state = {
     farm=false, xpFarm=false, noclip=false, gun=false, afk=false,
@@ -310,7 +309,6 @@ pcall(function()
     end
 end)
 
--- Force B/W
 settingsConfig.bgColor = {r=0, g=0, b=0}
 settingsConfig.textColor = {r=255, g=255, b=255}
 settingsConfig.textStrokeColor = {r=0, g=0, b=0}
@@ -653,7 +651,6 @@ local function applySlotAnims()
     playSlot("Idle", state.customAnims.Idle)
 end
 
--- State monitor: switches slot animations based on what the character is doing
 task.spawn(function()
     while true do
         task.wait(0.08)
@@ -687,8 +684,7 @@ LP.CharacterAdded:Connect(function()
     stopAllSlotTracks()
     animState.current = "Idle"
     if state.customAnimsEnabled then
-        task.wait(1.2)
-        applySlotAnims()
+        task.delay(1.2, function() pcall(applySlotAnims) end)
     end
 end)
 -- =============================================================
@@ -822,7 +818,6 @@ local mainTgls = {}; local quickTgls = {}
 local quickFrame = nil; local bgFrame = nil; local bgImage = nil; local mainOpenBtn = nil
 local applyLowDeviceOptimizations = function() end
 local applyFpsBoost = function() end
-local updateViz = function() end
 
 updateViz = function(key)
     if mainTgls[key] then
@@ -904,7 +899,7 @@ local function setToggleState(key, value)
         elseif key == "disableAnimations" then
             task.delay(0.15, function() pcall(function() buildUI(true) end) end)
         elseif key == "customAnimsEnabled" then
-            task.spawn(function() applySlotAnims() end)
+            task.spawn(function() pcall(applySlotAnims) end)
         elseif key == "showRoundTimerCountdown" and not value then roundTimerFrame.Visible = false end
         saveSettings()
     end)
@@ -1434,7 +1429,6 @@ task.spawn(function()
     end
 end)
 
--- Confetti
 local secretPartyPlaying = false
 local function playPartyPop()
     if secretPartyPlaying then return end
@@ -1853,99 +1847,64 @@ local function resetX4(i)
     end)
 end
 
--- ====================== EMOTE + ANIMATION DATA ======================
+-- ====================== EMOTES DATA ======================
 local EMOTES = {
     {id="93105950995997", name="Caramelldansen"},
     {id="84306405425879", name="Caramell Dansen [BEST]"},
-    {id="85361710130557", name="Caramelldansen (Alt)"},
     {id="80877772569772", name="Default Dance | OG"},
-    {id="133158580522571", name="Default Dance"},
     {id="17746270218",  name="Sturdy Dance - Ice Spice"},
     {id="85608190427964",name="Sturdy Dance"},
     {id="129149402922241",name="Griddy"},
     {id="126516908191316",name="Billy Bounce"},
-    {id="93450937830334",name="Billy Bounce (Alt)"},
     {id="98901420955781",name="Hakari Dance [FORSAKEN]"},
     {id="122147154162464",name="Hakari Dance"},
-    {id="131013239122616",name="Hakari Dance (Alt)"},
     {id="15571539403",  name="Nicki Minaj Anaconda"},
     {id="15571538346",  name="Nicki Minaj Boom Boom Boom"},
     {id="15571540519",  name="Nicki Minaj Starships"},
-    {id="15571536896",  name="Nicki Minaj Super Bass"},
     {id="78058324703968",name="Michael Jackson [BEST]"},
     {id="122773107025712",name="Michael Jackson"},
-    {id="94226046885073",name="Smooth Criminal MJ"},
     {id="15506503658",  name="Victory Dance"},
     {id="6865013133",   name="Cha Cha"},
-    {id="3696764866",   name="Cha-Cha (Alt)"},
     {id="115777223962514",name="Ya Ya Ying Dance"},
-    {id="121076776003313",name="Ya Ya Ying Dance [OG]"},
     {id="131407261984740",name="Buss It! [OG]"},
     {id="89157328525577",name="Silly Jumping Spider"},
     {id="85364777159340",name="Rat Dance"},
-    {id="94083401455021",name="Rat Dance (Alt)"},
-    {id="79460913196046",name="Rat Dance Meme"},
     {id="86656342856697",name="Macarena"},
-    {id="73946479113094",name="Macarena (Alt)"},
     {id="81808860196321",name="Hotel Transylvania Macarena"},
     {id="91927498467600",name="Koto Nai Meme Dance"},
     {id="130655908439646",name="Beat Da Koto Nai"},
-    {id="126468010841883",name="Spice Queen of Da Place"},
     {id="121347449465835",name="Spice Keep Bouncing"},
     {id="70975021709810",name="Big G Bounce"},
     {id="139271706064778",name="Hip Bounce"},
-    {id="104060042886647",name="[OG] Brooklyn Pop Hip Swing"},
-    {id="120037539988659",name="[OG] Nya San Russian Kawaii"},
     {id="111665668810578",name="Sigma Boy Dance"},
     {id="17000058939",  name="Mini Kong"},
-    {id="18443268949",  name="SpongeBob Imaginaaation"},
     {id="107899954696611",name="Spongebob Shuffle Dance"},
-    {id="18443271885",  name="SpongeBob Dance"},
     {id="3576721660",   name="Robot"},
     {id="5917570207",   name="Floss Dance"},
-    {id="132367660388476",name="SHAKE"},
     {id="13520623514",  name="TWICE Fancy"},
     {id="14900151704",  name="TWICE LIKEY"},
     {id="91811386043367",name="TWICE - What Is Love"},
-    {id="13344121112",  name="TWICE What Is Love (Alt)"},
     {id="12874468267",  name="TWICE The Feels"},
-    {id="79194689807074",name="TWICE - The Feels"},
-    {id="116468071022853",name="Gangnam Style (Original)"},
-    {id="80923445784018",name="Gangnam Style"},
-    {id="104142334418357",name="It's Gangnam Style! [BEST]"},
-    {id="119256963154827",name="Dougie Meme Dance"},
+    {id="116468071022853",name="Gangnam Style"},
     {id="114756515400742",name="Dougie [BEST]"},
-    {id="93675237485386",name="Dougie"},
-    {id="123831614665513",name="Jump - BLACKPINK [BEST]"},
-    {id="106977382414370",name="Jump - BLACKPINK"},
-    {id="122404842843791",name="JUMP - BP (KPOP)"},
+    {id="123831614665513",name="Jump - BLACKPINK"},
     {id="138319492354914",name="Yuji Jumping Slowed"},
-    {id="113702736944973",name="Yuji Jumping Edit"},
     {id="4212496830",    name="Zombie"},
     {id="75017857395637",name="TV Time Dance"},
     {id="128729212388115",name="Phibz [OG]"},
-    {id="95386318624540",name="Phibz"},
     {id="92237689732858",name="Da Hood Stomp"},
-    {id="123783725600432",name="Da Hood Dance"},
     {id="123043305808890",name="Spongebob"},
     {id="137284968787523",name="Street Glide"},
     {id="91773089278851",name="Street Flow Bounce"},
-    {id="129931581232815",name="VEM CA NÉNEM"},
     {id="130838810836830",name="Umamusume Dance"},
-    {id="130575801528647",name="Childish Tantrum"},
-    {id="121911959295081",name="Kid Tantrum"},
     {id="5104374556",    name="Tantrum"},
-    {id="13823339506",   name="Tommy Archer"},
     {id="133248139921782",name="Jumpstyle dance"},
-    {id="89614983665331",name="Jumpstyle Dance (Alt)"},
-    {id="99563839802389",name="Jumpstyle (Alt 2)"},
     {id="121067808279598",name="PARROT PARTY DANCE"},
     {id="129389629031100",name="Ledge/Railing Sit"},
     {id="3576717965",    name="Shy"},
     {id="129668542320076",name="/e sit"},
     {id="124072098165199",name="/e dance2"},
     {id="93511411593120",name="/e fly"},
-    {id="97830214926142",name="Accurate Admin Fly"},
 }
 
 local ANIMATIONS = {
@@ -1958,10 +1917,8 @@ local ANIMATIONS = {
     {id="89104845724058", name="Adorable Dolly Pose"},
     {id="87739743400914", name="Catwalk Walk"},
     {id="120380776076922",name="Catwalk Walk (Alt)"},
-    {id="138140141577966",name="Catwalk Walk (OG)"},
     {id="120302905807132",name="STURDY"},
     {id="135922662345048",name="Snow Angels"},
-    {id="125386993330077",name="Scene Profile Idle Y2K"},
     {id="138453007205351",name="Sukuna Aura Pose"},
     {id="93043556902763", name="Aura Posing"},
     {id="122498540377510",name="Godly Floating Sleeping Aura"},
@@ -1977,29 +1934,25 @@ local ANIMATIONS = {
     {id="84555218084038", name="Helicopter Spin"},
     {id="110553756436163",name="Helicopter"},
     {id="140547238892659",name="Helicopter (Alt)"},
-    {id="119431985170060",name="Helicopter (Alt 2)"},
     {id="3576719440",     name="T Pose"},
     {id="3823158750",     name="Godlike"},
     {id="5104377791",     name="Hero Landing"},
     {id="4689362868",     name="Sleep"},
     {id="3716633898",     name="Twirl"},
     {id="128920596154369",name="Belly Dance"},
-    {id="76700167742736", name="Belly Dance (Alt)"},
     {id="121899062503943",name="Belly Dancing"},
     {id="105933851371838",name="Kawaii Shy Sit Idle Pose"},
     {id="126684112484206",name="Cute Shy Avatar Pose (LOOPED)"},
     {id="129766891082557",name="Sweetest Angel Sit Pose"},
     {id="124031351335869",name="Kayah's Cute Pose"},
-    {id="13768975574",    name="TWICE Pop by Nayeon"},
     {id="88416001739999", name="Biblically Accurate Emote"},
-    {id="133596366979822",name="Biblically Accurate Emote (Alt)"},
-    {id="103040723950430",name="Gojo Floating Pose / The Honored One"},
+    {id="103040723950430",name="Gojo Floating Pose"},
     {id="100953557187752",name="Gojo Floating The Honored One"},
     {id="108317182353594",name="Gojo Levitation"},
     {id="91085159191582", name="Gojo Floating JJK"},
     {id="132631811481169",name="Invincible Viltrumite Flying"},
     {id="93375577935500", name="Invincible Floating (LOW)"},
-    {id="131950236025472",name="Relax Flying Anime (Floating)"},
+    {id="131950236025472",name="Relax Flying Anime"},
     {id="117134539591727",name="Floating Idle animation"},
     {id="132152702263080",name="Fairy Sit Floating Anime"},
     {id="95339652051393", name="Sad Depressed Crying Sit"},
@@ -2010,16 +1963,12 @@ local ANIMATIONS = {
     {id="129575609080331",name="Cute Sit"},
     {id="126847889432485",name="Vibing Sit"},
     {id="85370173309996", name="Side Sit"},
-    {id="82167506755506", name="Cute Sit (Alt)"},
     {id="113112871341684",name="CUTE SIT"},
     {id="131875333242836",name="Cute Sit (Alt 2)"},
     {id="118688124889191",name="Nya San"},
     {id="12715393154",    name="TWICE Moonlight Sunrise"},
-    {id="12715395038",    name="TWICE Set Me Free Dance 1"},
-    {id="12715397488",    name="TWICE Set Me Free Dance 2"},
     {id="127271798262177",name="M3GAN's Dance"},
     {id="122087602422027",name="Kawaii Bouncy Anime Girl Dance"},
-    {id="130855166586798",name="Kawaii Bouncy Anime Girl (OG)"},
     {id="74193679388896", name="Bouncy Cute Girl Anime Idle"},
     {id="93875137466223", name="Scary Tall Creature Transformation"},
     {id="127764273000599",name="Dropkick"},
@@ -2033,13 +1982,8 @@ local ANIMATIONS = {
     {id="12507097350",    name="Alo Yoga Lotus Position"},
     {id="12507106431",    name="Alo Yoga Warrior II"},
     {id="12507120275",    name="Alo Yoga Triangle"},
-    {id="122814100170962",name="Obby Head Emote"},
-    {id="76394392186917", name="Obby Emote"},
     {id="118853736905967",name="Wall Aura Farm Pose"},
     {id="88969192102242", name="Wall Lean"},
-    {id="71556328869803", name="Wall Lean YN [AURA FARM]"},
-    {id="110537281410647",name="Wall Lean Idle [Aura Farm]"},
-    {id="125033083158711",name="Aura Wall Lean"},
     {id="75911227509248", name="Ghost Floating"},
     {id="111499780397123",name="Levitation Idle Emote 2"},
     {id="15698511500",    name="Cuco - Levitate"},
@@ -2372,7 +2316,8 @@ buildUI = function(reb)
         return box
     end
 
-    local function buildAnimPage(page, list, label)
+    -- EMOTES PAGE (list style)
+    local function buildEmotePage(page, list, label)
         local info = Instance.new("TextLabel", page)
         info.Size = UDim2.new(1, 0, 0, 20 * selectedScale)
         info.LayoutOrder = 1
@@ -2387,7 +2332,7 @@ buildUI = function(reb)
         stopBtn.Size = UDim2.new(1, 0, 0, 34 * selectedScale)
         stopBtn.LayoutOrder = 2
         stopBtn.BackgroundColor3 = Color3.fromRGB(120, 30, 30)
-        stopBtn.Text = "  ■ Stop Current Emote"
+        stopBtn.Text = "  Stop Current Emote"
         stopBtn.TextColor3 = Color3.new(1, 1, 1)
         stopBtn.Font = Enum.Font.GothamBold
         stopBtn.TextSize = 12 * fm
@@ -2432,11 +2377,9 @@ buildUI = function(reb)
                 if c:IsA("GuiObject") and c ~= sl then c:Destroy() end
             end
             filter = string.lower(filter or "")
-            local shown = 0
             for i, entry in ipairs(list) do
                 local nm = string.lower(entry.name)
                 if filter == "" or string.find(nm, filter, 1, true) then
-                    shown = shown + 1
                     local b = Instance.new("TextButton", sc)
                     b.Size = UDim2.new(1, 0, 0, 32 * selectedScale)
                     b.LayoutOrder = i
@@ -2467,76 +2410,29 @@ buildUI = function(reb)
                     end)
                 end
             end
-            if shown == 0 then
-                local l = Instance.new("TextLabel", sc)
-                l.Size = UDim2.new(1, 0, 0, 24 * selectedScale)
-                l.BackgroundTransparency = 1
-                l.Text = "No matches"
-                l.TextColor3 = TXTD
-                l.Font = Enum.Font.Gotham
-                l.TextSize = 11 * fm
-                l.TextXAlignment = Enum.TextXAlignment.Left
-            end
         end
         search:GetPropertyChangedSignal("Text"):Connect(function() render(search.Text) end)
         render("")
     end
 
-    -- Slot-based animation tab
+    -- SLOT-BASED ANIMATIONS PAGE
     local function buildSlotsPage(page, list)
         local info = Instance.new("TextLabel", page)
         info.Size = UDim2.new(1, 0, 0, 20 * selectedScale)
         info.LayoutOrder = 1
         info.BackgroundTransparency = 1
-        info.Text = "R15 Only — assigns an animation to each movement slot"
+        info.Text = "R15 Only - assign an animation to each movement slot"
         info.TextColor3 = Color3.fromRGB(150, 150, 150)
         info.Font = Enum.Font.GothamBold
         info.TextSize = 10 * fm
         info.TextXAlignment = Enum.TextXAlignment.Left
 
-        -- Enable toggle
-        local enRow = Instance.new("Frame", page)
-        enRow.Size = UDim2.new(1, 0, 0, 40 * selectedScale)
-        enRow.LayoutOrder = 2; enRow.BackgroundColor3 = CARD
-        Instance.new("UICorner", enRow).CornerRadius = R(10)
-        local enLbl = Instance.new("TextLabel", enRow)
-        enLbl.Size = UDim2.new(1, -64 * selectedScale, 1, 0)
-        enLbl.Position = UDim2.new(0, 14 * selectedScale, 0, 0)
-        enLbl.BackgroundTransparency = 1; enLbl.Text = "Enable Custom Animations"
-        enLbl.TextColor3 = TXT; enLbl.Font = Enum.Font.GothamMedium; enLbl.TextSize = 12.5 * fm
-        enLbl.TextXAlignment = Enum.TextXAlignment.Left
-        local enPill = Instance.new("Frame", enRow)
-        enPill.Size = UDim2.new(0, 44 * selectedScale, 0, 24 * selectedScale)
-        enPill.Position = UDim2.new(1, -54 * selectedScale, 0.5, -12 * selectedScale)
-        enPill.BackgroundColor3 = state.customAnimsEnabled and ACC or Color3.fromRGB(32,32,32)
-        Instance.new("UICorner", enPill).CornerRadius = UDim.new(1, 0)
-        local enDot = Instance.new("Frame", enPill)
-        enDot.Size = UDim2.new(0, 16 * selectedScale, 0, 16 * selectedScale)
-        enDot.Position = state.customAnimsEnabled and UDim2.new(1, -20 * selectedScale, 0.5, -8 * selectedScale)
-                        or UDim2.new(0, 4 * selectedScale, 0.5, -8 * selectedScale)
-        enDot.BackgroundColor3 = state.customAnimsEnabled and Color3.new(0,0,0) or Color3.fromRGB(200,200,200)
-        Instance.new("UICorner", enDot).CornerRadius = UDim.new(1, 0)
-        mainTgls["customAnimsEnabled"] = {pill = enPill, dot = enDot}
-        local enHit = Instance.new("TextButton", enRow)
-        enHit.Size = UDim2.new(1, 0, 1, 0); enHit.BackgroundTransparency = 1; enHit.Text = ""; enHit.AutoButtonColor = false
-        enHit.MouseButton1Click:Connect(function()
-            state.customAnimsEnabled = not state.customAnimsEnabled
-            TweenService:Create(enPill, TweenInfo.new(0.28, Enum.EasingStyle.Quint), {
-                BackgroundColor3 = state.customAnimsEnabled and ACC or Color3.fromRGB(32,32,32)
-            }):Play()
-            TweenService:Create(enDot, TweenInfo.new(0.42, Enum.EasingStyle.Back), {
-                Position = state.customAnimsEnabled and UDim2.new(1, -20 * selectedScale, 0.5, -8 * selectedScale)
-                            or UDim2.new(0, 4 * selectedScale, 0.5, -8 * selectedScale),
-                BackgroundColor3 = state.customAnimsEnabled and Color3.new(0,0,0) or Color3.fromRGB(200,200,200)
-            }):Play()
-            applySlotAnims()
-            saveSettings()
-            notify("Custom Anims " .. (state.customAnimsEnabled and "enabled" or "disabled"))
-        end)
+        local slotButtons = {}
+        local pickerSlot = nil
+        local refreshSlotButtons
 
-        -- Picker overlay
+        -- Modal picker overlay
         local picker = Instance.new("Frame", main)
-        picker.Name = "AnimPicker"
         picker.Size = UDim2.new(1, 0, 1, 0)
         picker.BackgroundColor3 = Color3.new(0, 0, 0)
         picker.BackgroundTransparency = 0.35
@@ -2605,9 +2501,6 @@ buildUI = function(reb)
             pList.CanvasSize = UDim2.new(0, 0, 0, pLayout.AbsoluteContentSize.Y + 8)
         end)
 
-        local pickerSlot = nil
-        local refreshSlotButtons
-
         local function closePicker()
             picker.Visible = false
             pickerSlot = nil
@@ -2620,8 +2513,10 @@ buildUI = function(reb)
             end
             local filter = string.lower(pSearch.Text or "")
             local order = 0
+
+            -- Default option
+            order = order + 1
             do
-                order = order + 1
                 local b = Instance.new("TextButton", pList)
                 b.Size = UDim2.new(1, 0, 0, 30 * selectedScale)
                 b.LayoutOrder = order
@@ -2639,15 +2534,14 @@ buildUI = function(reb)
                 b.MouseButton1Click:Connect(function()
                     if pickerSlot then
                         state.customAnims[pickerSlot] = "Default"
-                        if state.customAnimsEnabled then
-                            playSlot(pickerSlot, "Default")
-                        end
+                        if state.customAnimsEnabled then playSlot(pickerSlot, "Default") end
                         saveSettings()
                         if refreshSlotButtons then refreshSlotButtons() end
                     end
                     closePicker()
                 end)
             end
+
             for i, entry in ipairs(list) do
                 local nm = string.lower(entry.name)
                 if filter == "" or string.find(nm, filter, 1, true) then
@@ -2676,9 +2570,7 @@ buildUI = function(reb)
                     b.MouseButton1Click:Connect(function()
                         if pickerSlot then
                             state.customAnims[pickerSlot] = tostring(entry.id)
-                            if state.customAnimsEnabled then
-                                playSlot(pickerSlot, tostring(entry.id))
-                            end
+                            if state.customAnimsEnabled then playSlot(pickerSlot, tostring(entry.id)) end
                             saveSettings()
                             if refreshSlotButtons then refreshSlotButtons() end
                         end
@@ -2689,7 +2581,6 @@ buildUI = function(reb)
         end
         pSearch:GetPropertyChangedSignal("Text"):Connect(renderPicker)
 
-        local slotButtons = {}
         refreshSlotButtons = function()
             for slot, btn in pairs(slotButtons) do
                 local id = state.customAnims[slot]
@@ -2742,10 +2633,10 @@ buildUI = function(reb)
             arrow.Size = UDim2.new(0, 20 * selectedScale, 1, 0)
             arrow.Position = UDim2.new(1, -22 * selectedScale, 0, 0)
             arrow.BackgroundTransparency = 1
-            arrow.Text = "▼"
+            arrow.Text = "v"
             arrow.TextColor3 = TXT
             arrow.Font = Enum.Font.GothamBold
-            arrow.TextSize = 10 * fm
+            arrow.TextSize = 12 * fm
 
             attachBounce(sel)
             sel.MouseButton1Click:Connect(function()
@@ -2761,7 +2652,7 @@ buildUI = function(reb)
 
         local slots = {"Idle", "Walk", "Run", "Jump", "Climb", "Fall", "Sit"}
         for i, s in ipairs(slots) do
-            makeSlotRow(s, i + 2)
+            makeSlotRow(s, i + 1)
         end
         refreshSlotButtons()
     end
@@ -2799,7 +2690,7 @@ buildUI = function(reb)
     makeSlider(pages["Secret"], "Max Zoom", 25, state.cameraMaxZoom or 500, 100, 2000, "cameraMaxZoom")
     tgg(pages["Secret"], "Info HUD", 26, "infoHudEnabled")
 
-    addSect(pages["Secret"], "HUD Contents (visible when HUD on)", 27)
+    addSect(pages["Secret"], "HUD Contents", 27)
     tgg(pages["Secret"], "Show Session Time", 28, "hudShowSession")
     tgg(pages["Secret"], "Show Player Count", 29, "hudShowPlayers")
     tgg(pages["Secret"], "Show Your Role", 30, "hudShowRole")
@@ -3216,7 +3107,7 @@ buildUI = function(reb)
     end)
 
     -- EMOTES TAB
-    buildAnimPage(pages["Emotes"], EMOTES, "emotes")
+    buildEmotePage(pages["Emotes"], EMOTES, "emotes")
     -- ANIMATIONS TAB (slot-based)
     buildSlotsPage(pages["Animations"], ANIMATIONS)
 
@@ -3384,7 +3275,7 @@ end
 pcall(function() buildUI() end)
 if state.disable3d then pcall(function() applyLowDeviceOptimizations(true) end) end
 if state.fpsBoost then pcall(function() applyFpsBoost(true) end) end
-if state.customAnimsEnabled then task.spawn(function() task.wait(2); applySlotAnims() end) end
+if state.customAnimsEnabled then task.spawn(function() task.wait(2); pcall(applySlotAnims) end) end
 
 -- Fly
 local flyBV, flyBG = nil, nil; local wasFlying = false
@@ -4115,7 +4006,6 @@ task.spawn(function()
     end
 end)
 
--- Aimbot
 RunService.RenderStepped:Connect(function()
     if not alive() then return end
     local tp = nil
@@ -4129,7 +4019,4 @@ RunService.RenderStepped:Connect(function()
     Workspace.CurrentCamera.CFrame = CFrame.lookAt(Workspace.CurrentCamera.CFrame.Position, tpart.Position)
 end)
 
-print("Appleware loaded - enjoy my script, love you though (made by p04j on discord)")
-end)
-
-if not _ok then warn("[Appleware] Load error: " .. tostring(_err)) end
+print("Appleware loaded - enjoy my script (made by p04j on discord)")
