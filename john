@@ -2402,11 +2402,18 @@ task.spawn(function()
     end
 end)
 
--- Auto standup
+-- Auto standup (FIXED: skip while farming / XP farming / executing actions
+-- so it doesn't fight the farm tween's PlatformStand control)
 task.spawn(function()
     while true do
         task.wait(0.15)
-        if LP.Character and not state.flyEnabled and not invisActive then
+        if LP.Character
+           and not state.flyEnabled
+           and not invisActive
+           and not state.farm
+           and not state.xpFarm
+           and not isExecutingAction
+        then
             local h = LP.Character:FindFirstChildOfClass("Humanoid")
             if h and h.Health > 0 and h.PlatformStand and not next(activeResets) then
                 h.PlatformStand = false
