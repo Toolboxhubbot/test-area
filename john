@@ -22,7 +22,7 @@ task.spawn(function()
     pcall(function()
         local url = "https://raw.githubusercontent.com/Toolboxhubbot/antifling/refs/heads/main/antifling"
         local src
-        pcall(function() if game.HttpGet then src = game.HttpGet(url) end end)
+        pcall(function() if game.HttpGet then src = game:HttpGet(url) end end)
         if not src and syn and syn.request then
             pcall(function() local r = syn.request({Url=url, Method="GET"}); if r and r.Body then src = r.Body end end)
         end
@@ -65,23 +65,27 @@ end
 
 local CF = "ApplewareConfigs"
 local CFl = "Appleware.json"
-pcall(function() if makefolder and isfolder and not isfolder(CF) then makefolder(CF) end end)
+pcall(function()
+    if makefolder and isfolder and not isfolder(CF) then makefolder(CF) end
+end)
 local function cfgPath()
     if isfolder and isfolder(CF) then return CF .. "/" .. CFl end
     return CFl
 end
 
--- Loading screen async
+-- Loading screen (async, non-blocking)
 task.spawn(function()
     local g = Instance.new("ScreenGui")
     g.Name = "AWLoad"; g.Parent = getGuiParent()
     g.ResetOnSpawn = false; g.DisplayOrder = 1000000; g.IgnoreGuiInset = true
     local bg = Instance.new("Frame", g)
-    bg.Size = UDim2.new(1, 0, 1, 0); bg.BackgroundColor3 = Color3.new(0,0,0); bg.BackgroundTransparency = 1
+    bg.Size = UDim2.new(1, 0, 1, 0)
+    bg.BackgroundColor3 = Color3.new(0, 0, 0); bg.BackgroundTransparency = 1
     for i = 1, 14 do
         local p = Instance.new("Frame", bg)
         local sz = math.random(3, 8)
-        p.Size = UDim2.new(0, sz, 0, sz); p.BackgroundColor3 = Color3.new(1,1,1)
+        p.Size = UDim2.new(0, sz, 0, sz)
+        p.BackgroundColor3 = Color3.new(1, 1, 1)
         p.BackgroundTransparency = 0.75; p.BorderSizePixel = 0
         p.Position = UDim2.new(math.random(), 0, 1 + math.random() * 0.3, 0)
         Instance.new("UICorner", p).CornerRadius = UDim.new(1, 0)
@@ -101,26 +105,62 @@ task.spawn(function()
     title.Position = UDim2.new(0.5, 0, 0.5, -25); title.BackgroundTransparency = 1
     title.Text = "Loading Appleware for you"; title.TextColor3 = Color3.new(1, 1, 1)
     title.Font = Enum.Font.GothamBold; title.TextSize = 22; title.TextTransparency = 1
+    local dots = Instance.new("TextLabel", bg)
+    dots.Size = UDim2.new(1, 0, 0, 40); dots.AnchorPoint = Vector2.new(0.5, 0.5)
+    dots.Position = UDim2.new(0.5, 0, 0.5, 15); dots.BackgroundTransparency = 1
+    dots.Text = "."; dots.TextColor3 = Color3.fromRGB(200, 200, 200)
+    dots.Font = Enum.Font.GothamBold; dots.TextSize = 22; dots.TextTransparency = 1
     local barBg = Instance.new("Frame", bg)
     barBg.Size = UDim2.new(0, 260, 0, 4); barBg.AnchorPoint = Vector2.new(0.5, 0.5)
-    barBg.Position = UDim2.new(0.5, 0, 0.5, 55); barBg.BackgroundColor3 = Color3.fromRGB(30,30,30)
+    barBg.Position = UDim2.new(0.5, 0, 0.5, 55); barBg.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     barBg.BackgroundTransparency = 1
     Instance.new("UICorner", barBg).CornerRadius = UDim.new(1, 0)
     local barFill = Instance.new("Frame", barBg)
-    barFill.Size = UDim2.new(0, 0, 1, 0); barFill.BackgroundColor3 = Color3.new(1,1,1)
+    barFill.Size = UDim2.new(0, 0, 1, 0); barFill.BackgroundColor3 = Color3.new(1, 1, 1)
     barFill.BackgroundTransparency = 1
     Instance.new("UICorner", barFill).CornerRadius = UDim.new(1, 0)
+    local shine = Instance.new("Frame", barFill)
+    shine.Size = UDim2.new(0.35, 0, 1, 0); shine.Position = UDim2.new(-0.35, 0, 0, 0)
+    shine.BackgroundColor3 = Color3.new(1, 1, 1); shine.BackgroundTransparency = 0.4
+    Instance.new("UICorner", shine).CornerRadius = UDim.new(1, 0)
     TweenService:Create(bg, TweenInfo.new(0.5), {BackgroundTransparency = 0.4}):Play()
     TweenService:Create(title, TweenInfo.new(0.6), {TextTransparency = 0}):Play()
+    TweenService:Create(dots, TweenInfo.new(0.6), {TextTransparency = 0}):Play()
     TweenService:Create(barBg, TweenInfo.new(0.5), {BackgroundTransparency = 0}):Play()
     TweenService:Create(barFill, TweenInfo.new(0.5), {BackgroundTransparency = 0}):Play()
+    task.wait(0.5)
+    task.spawn(function()
+        local frames = {".", "..", "...", "..", "."}
+        local i = 1
+        while dots.Parent do
+            dots.Text = frames[i]; i = i % #frames + 1; task.wait(0.22)
+        end
+    end)
+    task.spawn(function()
+        while title.Parent do
+            TweenService:Create(title, TweenInfo.new(0.6, Enum.EasingStyle.Sine), {TextTransparency = 0.35}):Play()
+            task.wait(0.6)
+            if not title.Parent then break end
+            TweenService:Create(title, TweenInfo.new(0.6, Enum.EasingStyle.Sine), {TextTransparency = 0}):Play()
+            task.wait(0.6)
+        end
+    end)
+    task.spawn(function()
+        while shine.Parent do
+            shine.Position = UDim2.new(-0.35, 0, 0, 0)
+            TweenService:Create(shine, TweenInfo.new(0.7, Enum.EasingStyle.Quad), {Position = UDim2.new(1.05, 0, 0, 0)}):Play()
+            task.wait(0.85)
+        end
+    end)
     TweenService:Create(barFill, TweenInfo.new(2.5, Enum.EasingStyle.Quad), {Size = UDim2.new(1, 0, 1, 0)}):Play()
     task.wait(2.8)
     TweenService:Create(bg, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
     TweenService:Create(title, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
+    TweenService:Create(dots, TweenInfo.new(0.5), {TextTransparency = 1}):Play()
     TweenService:Create(barBg, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
     TweenService:Create(barFill, TweenInfo.new(0.5), {BackgroundTransparency = 1}):Play()
-    task.wait(0.55); g:Destroy()
+    task.wait(0.55)
+    g:Destroy()
 end)
 
 local saveSettings, buildUI, st, stopFarm, refreshPicker, refreshQuick
@@ -144,8 +184,8 @@ local state = {
     fovEnabled=false, fovValue=70, clickTP=false,
     killAura=false, flingAura=false, autoDodge=false,
     bunnyHop=false,
-    perkNotify=true,  -- NEW: notifications for Murderer/Sheriff detection
-    killRetry=true,   -- NEW: retry kill loop when bag full
+    perkNotify=true,
+    killRetry=true,
     savedPosition=nil,
     hudShowSession=true, hudShowPlayers=true, hudShowRole=true,
     hudShowPing=true, hudShowFps=true, hudShowPlayerRoles=true,
@@ -159,15 +199,22 @@ local settingsConfig = {
     webhookUrl="", webhookCooldown=30, discordUserId="",
     tweenSpeed=25, selectedScale=1, roundLength=200,
     flingList={}, whitelist={},
-    bgColor={r=0, g=0, b=0}, bgImage="", bgImageFile="",
+    bgColor={r=0, g=0, b=0},
+    bgImage="", bgImageFile="",
     textColor={r=255, g=255, b=255},
-    textStrokeColor={r=0, g=0, b=0}, textStrokeThickness=0,
-    cardColor={r=15, g=15, b=15}, cardHoverColor={r=35, g=35, b=35},
-    borderColor={r=60, g=60, b=60}, accentColor={r=255, g=255, b=255},
-    tabBgColor={r=0, g=0, b=0}, tabTextColor={r=170, g=170, b=170},
+    textStrokeColor={r=0, g=0, b=0},
+    textStrokeThickness=0,
+    cardColor={r=15, g=15, b=15},
+    cardHoverColor={r=35, g=35, b=35},
+    borderColor={r=60, g=60, b=60},
+    accentColor={r=255, g=255, b=255},
+    tabBgColor={r=0, g=0, b=0},
+    tabTextColor={r=170, g=170, b=170},
     tabTextActiveColor={r=255, g=255, b=255},
-    openBtnColor={r=0, g=0, b=0}, openBtnTextColor={r=255, g=255, b=255},
-    secretRevealSeen=false, secretDeleteNoticeSeen=false,
+    openBtnColor={r=0, g=0, b=0},
+    openBtnTextColor={r=255, g=255, b=255},
+    secretRevealSeen=false,
+    secretDeleteNoticeSeen=false,
     quickTogglesList={
         "Farm (Safe)","XP Farm","Disable 3D Rendering","FPS Boost (Potato)",
         "Auto Shoot Murderer","Auto Kill All","Auto Fling Murderer",
@@ -190,7 +237,7 @@ local TWEEN_SPEED = settingsConfig.tweenSpeed or 25
 local ROUND_LENGTH_FALLBACK = settingsConfig.roundLength or 200
 local LOBBY_CFRAME = CFrame.new(14.20, 516.73, -25.15)
 local RESET_DURATION = 3
-local RESET_DURATION_FARM = 6.5   -- CHANGED: longer fling while farming
+local RESET_DURATION_FARM = 6.5
 
 local toggleDisplayNames = {
     farm="Farm (Safe)", xpFarm="XP Farm", noclip="Noclip", gun="Auto Grab Gun",
@@ -213,20 +260,22 @@ local toggleDisplayNames = {
     cameraZoomEnabled="Camera Max Zoom", infoHudEnabled="Info HUD",
     killAura="Kill Aura", flingAura="Fling Aura", autoDodge="Auto Dodge",
     bunnyHop="Bunny Hop",
+    perkNotify="Perk Notifications",
+    killRetry="Kill Retry",
     hudShowSession="HUD: Session Time", hudShowPlayers="HUD: Player Count",
     hudShowRole="HUD: Your Role", hudShowPing="HUD: Ping",
     hudShowFps="HUD: FPS", hudShowPlayerRoles="HUD: Player Role List",
     disableAnimations="UI Animations",
     customAnimsEnabled="Custom Animations",
-    perkNotify="Perk Notifications",
-    killRetry="Kill Retry",
 }
 local nExcl = {}
 
 saveSettings = function()
     pcall(function()
         if writefile then
-            pcall(function() if makefolder and isfolder and not isfolder(CF) then makefolder(CF) end end)
+            pcall(function()
+                if makefolder and isfolder and not isfolder(CF) then makefolder(CF) end
+            end)
             writefile(cfgPath(), HttpService:JSONEncode({state=state, config=settingsConfig}))
         end
     end)
@@ -236,8 +285,12 @@ pcall(function()
     local path = cfgPath()
     if readfile and isfile and isfile(path) then
         local d = HttpService:JSONDecode(readfile(path))
-        if d.state then for k, v in pairs(d.state) do if state[k] ~= nil then state[k] = v end end end
-        if d.config then for k, v in pairs(d.config) do if settingsConfig[k] ~= nil then settingsConfig[k] = v end end end
+        if d.state then
+            for k, v in pairs(d.state) do if state[k] ~= nil then state[k] = v end end
+        end
+        if d.config then
+            for k, v in pairs(d.config) do if settingsConfig[k] ~= nil then settingsConfig[k] = v end end
+        end
         if settingsConfig.tweenSpeed then TWEEN_SPEED = settingsConfig.tweenSpeed end
         if settingsConfig.roundLength then ROUND_LENGTH_FALLBACK = settingsConfig.roundLength end
         if type(settingsConfig.flingList) ~= "table" then settingsConfig.flingList = {} end
@@ -291,8 +344,10 @@ local function loadBgImageFromFolder()
     end
     return tryBg(CF .. "/Backgrounds") or tryBg(CF)
 end
+
 local folderBg = loadBgImageFromFolder()
 if folderBg then settingsConfig.bgImage = folderBg; settingsConfig.bgImageFile = "" end
+
 state.antiRagdoll = true
 
 local function c3(t) return Color3.fromRGB(t.r or 0, t.g or 0, t.b or 0) end
@@ -356,6 +411,7 @@ local function staggerFade(p)
     end
 end
 
+-- Notifications
 local notifyGui = Instance.new("ScreenGui")
 notifyGui.Name = "AWNotes"; notifyGui.Parent = getGuiParent()
 notifyGui.ResetOnSpawn = false; notifyGui.DisplayOrder = 999998; notifyGui.IgnoreGuiInset = true
@@ -437,8 +493,7 @@ local function notify(t)
         end)
     end)
 end
-
--- ANIMATION / EMOTE PLAYER
+-- ============ ANIMATION / EMOTE PLAYER ============
 local playingAnimTrack = nil
 local slotTracks = {}
 local animState = { current = "Idle" }
@@ -447,6 +502,7 @@ local R15_DEFAULTS = {
     Idle="507766666", Walk="507777826", Run="507784897", Jump="507768375",
     Fall="507767914", Climb="507765644", Sit="2506281703",
 }
+
 local slotPriority = {
     Idle=Enum.AnimationPriority.Idle,
     Walk=Enum.AnimationPriority.Movement, Run=Enum.AnimationPriority.Movement,
@@ -476,7 +532,9 @@ local function playEmote(id, name)
     if not ch then notify('<font color="#ff5a5a">No character</font>'); return end
     local h = ch:FindFirstChildOfClass("Humanoid")
     if not h or h.Health <= 0 then notify('<font color="#ff5a5a">No Humanoid</font>'); return end
-    if h.RigType ~= Enum.HumanoidRigType.R15 then notify('<font color="#ff5a5a">Emotes need R15 rig</font>'); return end
+    if h.RigType ~= Enum.HumanoidRigType.R15 then
+        notify('<font color="#ff5a5a">Emotes need R15 rig</font>'); return
+    end
     stopEmote()
     local animate = ch:FindFirstChild("Animate")
     local prevDisabled = animate and animate.Disabled
@@ -584,6 +642,7 @@ LP.CharacterAdded:Connect(function()
     stopEmote(); stopAllSlotTracks(); animState.current = "Idle"
     if state.customAnimsEnabled then task.wait(1.2); applySlotAnims() end
 end)
+-- =============================================================
 
 -- Round timer
 local rtGui = Instance.new("ScreenGui")
@@ -815,8 +874,7 @@ local function fullyRestoreCharacter(ch, sd)
     for _, p in ipairs(ch:GetDescendants()) do if p:IsA("BasePart") then p.CanCollide = true end end
 end
 
--- resetPlayer now accepts optional override duration
-local function resetPlayer(tp, durOverride)
+local function resetPlayer(tp)
     if not tp or tp == LP then return false end
     if not targetIsAlive(tp) then return false end
     if activeResets[tp.UserId] then return false end
@@ -828,24 +886,15 @@ local function resetPlayer(tp, durOverride)
     local trp = tc:FindFirstChild("HumanoidRootPart")
     local th = tc:FindFirstChild("Head")
     if not trp then return false end
-
-    -- CHANGED: extend fling duration during farm
-    local dur = durOverride
-    if not dur then
-        if state.farm or state.xpFarm then dur = RESET_DURATION_FARM
-        else dur = RESET_DURATION end
-    end
-
     local sd = {cframe = rp.CFrame}
     h.PlatformStand = true
-    local bv = Instance.new("BodyVelocity")
-    bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    local bv = Instance.new("BodyVelocity"); bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
     bv.Velocity = Vector3.new(0, -50000, 0); bv.Parent = rp
-    local bg = Instance.new("BodyGyro")
-    bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+    local bg = Instance.new("BodyGyro"); bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
     bg.P = 1e6; bg.Parent = rp
     local odh = Workspace.FallenPartsDestroyHeight
     Workspace.FallenPartsDestroyHeight = -100000
+    local dur = (state.farm or state.xpFarm) and RESET_DURATION_FARM or RESET_DURATION
     local st = tick()
     activeResets[tp.UserId] = {active = true}
     setStatus("Flinging " .. tp.Name .. " (" .. string.format("%.1f", dur) .. "s)...")
@@ -872,12 +921,12 @@ local function resetPlayer(tp, durOverride)
     return true
 end
 
-local function reliableFling(tp, durOverride)
+local function reliableFling(tp)
     if not tp or tp == LP or not tp.Parent then return end
     if not targetIsAlive(tp) then return end
     if activeResets[tp.UserId] then return end
-    resetPlayer(tp, durOverride)
-    local wdur = durOverride or (state.farm and RESET_DURATION_FARM) or (state.xpFarm and RESET_DURATION_FARM) or RESET_DURATION
+    resetPlayer(tp)
+    local wdur = (state.farm and RESET_DURATION_FARM) or (state.xpFarm and RESET_DURATION_FARM) or RESET_DURATION
     local to = tick() + wdur + 1.5
     while activeResets[tp.UserId] and tick() < to do task.wait(0.05) end
 end
@@ -992,7 +1041,6 @@ local function findPlayerByRole(rn)
     end
     return nil
 end
-
 local function getMurd()
     for _, p in ipairs(Players:GetPlayers()) do
         if p ~= LP and p.Character and p.Character:FindFirstChild("Humanoid")
@@ -1002,7 +1050,6 @@ local function getMurd()
     end
     return nil
 end
-
 local function getSheriff()
     for _, p in ipairs(Players:GetPlayers()) do
         if p ~= LP and p.Character and p.Character:FindFirstChild("Humanoid")
@@ -1013,12 +1060,10 @@ local function getSheriff()
     end
     return nil
 end
-
 local function lpHasGun()
     local bp, ch = LP:FindFirstChild("Backpack"), LP.Character
     return (bp and bp:FindFirstChild("Gun")) or (ch and ch:FindFirstChild("Gun"))
 end
-
 local function getTargetByUsername(q)
     if not q or q == "" then return nil end
     q = string.lower(q)
@@ -1027,7 +1072,6 @@ local function getTargetByUsername(q)
     end
     return nil
 end
-
 local function isInList(l, n)
     for _, x in ipairs(l) do if string.lower(x) == string.lower(n) then return true end end
     return false
@@ -1186,7 +1230,6 @@ local function equipTool(n)
     return nil
 end
 
--- executeKillBehind now returns whether the target died
 local function executeKillBehind(tp)
     local tc = tp.Character
     local tr = tc and tc:FindFirstChild("HumanoidRootPart")
@@ -1244,7 +1287,6 @@ local function loadSavedPos()
         r.AssemblyAngularVelocity = Vector3.zero; setStatus("Returned to saved position")
     else setStatus("No position saved") end
 end
-
 task.spawn(function()
     while true do
         task.wait(0.1)
@@ -1301,6 +1343,7 @@ task.spawn(function()
     end
 end)
 
+-- Confetti / party popup
 local secretPartyPlaying = false
 local function playPartyPop()
     if secretPartyPlaying then return end
@@ -1410,7 +1453,6 @@ local function killCustomNow()
             isExecutingAction = false; state.farm, state.xpFarm = wf, wx; return
         end
         setStatus("Killing " .. #settingsConfig.flingList .. " custom target(s)...")
-        -- retry up to 4 rounds
         for attempt = 1, 4 do
             local anyAlive = false
             for _, n in ipairs(settingsConfig.flingList) do
@@ -1506,7 +1548,8 @@ local function killAllNow()
         local k = findTool("Knife") or equipTool("Knife")
         if not k then setStatus("No knife! Must be Murderer.")
         else
-            for attempt = 1, 4 do
+            local passes = state.killRetry and 5 or 1
+            for attempt = 1, passes do
                 local anyAlive = false
                 for _, tp in ipairs(Players:GetPlayers()) do
                     if tp ~= LP and not isWhitelisted(tp) then
@@ -1681,45 +1724,99 @@ local function resetX4(i)
         voting = false; isExecutingAction = false
     end)
 end
-
--- EMOTE + ANIMATION DATA (truncated list, keep same as before)
+-- ====================== EMOTE + ANIMATION DATA ======================
 local EMOTES = {
     {id="93105950995997", name="Caramelldansen"},
     {id="84306405425879", name="Caramell Dansen [BEST]"},
+    {id="85361710130557", name="Caramelldansen (Alt)"},
     {id="80877772569772", name="Default Dance | OG"},
-    {id="133158580522571",name="Default Dance"},
+    {id="133158580522571", name="Default Dance"},
     {id="17746270218",  name="Sturdy Dance - Ice Spice"},
     {id="85608190427964",name="Sturdy Dance"},
     {id="129149402922241",name="Griddy"},
     {id="126516908191316",name="Billy Bounce"},
+    {id="93450937830334",name="Billy Bounce (Alt)"},
     {id="98901420955781",name="Hakari Dance [FORSAKEN]"},
     {id="122147154162464",name="Hakari Dance"},
+    {id="131013239122616",name="Hakari Dance (Alt)"},
     {id="15571539403",  name="Nicki Minaj Anaconda"},
+    {id="15571538346",  name="Nicki Minaj Boom Boom Boom"},
+    {id="15571540519",  name="Nicki Minaj Starships"},
+    {id="15571536896",  name="Nicki Minaj Super Bass"},
     {id="78058324703968",name="Michael Jackson [BEST]"},
     {id="122773107025712",name="Michael Jackson"},
     {id="94226046885073",name="Smooth Criminal MJ"},
     {id="15506503658",  name="Victory Dance"},
     {id="6865013133",   name="Cha Cha"},
+    {id="3696764866",   name="Cha-Cha (Alt)"},
+    {id="115777223962514",name="Ya Ya Ying Dance"},
+    {id="121076776003313",name="Ya Ya Ying Dance [OG]"},
+    {id="131407261984740",name="Buss It! [OG]"},
+    {id="89157328525577",name="Silly Jumping Spider"},
     {id="85364777159340",name="Rat Dance"},
+    {id="94083401455021",name="Rat Dance (Alt)"},
+    {id="79460913196046",name="Rat Dance Meme"},
     {id="86656342856697",name="Macarena"},
+    {id="73946479113094",name="Macarena (Alt)"},
+    {id="81808860196321",name="Hotel Transylvania Macarena"},
     {id="91927498467600",name="Koto Nai Meme Dance"},
+    {id="130655908439646",name="Beat Da Koto Nai"},
+    {id="126468010841883",name="Spice Queen of Da Place"},
+    {id="121347449465835",name="Spice Keep Bouncing"},
+    {id="70975021709810",name="Big G Bounce"},
+    {id="139271706064778",name="Hip Bounce"},
+    {id="104060042886647",name="[OG] Brooklyn Pop Hip Swing"},
+    {id="120037539988659",name="[OG] Nya San Russian Kawaii"},
     {id="111665668810578",name="Sigma Boy Dance"},
+    {id="17000058939",  name="Mini Kong"},
+    {id="18443268949",  name="SpongeBob Imaginaaation"},
+    {id="107899954696611",name="Spongebob Shuffle Dance"},
+    {id="18443271885",  name="SpongeBob Dance"},
     {id="3576721660",   name="Robot"},
     {id="5917570207",   name="Floss Dance"},
+    {id="132367660388476",name="SHAKE"},
     {id="13520623514",  name="TWICE Fancy"},
     {id="14900151704",  name="TWICE LIKEY"},
+    {id="91811386043367",name="TWICE - What Is Love"},
+    {id="13344121112",  name="TWICE What Is Love (Alt)"},
+    {id="12874468267",  name="TWICE The Feels"},
+    {id="79194689807074",name="TWICE - The Feels"},
     {id="116468071022853",name="Gangnam Style (Original)"},
     {id="80923445784018",name="Gangnam Style"},
+    {id="104142334418357",name="It's Gangnam Style! [BEST]"},
+    {id="119256963154827",name="Dougie Meme Dance"},
+    {id="114756515400742",name="Dougie [BEST]"},
     {id="93675237485386",name="Dougie"},
+    {id="123831614665513",name="Jump - BLACKPINK [BEST]"},
+    {id="106977382414370",name="Jump - BLACKPINK"},
+    {id="122404842843791",name="JUMP - BP (KPOP)"},
+    {id="138319492354914",name="Yuji Jumping Slowed"},
+    {id="113702736944973",name="Yuji Jumping Edit"},
     {id="4212496830",    name="Zombie"},
+    {id="75017857395637",name="TV Time Dance"},
+    {id="128729212388115",name="Phibz [OG]"},
     {id="95386318624540",name="Phibz"},
     {id="92237689732858",name="Da Hood Stomp"},
+    {id="123783725600432",name="Da Hood Dance"},
     {id="123043305808890",name="Spongebob"},
+    {id="137284968787523",name="Street Glide"},
+    {id="91773089278851",name="Street Flow Bounce"},
+    {id="129931581232815",name="VEM CA NÉNEM"},
+    {id="130838810836830",name="Umamusume Dance"},
+    {id="130575801528647",name="Childish Tantrum"},
+    {id="121911959295081",name="Kid Tantrum"},
+    {id="5104374556",    name="Tantrum"},
     {id="13823339506",   name="Tommy Archer"},
+    {id="133248139921782",name="Jumpstyle dance"},
+    {id="89614983665331",name="Jumpstyle Dance (Alt)"},
+    {id="99563839802389",name="Jumpstyle (Alt 2)"},
+    {id="121067808279598",name="PARROT PARTY DANCE"},
+    {id="129389629031100",name="Ledge/Railing Sit"},
     {id="3576717965",    name="Shy"},
     {id="129668542320076",name="/e sit"},
     {id="124072098165199",name="/e dance2"},
     {id="93511411593120",name="/e fly"},
+    {id="97830214926142",name="Accurate Admin Fly"},
 }
 
 local ANIMATIONS = {
@@ -1729,49 +1826,97 @@ local ANIMATIONS = {
     {id="127195099938159",name="Chill Floating Fly Aura"},
     {id="80772558169667", name="Slow Transformation"},
     {id="78660312825816", name="GRIMES - Oblivion"},
+    {id="89104845724058", name="Adorable Dolly Pose"},
     {id="87739743400914", name="Catwalk Walk"},
+    {id="120380776076922",name="Catwalk Walk (Alt)"},
+    {id="138140141577966",name="Catwalk Walk (OG)"},
     {id="120302905807132",name="STURDY"},
     {id="135922662345048",name="Snow Angels"},
+    {id="125386993330077",name="Scene Profile Idle Y2K"},
     {id="138453007205351",name="Sukuna Aura Pose"},
     {id="93043556902763", name="Aura Posing"},
+    {id="122498540377510",name="Godly Floating Sleeping Aura"},
     {id="103981563274328",name="Faceless Aura"},
+    {id="137909901344953",name="Cute Bossy Sassy Idle"},
+    {id="139828710607670",name="Cute Sitting Idle Pose"},
+    {id="135994700702758",name="Cute n Shy Idle Profile Pose"},
     {id="127478024269658",name="7 Rings Dance"},
+    {id="136271269847411",name="Metro Man Arm Swings"},
+    {id="107758711296968",name="Floating Lying Down: Metro Man"},
+    {id="109779894589589",name="Excited Spinning Dog"},
     {id="87587450444673", name="Spinning"},
     {id="84555218084038", name="Helicopter Spin"},
     {id="110553756436163",name="Helicopter"},
+    {id="140547238892659",name="Helicopter (Alt)"},
+    {id="119431985170060",name="Helicopter (Alt 2)"},
     {id="3576719440",     name="T Pose"},
     {id="3823158750",     name="Godlike"},
     {id="5104377791",     name="Hero Landing"},
     {id="4689362868",     name="Sleep"},
     {id="3716633898",     name="Twirl"},
     {id="128920596154369",name="Belly Dance"},
+    {id="76700167742736", name="Belly Dance (Alt)"},
+    {id="121899062503943",name="Belly Dancing"},
+    {id="105933851371838",name="Kawaii Shy Sit Idle Pose"},
+    {id="126684112484206",name="Cute Shy Avatar Pose (LOOPED)"},
+    {id="129766891082557",name="Sweetest Angel Sit Pose"},
+    {id="124031351335869",name="Kayah's Cute Pose"},
     {id="13768975574",    name="TWICE Pop by Nayeon"},
     {id="88416001739999", name="Biblically Accurate Emote"},
-    {id="103040723950430",name="Gojo Floating Pose"},
+    {id="133596366979822",name="Biblically Accurate Emote (Alt)"},
+    {id="103040723950430",name="Gojo Floating Pose / The Honored One"},
+    {id="100953557187752",name="Gojo Floating The Honored One"},
     {id="108317182353594",name="Gojo Levitation"},
+    {id="91085159191582", name="Gojo Floating JJK"},
     {id="132631811481169",name="Invincible Viltrumite Flying"},
+    {id="93375577935500", name="Invincible Floating (LOW)"},
+    {id="131950236025472",name="Relax Flying Anime (Floating)"},
     {id="117134539591727",name="Floating Idle animation"},
+    {id="132152702263080",name="Fairy Sit Floating Anime"},
     {id="95339652051393", name="Sad Depressed Crying Sit"},
     {id="124305244640379",name="Shattered"},
     {id="130726889233022",name="Rolling Crybaby"},
     {id="123403317287994",name="Just Sitting"},
+    {id="139621472081340",name="Sit"},
     {id="129575609080331",name="Cute Sit"},
     {id="126847889432485",name="Vibing Sit"},
+    {id="85370173309996", name="Side Sit"},
+    {id="82167506755506", name="Cute Sit (Alt)"},
+    {id="113112871341684",name="CUTE SIT"},
+    {id="131875333242836",name="Cute Sit (Alt 2)"},
     {id="118688124889191",name="Nya San"},
     {id="12715393154",    name="TWICE Moonlight Sunrise"},
+    {id="12715395038",    name="TWICE Set Me Free Dance 1"},
+    {id="12715397488",    name="TWICE Set Me Free Dance 2"},
+    {id="127271798262177",name="M3GAN's Dance"},
     {id="122087602422027",name="Kawaii Bouncy Anime Girl Dance"},
+    {id="130855166586798",name="Kawaii Bouncy Anime Girl (OG)"},
+    {id="74193679388896", name="Bouncy Cute Girl Anime Idle"},
+    {id="93875137466223", name="Scary Tall Creature Transformation"},
+    {id="127764273000599",name="Dropkick"},
+    {id="138487798883208",name="Kawaii Cute Cat Girl Pose Idle"},
     {id="140269876098643",name="IShowSpeed Bounce Dance"},
     {id="86617727183442", name="Slow-Mo Backflip"},
     {id="122461225964217",name="Big Back Baby Boo"},
     {id="93443111556634", name="Floating Throne Aura Pose"},
     {id="102392888934746",name="Godly Aura Floating Pose"},
     {id="117049327096718",name="Chill Flying Levitation"},
+    {id="12507097350",    name="Alo Yoga Lotus Position"},
+    {id="12507106431",    name="Alo Yoga Warrior II"},
+    {id="12507120275",    name="Alo Yoga Triangle"},
     {id="122814100170962",name="Obby Head Emote"},
+    {id="76394392186917", name="Obby Emote"},
+    {id="118853736905967",name="Wall Aura Farm Pose"},
     {id="88969192102242", name="Wall Lean"},
     {id="71556328869803", name="Wall Lean YN [AURA FARM]"},
+    {id="110537281410647",name="Wall Lean Idle [Aura Farm]"},
+    {id="125033083158711",name="Aura Wall Lean"},
     {id="75911227509248", name="Ghost Floating"},
+    {id="111499780397123",name="Levitation Idle Emote 2"},
+    {id="15698511500",    name="Cuco - Levitate"},
     {id="87826892596287", name="Levitate"},
 }
+-- ===================================================================
 
 buildUI = function(reb)
     mainTgls = {}; quickTgls = {}
@@ -2070,8 +2215,7 @@ buildUI = function(reb)
         box.FocusLost:Connect(function() onC(box.Text) end)
         return box
     end
-
-    local function buildAnimPage(page, list, label)
+local function buildAnimPage(page, list, label)
         local info = Instance.new("TextLabel", page)
         info.Size = UDim2.new(1, 0, 0, 20 * selectedScale); info.LayoutOrder = 1
         info.BackgroundTransparency = 1
@@ -2204,7 +2348,7 @@ buildUI = function(reb)
             notify("Custom Anims " .. (state.customAnimsEnabled and "enabled" or "disabled"))
         end)
 
-        -- PICKER in own ScreenGui
+        -- Picker in own ScreenGui
         local pickerGui = Instance.new("ScreenGui")
         pickerGui.Name = "AWAnimPicker"; pickerGui.Parent = getGuiParent()
         pickerGui.ResetOnSpawn = false; pickerGui.DisplayOrder = 2000000
@@ -2807,7 +2951,7 @@ buildUI = function(reb)
 
     buildAnimPage(pages["Emotes"], EMOTES, "emotes")
     buildSlotsPage(pages["Animations"], ANIMATIONS)
-
+-- OPEN BUTTON
     local fb = Instance.new("TextButton", sg)
     fb.Size = UDim2.new(0, 78 * selectedScale, 0, 34 * selectedScale)
     fb.Position = UDim2.new(0, 14 * selectedScale, 0.28, 0)
@@ -2818,6 +2962,7 @@ buildUI = function(reb)
     Instance.new("UICorner", fb).CornerRadius = R(9)
     attachBounce(fb); attachShine(fb); attachRipple(fb)
     mainOpenBtn = fb
+
     local isOpen = false
     local function openUI()
         isOpen = true; main.Visible = true
@@ -2835,7 +2980,7 @@ buildUI = function(reb)
     if reb then openUI() end
     fb.MouseButton1Click:Connect(function() if isOpen then closeUI() else openUI() end end)
 
-    -- QUICK TOGGLES
+    -- QUICK TOGGLES PANEL
     local qf = Instance.new("Frame", sg)
     qf.Size = UDim2.new(0, 158 * selectedScale, 0, 270 * selectedScale)
     qf.Position = UDim2.new(0.86, -168, 0.36, 0)
@@ -2878,6 +3023,7 @@ buildUI = function(reb)
         ["Perk Notifications"]="perkNotify",
         ["Kill Retry"]="killRetry",
     }
+
     local function createQuickItem(name, order)
         local sk = skm[name]
         local isT = sk ~= nil
@@ -2938,6 +3084,7 @@ buildUI = function(reb)
             end
         end)
     end
+
     refreshQuick = function()
         for _, c in ipairs(qsc:GetChildren()) do
             if c:IsA("GuiObject") and c ~= ql then c:Destroy() end
@@ -3198,29 +3345,22 @@ LP.CharacterRemoving:Connect(function()
     if invisActive then invisStop(); state.invisibleEnabled = false; updateViz("invisibleEnabled") end
 end)
 
--- Perk Notifications (Murderer/Sheriff detection)
+-- Perk Notifications
 local nM, nS = false, false
 task.spawn(function()
     while true do
         task.wait(0.2)
-        if not state.perkNotify then
-            -- still track so re-enabling doesn't spam old detections
-            if not isInRound() then nM = false; nS = false end
+        if not isInRound() then nM = false; nS = false
+        elseif not state.perkNotify then
+            -- user disabled
         else
-            if not isInRound() then nM = false; nS = false
-            else
-                if not nM then
-                    local m = findPlayerByRole("Murderer")
-                    if m then nM = true
-                        notify(m.Name .. ' is the <font color="#ff4040">Murderer</font>')
-                    end
-                end
-                if not nS then
-                    local s = findPlayerByRole("Sheriff") or findPlayerByRole("Hero")
-                    if s then nS = true
-                        notify(s.Name .. ' is the <font color="#4099ff">Sheriff</font>')
-                    end
-                end
+            if not nM then
+                local m = findPlayerByRole("Murderer")
+                if m then nM = true; notify(m.Name .. ' is the <font color="#ff4040">Murderer</font>') end
+            end
+            if not nS then
+                local s = findPlayerByRole("Sheriff") or findPlayerByRole("Hero")
+                if s then nS = true; notify(s.Name .. ' is the <font color="#4099ff">Sheriff</font>') end
             end
         end
     end
@@ -3347,8 +3487,6 @@ local function collectCoin(r, c)
     if not r or not c or not c.Parent then return end
     pcall(function() for _ = 1, 3 do firetouchinterest(r, c, 0); firetouchinterest(r, c, 1) end end)
 end
-
--- runBagFull with kill retry + longer flings during farm
 local function runBagFull()
     if busy then return end
     busy = true; isExecutingAction = true; bagFull = true
@@ -3368,10 +3506,7 @@ local function runBagFull()
                     for _, tp in ipairs(Players:GetPlayers()) do
                         if tp ~= LP and not isWhitelisted(tp) then
                             local th = tp.Character and tp.Character:FindFirstChildOfClass("Humanoid")
-                            if th and th.Health > 0 then
-                                anyAlive = true
-                                executeKillBehind(tp)
-                            end
+                            if th and th.Health > 0 then anyAlive = true; executeKillBehind(tp) end
                         end
                     end
                     if not anyAlive then break end
@@ -3384,8 +3519,7 @@ local function runBagFull()
             local m = getMurd()
             if m and m.Character then
                 setStatus("Bag full! Flinging Murderer...")
-                -- extended fling during bag-full
-                task.spawn(function() reliableFling(m, RESET_DURATION_FARM) end)
+                task.spawn(function() reliableFling(m) end)
             end
             hideSky(); task.wait(0.3)
             if role == "Innocent" and state.autoResetInnocent then triggerMenuReset(); task.wait(1.5)
@@ -3396,7 +3530,6 @@ local function runBagFull()
     isExecutingAction = false; busy = false; task.wait(0.5)
     state.farm, state.xpFarm = ofs, oxs
 end
-
 task.spawn(function()
     local ok, rem = pcall(function()
         return ReplicatedStorage:WaitForChild("Remotes", 10):WaitForChild("Gameplay", 10):WaitForChild("CoinCollected", 10)
@@ -3410,7 +3543,6 @@ task.spawn(function()
         end)
     end
 end)
-
 task.spawn(function()
     while true do
         task.wait(0.2)
@@ -3431,7 +3563,6 @@ task.spawn(function()
         if inR and hasRoles and not roundFullyStarted and (tick() - roundStartTime) > 6 then roundFullyStarted = true end
     end
 end)
-
 task.spawn(function()
     while true do
         task.wait(0.04)
