@@ -1,8 +1,5 @@
 -- ================================================================
 -- Appleware - Full rebuild with all fixes
--- Changes: antifling, voting reset, map coords, simpler shift lock,
--- numeric crosshair ID input, invisible circle button, optimized
--- fling, more animation options
 -- ================================================================
 
 -- ============ ANTIFLING (executes first) ============
@@ -42,6 +39,7 @@ local StatsService = game:GetService("Stats")
 local LP = Players.LocalPlayer
 local PlaceId = game.PlaceId
 
+-- ============ FORWARD DECLARATIONS ============
 local saveSettings, buildUI, st, stopFarm, refreshQuick
 local setToggleState, updateViz, applyCrosshair, notify, updateShiftLockVisual
 local killAllNow, grabGunNow, flingSheriffNow, teleportToMap, saveCurrentPos
@@ -49,6 +47,12 @@ local killCustomNow, flingCustomNow, flingAllNow, flingMurdererNow
 local killSheriffNow, teleportToLobby, teleportToMurderer, teleportToSheriff, teleportToCustom
 local loadSavedPos, updateCircleViz, rebuildCircleButtons, detectMurdererPerk
 local resetX4, teleportToVoteSpot
+local mainTgls, quickTgls
+local bgFrame, blackScreen, mainOpenBtn, quickFrame, bgImage
+local selectedScale = 1
+local nExcl = {}
+local toggleDisplayNames = {}
+local slForcedOn = false
 
 local CF = "ApplewareConfigs"
 local CFl = "Appleware.json"
@@ -109,10 +113,9 @@ local state = {
     farmTimerStart=0,
     notifyRoundStart=false, notifyOwnRole=false,
     notifyMurdererDeath=false, notifySound=false,
-    -- Animation options
     animationsEnabled=true,
-    animationStyle="Back", -- Back, Bounce, Elastic, Quad, Sine, Quint, Linear
-    animationSpeed=1, -- multiplier
+    animationStyle="Back",
+    animationSpeed=1,
     animRipple=true,
     animShine=true,
     animBounce=true,
@@ -130,6 +133,38 @@ local state = {
     circleButtonsEnabled=false, circleGlobalSize=62,
 }
 
+-- ============ TOGGLE DISPLAY NAMES ============
+toggleDisplayNames = {
+    farm="Farm (Safe)", xpFarm="XP Farm", noclip="Noclip", gun="Auto Grab Gun",
+    afk="Anti AFK", antiVoid="Anti-Void", notifyMapName="Notify Map Name",
+    showRoundTimerCountdown="Round Timer", autoKillAll="Auto Kill All",
+    autoFlingMur="Auto Fling Murderer", autoFlingSheriff="Auto Fling Sheriff",
+    autoResetMurderer="Auto Reset: Murderer", autoResetSheriff="Auto Reset: Sheriff",
+    autoResetInnocent="Auto Reset: Innocent",
+    aimbotMurderer="Aimbot: Murderer", aimbotSheriff="Aimbot: Sheriff",
+    loopFlingAll="Loop Fling All", loopFlingMur="Loop Fling Murderer",
+    loopFlingSheriff="Loop Fling Sheriff", loopFlingCustom="Loop Fling Custom",
+    disable3d="Disable 3D Rendering", fpsBoost="FPS Boost (Potato)",
+    espPlayers="Player ESP", espChams="Chams", espName="ESP Name",
+    espDistance="ESP Distance", espBox="ESP Box", espSkeleton="ESP Skeleton",
+    espHealthBar="ESP Health", espTracer="ESP Tracer", espGunDrop="Gun Drop ESP",
+    espCornerBox="Corner Box", espOffscreen="Off-Screen Arrows",
+    flyEnabled="Fly", infJumpEnabled="Infinite Jump", bunnyHop="Bunny Hop",
+    speedGlitch="Speed Glitch", invisibleEnabled="Invisible",
+    killAura="Kill Aura", flingAura="Fling Aura", autoDodge="Auto Dodge",
+    freeze="Freeze", fullbright="Fullbright", fovEnabled="FOV Changer",
+    fovVisual="FOV Visual", cameraZoomEnabled="Camera Zoom", infoHudEnabled="Info HUD",
+    clickTP="Click Teleport", customShiftLockButton="Custom Shift Lock",
+    crosshairEnabled="Crosshair", crosshairDot="Crosshair Dot",
+    crosshairHideShiftLock="Hide ShiftLock Crosshair",
+    crosshairShiftLockOnly="Only When Locked", crosshairSpin="Spin Crosshair",
+    animationsEnabled="Animations", notifySound="Notify Sound",
+    circleButtonsEnabled="Circle Buttons", quickTogglesVisible="Quick Toggles",
+    murdererPredictor="Murderer Predictor", murdererPerkNotify="Perk Notify",
+    notifyRoundStart="Round Start Notify", notifyOwnRole="Own Role Notify",
+    notifyMurdererDeath="Murderer Death Notify",
+}
+
 -- ============ CIRCLE ACTIONS ============
 local CIRCLE_ACTIONS = {
     {id="aimbotMurderer",   label="Aimbot M",      type="toggle"},
@@ -143,26 +178,12 @@ local CIRCLE_ACTIONS = {
     {id="tpMap",            label="TP Map",        type="action"},
     {id="tpLobby",          label="TP Lobby",      type="action"},
     {id="tpCustom",         label="TP Custom",     type="action"},
-    -- Secret tab
     {id="flyEnabled",       label="Fly",           type="toggle", secret=true},
     {id="noclip",           label="Noclip",        type="toggle", secret=true},
     {id="infJumpEnabled",   label="Inf Jump",      type="toggle", secret=true},
     {id="bunnyHop",         label="Bunny Hop",     type="toggle", secret=true},
     {id="speedGlitch",      label="Speed Glitch",  type="toggle", secret=true},
     {id="invisibleEnabled", label="Invisible",     type="toggle", secret=true},
-}
-
--- Presets store: keyed by user-facing name, value is a decal ID string.
--- Users can paste a raw number or a full rbxassetid:// URL
-local CROSSHAIR_PRESETS = {
-    {name="Cross",       id="6031075931"},
-    {name="Thin Cross",  id="6031075932"},
-    {name="Dot",         id="6031090996"},
-    {name="Circle",      id="6031094669"},
-    {name="Sniper",      id="6031232897"},
-    {name="Chevron",     id="6031246797"},
-    {name="X Shape",     id="6031249908"},
-    {name="T Shape",     id="6031258949"},
 }
 
 local CROSSHAIR_COLORS = {
@@ -511,6 +532,32 @@ notify = function(t)
             task.wait(0.5)
             if w and w.Parent then w:Destroy() end
             nCount = math.max(0, nCount - 1)
+        end)
+    end)
+end
+
+-- ============ SETTINGS SAVE ============
+saveSettings = function()
+    task.spawn(function()
+        pcall(function()
+            local data = { state = {}, settings = {} }
+            for k, v in pairs(state) do
+                local t = type(v)
+                if t == "number" or t == "string" or t == "boolean" or t == "table" then
+                    data.state[k] = v
+                end
+            end
+            for k, v in pairs(settingsConfig) do
+                local t = type(v)
+                if t == "number" or t == "string" or t == "boolean" or t == "table" then
+                    data.settings[k] = v
+                end
+            end
+            data.settings.quickTogglesList = nil
+            data.settings.allQuickToggles = nil
+            if writefile then
+                writefile(cfgPath(), HttpService:JSONEncode(data))
+            end
         end)
     end)
 end
@@ -992,11 +1039,40 @@ local function findMapCoord()
                     end
                 end
             end
-            -- Fallback: spawn location
             local spawn = m:FindFirstChildWhichIsA("SpawnLocation", true)
             if spawn then return safePointAt(spawn.Position) end
         end
     end
+    return nil
+end
+
+-- ============ BAG COUNT READ ============
+local function readBagCountFromGame()
+    local ok, val = pcall(function()
+        for _, m in ipairs(Workspace:GetChildren()) do
+            local cc = m:FindFirstChild("CoinContainer")
+            if cc then
+                local leaderstats = LP:FindFirstChild("leaderstats")
+                if leaderstats then
+                    for _, v in ipairs(leaderstats:GetChildren()) do
+                        if v:IsA("IntValue") and (v.Name:lower():find("coin")) then
+                            return v.Value
+                        end
+                    end
+                end
+            end
+        end
+        local ls = LP:FindFirstChild("leaderstats")
+        if ls then
+            for _, v in ipairs(ls:GetChildren()) do
+                if v:IsA("IntValue") and (v.Name:lower():find("coin")) then
+                    return v.Value
+                end
+            end
+        end
+        return nil
+    end)
+    if ok then return val end
     return nil
 end
 
@@ -1208,7 +1284,6 @@ teleportToCustom = function()
     end
 end
 
--- Voting
 teleportToVoteSpot = function(i)
     local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if not r then return end
@@ -1308,7 +1383,7 @@ stopFarm = function()
     end
 end
 
-applyLowDeviceOptimizations = function(en)
+local function applyLowDeviceOptimizations(en)
     pcall(function()
         if en then
             RunService:Set3dRenderingEnabled(false)
@@ -1326,7 +1401,7 @@ applyLowDeviceOptimizations = function(en)
 end
 
 local fpsBoostMaid = nil
-applyFpsBoost = function(en)
+local function applyFpsBoost(en)
     pcall(function()
         if en then
             Lighting.GlobalShadows = false
@@ -1427,7 +1502,7 @@ setToggleState = function(key, value)
 end
 
 updateViz = function(key)
-    if mainTgls[key] then
+    if mainTgls and mainTgls[key] then
         local d = mainTgls[key]
         local on = state[key]
         local pillC = on and Color3.new(1,1,1) or Color3.fromRGB(32,32,32)
@@ -1444,7 +1519,7 @@ updateViz = function(key)
             BackgroundColor3 = dotC
         }):Play()
     end
-    if quickTgls[key] then
+    if quickTgls and quickTgls[key] then
         local d = quickTgls[key]
         local on = state[key]
         local bg = on and Color3.new(1,1,1) or Color3.fromRGB(18,18,18)
@@ -1510,8 +1585,7 @@ RunService.RenderStepped:Connect(function(dt)
     end
 end)
 
--- ============ SHIFT LOCK (SIMPLIFIED) ============
--- Just one button. Black = off, white = on. Click to toggle.
+-- ============ SHIFT LOCK ============
 local shiftLockGui = Instance.new("ScreenGui")
 shiftLockGui.Name = "AW_ShiftLock"
 shiftLockGui.ResetOnSpawn = false
@@ -1541,8 +1615,6 @@ local slStroke = Instance.new("UIStroke", shiftLockBtn)
 slStroke.Color = Color3.new(1, 1, 1)
 slStroke.Thickness = 2
 slStroke.Transparency = 0.25
-
-local slForcedOn = false
 
 updateShiftLockVisual = function()
     if slForcedOn then
@@ -1688,7 +1760,6 @@ local function hideShiftLockCrosshair(hide)
     end)
 end
 
--- Normalize numeric ID -> rbxassetid://N
 local function normalizeId(s)
     if not s or s == "" then return "" end
     s = tostring(s)
@@ -2039,6 +2110,7 @@ end
 
 -- ============ BUILD UI ============
 buildUI = function(reb)
+    selectedScale = (settingsConfig.selectedScale or 1)
     mainTgls = {}
     quickTgls = {}
     local parent = getGuiParent()
@@ -2135,7 +2207,7 @@ buildUI = function(reb)
     ct.BackgroundTransparency = 1
     ct.ClipsDescendants = true
 
-    local tabs = {"Farm","Combat","Teleport","ESP","Webhook","Misc","Voting","Crosshair","UI"}
+    local tabs = {"Farm","Combat","Teleport","ESP","Webhook","Misc","Voting","Crosshair","ShiftLock","UI"}
     local pages, pageGs, btns = {}, {}, {}
     local curTab = "Farm"
     local switching = false
@@ -2736,15 +2808,12 @@ buildUI = function(reb)
     -- ============ CROSSHAIR TAB ============
     addSect(pages["Crosshair"], "Crosshair", 1)
     tgg(pages["Crosshair"], "Enable Crosshair", 2, "crosshairEnabled")
-    tgg(pages["Crosshair"], "Custom Shift Lock Button", 3, "customShiftLockButton")
-    tgg(pages["Crosshair"], "Only Show When Shift-Locked", 4, "crosshairShiftLockOnly")
-    tgg(pages["Crosshair"], "Replace Shift-Lock Crosshair", 5, "crosshairHideShiftLock")
-    tgg(pages["Crosshair"], "Center Dot", 6, "crosshairDot")
+    tgg(pages["Crosshair"], "Center Dot", 3, "crosshairDot")
 
     local crossStyles = {"Cross", "Dot", "Circle", "Custom"}
     local csBtn = Instance.new("TextButton", pages["Crosshair"])
     csBtn.Size = UDim2.new(1, 0, 0, 38 * selectedScale)
-    csBtn.LayoutOrder = 7
+    csBtn.LayoutOrder = 4
     csBtn.BackgroundColor3 = CARD
     csBtn.Text = "  Style: " .. (state.crosshairStyle or "Dot")
     csBtn.TextColor3 = TXT
@@ -2763,8 +2832,8 @@ buildUI = function(reb)
         applyCrosshair()
     end)
 
-    addSect(pages["Crosshair"], "Custom Image (paste ID or URL)", 8)
-    local idInput = makeInput(pages["Crosshair"], 9, "e.g. 6031090996 or rbxassetid://6031090996",
+    addSect(pages["Crosshair"], "Custom Image (paste ID or URL)", 5)
+    local idInput = makeInput(pages["Crosshair"], 6, "e.g. 6031090996 or rbxassetid://6031090996",
         state.crosshairImageId or "", function(t)
             state.crosshairImageId = normalizeId(t)
             state.crosshairStyle = "Custom"
@@ -2772,13 +2841,12 @@ buildUI = function(reb)
             saveSettings()
             applyCrosshair()
         end)
-    -- Auto-apply while typing
     idInput:GetPropertyChangedSignal("Text"):Connect(function()
         state.crosshairImageId = normalizeId(idInput.Text)
         state.crosshairStyle = "Custom"
         csBtn.Text = "  Style: Custom"
     end)
-    addBtn(pages["Crosshair"], "Apply Image ID", 10, function()
+    addBtn(pages["Crosshair"], "Apply Image ID", 7, function()
         state.crosshairImageId = normalizeId(idInput.Text)
         state.crosshairStyle = "Custom"
         csBtn.Text = "  Style: Custom"
@@ -2787,24 +2855,24 @@ buildUI = function(reb)
         notify("Crosshair image applied")
     end)
 
-    addSect(pages["Crosshair"], "Size & Appearance", 11)
-    makeSlider(pages["Crosshair"], "Size", 12, state.crosshairSize or 20, 2, 100, "crosshairSize", applyCrosshair)
-    makeSlider(pages["Crosshair"], "Thickness", 13, state.crosshairThickness or 2, 1, 10, "crosshairThickness", applyCrosshair)
-    makeSlider(pages["Crosshair"], "Gap", 14, state.crosshairGap or 4, 0, 40, "crosshairGap", applyCrosshair)
-    makeSlider(pages["Crosshair"], "Dot Size", 15, state.crosshairDotSize or 3, 1, 12, "crosshairDotSize", applyCrosshair)
-    makeSlider(pages["Crosshair"], "Opacity %", 16, math.floor((state.crosshairOpacity or 1) * 100), 10, 100, nil, function(v)
+    addSect(pages["Crosshair"], "Size & Appearance", 8)
+    makeSlider(pages["Crosshair"], "Size", 9, state.crosshairSize or 20, 2, 100, "crosshairSize", applyCrosshair)
+    makeSlider(pages["Crosshair"], "Thickness", 10, state.crosshairThickness or 2, 1, 10, "crosshairThickness", applyCrosshair)
+    makeSlider(pages["Crosshair"], "Gap", 11, state.crosshairGap or 4, 0, 40, "crosshairGap", applyCrosshair)
+    makeSlider(pages["Crosshair"], "Dot Size", 12, state.crosshairDotSize or 3, 1, 12, "crosshairDotSize", applyCrosshair)
+    makeSlider(pages["Crosshair"], "Opacity %", 13, math.floor((state.crosshairOpacity or 1) * 100), 10, 100, nil, function(v)
         state.crosshairOpacity = v / 100
         applyCrosshair()
         saveSettings()
     end)
 
-    addSect(pages["Crosshair"], "Spin", 17)
-    tgg(pages["Crosshair"], "Spin Crosshair", 18, "crosshairSpin")
-    makeSlider(pages["Crosshair"], "Spin Speed (deg/sec)", 19, state.crosshairSpinSpeed or 90, 10, 720, "crosshairSpinSpeed")
+    addSect(pages["Crosshair"], "Spin", 14)
+    tgg(pages["Crosshair"], "Spin Crosshair", 15, "crosshairSpin")
+    makeSlider(pages["Crosshair"], "Spin Speed (deg/sec)", 16, state.crosshairSpinSpeed or 90, 10, 720, "crosshairSpinSpeed")
     do
         local spinDirBtn = Instance.new("TextButton", pages["Crosshair"])
         spinDirBtn.Size = UDim2.new(1, 0, 0, 38 * selectedScale)
-        spinDirBtn.LayoutOrder = 20
+        spinDirBtn.LayoutOrder = 17
         spinDirBtn.BackgroundColor3 = CARD
         local dirLabel = (state.crosshairSpinDirection or 1) == 1 and "Clockwise" or "Counter-Clockwise"
         spinDirBtn.Text = "  Spin Direction: " .. dirLabel
@@ -2821,11 +2889,11 @@ buildUI = function(reb)
         end)
     end
 
-    addSect(pages["Crosshair"], "Quick Colors", 21)
+    addSect(pages["Crosshair"], "Quick Colors", 18)
     do
         local colorRow = Instance.new("Frame", pages["Crosshair"])
         colorRow.Size = UDim2.new(1, 0, 0, 100 * selectedScale)
-        colorRow.LayoutOrder = 22
+        colorRow.LayoutOrder = 19
         colorRow.BackgroundTransparency = 1
         local colorList = Instance.new("UIListLayout", colorRow)
         colorList.FillDirection = Enum.FillDirection.Horizontal
@@ -2841,10 +2909,10 @@ buildUI = function(reb)
             swatch.AutoButtonColor = false
             swatch.BorderSizePixel = 0
             Instance.new("UICorner", swatch).CornerRadius = R(6)
-            local st = Instance.new("UIStroke", swatch)
-            st.Color = Color3.fromRGB(255,255,255)
-            st.Thickness = 1
-            st.Transparency = 0.5
+            local stt = Instance.new("UIStroke", swatch)
+            stt.Color = Color3.fromRGB(255,255,255)
+            stt.Thickness = 1
+            stt.Transparency = 0.5
             swatch.MouseButton1Click:Connect(function()
                 state.crosshairColor = {r=cp.r, g=cp.g, b=cp.b}
                 saveSettings()
@@ -2853,18 +2921,18 @@ buildUI = function(reb)
         end
     end
 
-    addSect(pages["Crosshair"], "Custom RGB", 23)
-    makeSlider(pages["Crosshair"], "Red", 24, state.crosshairColor.r or 0, 0, 255, nil, function(v)
+    addSect(pages["Crosshair"], "Custom RGB", 20)
+    makeSlider(pages["Crosshair"], "Red", 21, state.crosshairColor.r or 0, 0, 255, nil, function(v)
         state.crosshairColor.r = v
         applyCrosshair()
         saveSettings()
     end)
-    makeSlider(pages["Crosshair"], "Green", 25, state.crosshairColor.g or 255, 0, 255, nil, function(v)
+    makeSlider(pages["Crosshair"], "Green", 22, state.crosshairColor.g or 255, 0, 255, nil, function(v)
         state.crosshairColor.g = v
         applyCrosshair()
         saveSettings()
     end)
-    makeSlider(pages["Crosshair"], "Blue", 26, state.crosshairColor.b or 100, 0, 255, nil, function(v)
+    makeSlider(pages["Crosshair"], "Blue", 23, state.crosshairColor.b or 100, 0, 255, nil, function(v)
         state.crosshairColor.b = v
         applyCrosshair()
         saveSettings()
@@ -2885,18 +2953,65 @@ buildUI = function(reb)
         applyCrosshair()
     end)
 
+    -- ============ SHIFT LOCK TAB ============
+    addSect(pages["ShiftLock"], "Shift Lock", 1)
+    tgg(pages["ShiftLock"], "Custom Shift Lock Button", 2, "customShiftLockButton")
+    tgg(pages["ShiftLock"], "Crosshair Only When Shift-Locked", 3, "crosshairShiftLockOnly")
+    tgg(pages["ShiftLock"], "Replace Default Shift-Lock Crosshair", 4, "crosshairHideShiftLock")
+
+    addSect(pages["ShiftLock"], "Button Position", 5)
+    makeSlider(pages["ShiftLock"], "X Offset From Center", 6, 0, -400, 400, nil, function(v)
+        shiftLockBtn.Position = UDim2.new(0.5, v, shiftLockBtn.Position.Y.Scale, shiftLockBtn.Position.Y.Offset)
+    end)
+    makeSlider(pages["ShiftLock"], "Y From Bottom (negative)", 7, -100, -400, -20, nil, function(v)
+        shiftLockBtn.Position = UDim2.new(shiftLockBtn.Position.X.Scale, shiftLockBtn.Position.X.Offset, 1, v)
+    end)
+    makeSlider(pages["ShiftLock"], "Button Size", 8, 60, 30, 140, nil, function(v)
+        shiftLockBtn.Size = UDim2.new(0, v, 0, v)
+    end)
+
+    addSect(pages["ShiftLock"], "Actions", 9)
+    addBtn(pages["ShiftLock"], "Toggle Shift Lock Now", 10, function()
+        slForcedOn = not slForcedOn
+        applyShiftLock()
+        updateShiftLockVisual()
+        if slForcedOn then
+            notify('Shift Lock: <font color="#5aff8c">ON</font>')
+        else
+            notify('Shift Lock: <font color="#ff5a5a">OFF</font>')
+        end
+    end)
+    addBtn(pages["ShiftLock"], "Force Reset MouseBehavior", 11, function()
+        pcall(function()
+            UIS.MouseBehavior = Enum.MouseBehavior.Default
+            UIS.MouseIconEnabled = true
+        end)
+        slForcedOn = false
+        updateShiftLockVisual()
+        notify("MouseBehavior reset")
+    end)
+
     -- ============ UI TAB ============
     tgg(pages["UI"], "Show Quick Toggles Menu", 1, "quickTogglesVisible")
     tgg(pages["UI"], "Enable Animations", 2, "animationsEnabled")
     tgg(pages["UI"], "Notification Sound", 3, "notifySound")
     tgg(pages["UI"], "Enable Circle Buttons", 4, "circleButtonsEnabled")
 
-    addSect(pages["UI"], "Animation Options", 5)
+    addSect(pages["UI"], "Interface Scale", 5)
+    makeSlider(pages["UI"], "UI Size (0.5x – 2.0x)", 6, math.floor((settingsConfig.selectedScale or 1) * 10), 5, 20, nil, function(v)
+        settingsConfig.selectedScale = v / 10
+        saveSettings()
+    end)
+    addBtn(pages["UI"], "Apply UI Size (Rebuild)", 7, function()
+        buildUI(true)
+        notify("UI size applied")
+    end)
+
+    addSect(pages["UI"], "Animation Options", 10)
     do
-        -- Style dropdown
         local styleBtn = Instance.new("TextButton", pages["UI"])
         styleBtn.Size = UDim2.new(1, 0, 0, 38 * selectedScale)
-        styleBtn.LayoutOrder = 6
+        styleBtn.LayoutOrder = 11
         styleBtn.BackgroundColor3 = CARD
         styleBtn.Text = "  Anim Style: " .. (state.animationStyle or "Back")
         styleBtn.TextColor3 = TXT
@@ -2916,14 +3031,14 @@ buildUI = function(reb)
             buildUI(true)
         end)
     end
-    makeSlider(pages["UI"], "Anim Speed Multiplier", 7, math.floor((state.animationSpeed or 1) * 10), 5, 30, nil, function(v)
+    makeSlider(pages["UI"], "Anim Speed Multiplier", 12, math.floor((state.animationSpeed or 1) * 10), 5, 30, nil, function(v)
         state.animationSpeed = v / 10
         saveSettings()
     end)
-    tgg(pages["UI"], "Enable Bounce", 8, "animBounce")
-    tgg(pages["UI"], "Enable Ripple", 9, "animRipple")
-    tgg(pages["UI"], "Enable Shine", 10, "animShine")
-    tgg(pages["UI"], "Enable Stagger Fade", 11, "animStagger")
+    tgg(pages["UI"], "Enable Bounce", 13, "animBounce")
+    tgg(pages["UI"], "Enable Ripple", 14, "animRipple")
+    tgg(pages["UI"], "Enable Shine", 15, "animShine")
+    tgg(pages["UI"], "Enable Stagger Fade", 16, "animStagger")
 
     addSect(pages["UI"], "Circle Button Size", 20)
     makeSlider(pages["UI"], "Global Circle Button Size", 21, state.circleGlobalSize or 62, 30, 150, "circleGlobalSize", function(v)
@@ -3623,11 +3738,10 @@ task.spawn(function()
     end
 end)
 
--- ============ AUTO COMBAT (throttled) ============
--- Only scans once per tick, only runs when bag full
+-- ============ AUTO COMBAT ============
 task.spawn(function()
     while true do
-        task.wait(1) -- scan every 1s instead of 0.5s
+        task.wait(1)
         if not alive() then continue end
         if isExecutingAction or next(activeResets) then continue end
         if state.xpFarm then continue end
@@ -3669,7 +3783,7 @@ end)
 
 task.spawn(function()
     while true do
-        task.wait(1) -- scan every 1s
+        task.wait(1)
         if not alive() then continue end
         if not bagFull then continue end
         if state.loopFlingAll or state.loopFlingMur or state.loopFlingSheriff or state.loopFlingCustom then
@@ -3715,7 +3829,7 @@ end)
 
 task.spawn(function()
     while true do
-        task.wait(0.2) -- kill aura 5/s
+        task.wait(0.2)
         if state.killAura and alive() then
             local knife = findTool("Knife")
             if knife then
@@ -3737,7 +3851,7 @@ end)
 
 task.spawn(function()
     while true do
-        task.wait(0.5) -- fling aura 2/s
+        task.wait(0.5)
         if state.flingAura and alive() and not next(activeResets) then
             local myRoot = LP.Character:FindFirstChild("HumanoidRootPart")
             if myRoot then
@@ -4552,7 +4666,7 @@ Players.PlayerRemoving:Connect(function(p)
     clearPlayerESP(p)
 end)
 
--- ============ AIMBOT (sharp, sticky) ============
+-- ============ AIMBOT ============
 local currentAimTarget = nil
 
 local function predictImpact(targetPos, targetVel, camPos, projSpeed)
