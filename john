@@ -1,9 +1,7 @@
 -- ================================================================
--- Appleware
+-- Appleware  (paste this directly into your executor)
 -- ================================================================
 
--- This pcall wrapper prints any error to the console so you can tell
--- me exactly what's failing if it still doesn't run.
 local ok, err = pcall(function()
 
 local Players = game:GetService("Players")
@@ -196,7 +194,6 @@ local EASE_SOFT = Enum.EasingStyle.Sine
 local EASE_OUT = Enum.EasingDirection.Out
 local EASE_IN = Enum.EasingDirection.In
 
--- ============ SPINNING STROKE GRADIENT ============
 local spinGradients = {}
 local SPIN_SPEED = 130
 local PULSE_SPEED = 0.9
@@ -242,31 +239,41 @@ local function attachSpinStroke(stroke, isOn, opts)
     if existing then
         grad = existing
     else
-        grad = Instance.new("UIGradient", stroke)
+        local okG, g = pcall(function() return Instance.new("UIGradient", stroke) end)
+        if not okG or not g then return nil end
+        grad = g
         grad.Name = "SpinGrad"
         grad.Rotation = 0
         table.insert(spinGradients, grad)
     end
     setSpinGradColors(grad, isOn)
 
-    if opts.pulse ~= false and not stroke:GetAttribute("Breathing") then
-        stroke:SetAttribute("Breathing", true)
-        local baseThickness = opts.baseThickness or stroke.Thickness or 2
-        local minT = math.max(1, baseThickness * PULSE_MIN)
-        local maxT = baseThickness * PULSE_MAX
-        task.spawn(function()
-            while stroke and stroke.Parent do
-                TweenService:Create(stroke,
-                    TweenInfo.new(PULSE_SPEED, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-                    {Thickness = maxT}):Play()
-                task.wait(PULSE_SPEED)
-                if not stroke or not stroke.Parent then break end
-                TweenService:Create(stroke,
-                    TweenInfo.new(PULSE_SPEED, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-                    {Thickness = minT}):Play()
-                task.wait(PULSE_SPEED)
-            end
-        end)
+    if opts.pulse ~= false then
+        local hasAttr = stroke.GetAttribute ~= nil and stroke.SetAttribute ~= nil
+        local alreadyBreathing = false
+        if hasAttr then
+            local okA, a = pcall(function() return stroke:GetAttribute("Breathing") end)
+            alreadyBreathing = okA and a
+        end
+        if not alreadyBreathing then
+            if hasAttr then pcall(function() stroke:SetAttribute("Breathing", true) end) end
+            local baseThickness = opts.baseThickness or stroke.Thickness or 2
+            local minT = math.max(1, baseThickness * PULSE_MIN)
+            local maxT = baseThickness * PULSE_MAX
+            task.spawn(function()
+                while stroke and stroke.Parent do
+                    TweenService:Create(stroke,
+                        TweenInfo.new(PULSE_SPEED, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+                        {Thickness = maxT}):Play()
+                    task.wait(PULSE_SPEED)
+                    if not stroke or not stroke.Parent then break end
+                    TweenService:Create(stroke,
+                        TweenInfo.new(PULSE_SPEED, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+                        {Thickness = minT}):Play()
+                    task.wait(PULSE_SPEED)
+                end
+            end)
+        end
     end
     return grad
 end
@@ -577,8 +584,8 @@ local function getCoinCount()
         function() return LP:GetAttribute("Coins") end,
     }
     for _, fn in ipairs(candidates) do
-        local ok, v = pcall(fn)
-        if ok and v ~= nil then
+        local ok2, v = pcall(fn)
+        if ok2 and v ~= nil then
             local n = readNum(v)
             if n then return n end
         end
@@ -597,7 +604,7 @@ local cachedRoleModule, cachedRoleModuleAt = nil, 0
 local function getCachedRoleData()
     local now = tick()
     if cachedRoleModule and (now - cachedRoleModuleAt) < 2 then return cachedRoleModule end
-    local ok, data = pcall(function()
+    local ok2, data = pcall(function()
         local mods = ReplicatedStorage:FindFirstChild("Modules")
         if mods then
             local pd = mods:FindFirstChild("PlayerData") or mods:FindFirstChild("Roles") or mods:FindFirstChild("RoleData") or mods:FindFirstChild("RoundData")
@@ -606,7 +613,7 @@ local function getCachedRoleData()
         local direct = ReplicatedStorage:FindFirstChild("PlayerData") or ReplicatedStorage:FindFirstChild("Roles")
         if direct then return require(direct) end
     end)
-    if ok and type(data) == "table" then
+    if ok2 and type(data) == "table" then
         cachedRoleModule = data; cachedRoleModuleAt = now; return data
     end
     local rf = ReplicatedStorage:FindFirstChild("GetPlayerData", true)
@@ -736,11 +743,9 @@ local function triggerMenuReset()
     end)
 end
 
--- ============ HITBOX EXPANDER STATE ============
 local killLocked = {}
 local hitboxOriginals = {}
 
--- ============ FLING ============
 local activeResets = {}
 local RESET_DURATION = 0.8
 local function isResetActive(userId)
@@ -755,8 +760,8 @@ local function reliableFling(tp, forceManual)
     if isResetActive(tp.UserId) then return false end
     if isWhitelisted(tp) then return false end
     if not forceManual then
-        local ok = state.loopFlingAll or state.loopFlingMur or state.loopFlingSheriff or state.loopFlingCustom or state.flingAura
-        if not ok then return false end
+        local ok2 = state.loopFlingAll or state.loopFlingMur or state.loopFlingSheriff or state.loopFlingCustom or state.flingAura
+        if not ok2 then return false end
     end
     local Character = LP.Character
     if not Character then return false end
@@ -830,7 +835,6 @@ local function reliableFling(tp, forceManual)
     return true
 end
 
--- ============ ACTIONS ============
 local function executeHitboxKill(tp)
     if not tp or not tp.Parent then return end
     if killLocked[tp.UserId] then return end
@@ -1046,7 +1050,6 @@ local function teleportToCustom()
     _G.__AW_NOTIFY("No custom target found")
 end
 
--- ============ HITBOX EXPANDER HELPERS ============
 local function getHitboxTargets()
     local targets = {}
     local mode = state.hitboxExpanderTarget or "murderer"
@@ -1107,7 +1110,6 @@ local function restoreHitboxForPart(hrp)
     hitboxOriginals[hrp] = nil
 end
 
--- ============ COOLDOWN ============
 local SHOT_COOLDOWN = 0.4
 local lastShotTime = -SHOT_COOLDOWN
 
@@ -1115,7 +1117,6 @@ local function canFire()
     return (tick() - lastShotTime) >= SHOT_COOLDOWN
 end
 
--- ============ SILENT AIM ============
 local silentAimTarget = nil
 local silentAimHead = nil
 
@@ -1142,12 +1143,12 @@ local function findShootRemote()
     }
     for _, path in ipairs(paths) do
         local cur = path[1]
-        local ok = true
+        local okp = true
         for i = 2, #path do
             cur = cur and cur:FindFirstChild(path[i])
-            if not cur then ok = false break end
+            if not cur then okp = false break end
         end
-        if ok and cur and (cur:IsA("RemoteEvent") or cur:IsA("RemoteFunction")) then
+        if okp and cur and (cur:IsA("RemoteEvent") or cur:IsA("RemoteFunction")) then
             return cur
         end
     end
@@ -1270,7 +1271,6 @@ local function fullShootSequence()
     return tryShootMurderer()
 end
 
--- ============ GUN TRIGGER ============
 local gunActivatedConn = nil
 
 local function unbindGun()
@@ -1301,7 +1301,6 @@ end
 if LP.Character then watchCharacter(LP.Character) end
 LP.CharacterAdded:Connect(function(char) unbindGun(); watchCharacter(char) end)
 
--- ============ VOTING ============
 local VOTE_SPOTS = {
     [1] = Vector3.new(25, 508, 50),
     [2] = Vector3.new(13, 508, 52),
@@ -1383,7 +1382,6 @@ local function getVoteMapNames()
     return mapNames
 end
 
--- ============ ROUND TIMER ============
 local rtGui = Instance.new("ScreenGui")
 rtGui.Name = "AWRT"; rtGui.ResetOnSpawn = false
 rtGui.DisplayOrder = 999997; rtGui.IgnoreGuiInset = true
@@ -1406,7 +1404,6 @@ rtValue.TextColor3 = Color3.new(1,1,1)
 rtValue.Font = Enum.Font.GothamBold
 rtValue.TextSize = 22
 
--- ============ BIG SHOOT BUTTON ============
 local bigGui = Instance.new("ScreenGui")
 bigGui.Name = "AW_BigShoot"
 bigGui.ResetOnSpawn = false
@@ -1515,7 +1512,6 @@ UIS.InputEnded:Connect(function(input)
     end
 end)
 
--- ============ FLOATING ACTION BUTTONS ============
 local floatGui = Instance.new("ScreenGui")
 floatGui.Name = "AW_FloatingActions"
 floatGui.ResetOnSpawn = false
@@ -1713,7 +1709,6 @@ end
 
 rebuildFloatButtons()
 
--- ============ MAIN UI ============
 local sg = Instance.new("ScreenGui")
 sg.Name = "Appleware"
 sg.Parent = PlayerGui
@@ -2103,7 +2098,6 @@ local function makeInput(page, order, ph, val, onC)
     return box
 end
 
--- ============ SECRET TAB ============
 addSect(pages[SECRET_NAME], "Hitbox Expander", 1)
 tgg(pages[SECRET_NAME], "Hitbox Expander", 2, "hitboxExpander")
 makeSlider(pages[SECRET_NAME], "Hitbox Size", 3, state.hitboxExpanderSize or 15, 5, 60, "hitboxExpanderSize")
@@ -2239,7 +2233,6 @@ tgg(pages["Combat"], "Aimbot Visibility Check", 46, "aimbotVisCheck")
 tgg(pages["Combat"], "Aimbot Instant Snap", 47, "aimbotSnap")
 tgg(pages["Combat"], "Aimbot Sticky Target", 48, "aimbotSticky")
 
--- ============ PLAYERS TAB ============
 addSect(pages["Players"], "Add Player (Type Name)", 1)
 makeInput(pages["Players"], 2, "Username or display name...", state.playerSearchText or "", function(t)
     state.playerSearchText = t
@@ -2885,7 +2878,6 @@ fb.MouseButton1Click:Connect(function()
     fb.Text = isOpen and "Close" or "Open"
 end)
 
--- ============ FLY ============
 local flyBV = nil
 local flyBG = nil
 local flyConnection = nil
@@ -3159,7 +3151,6 @@ task.spawn(function()
     end
 end)
 
--- ============ HITBOX EXPANDER LOOP ============
 task.spawn(function()
     while true do
         task.wait(0.1)
@@ -3190,7 +3181,6 @@ task.spawn(function()
     end
 end)
 
--- Auto shoot loop
 task.spawn(function()
     while true do
         task.wait(0.1)
@@ -3365,7 +3355,6 @@ task.spawn(function()
     end
 end)
 
--- Auto Dodge
 task.spawn(function()
     local dodgeCooldown = 0
     while true do
@@ -3406,7 +3395,6 @@ task.spawn(function()
     end
 end)
 
--- ============ TOUCH FLING (WALK FLING) ============
 local touchFlingCooldown = 0
 local TOUCH_FLING_RANGE = 12
 local TOUCH_FLING_COOLDOWN = 0.25
@@ -3485,7 +3473,6 @@ task.spawn(function()
     end
 end)
 
--- ============ AIMBOT ============
 local currentAimTarget = nil
 RunService.RenderStepped:Connect(function(dt)
     if not alive() then currentAimTarget = nil; return end
@@ -3550,7 +3537,6 @@ RunService.RenderStepped:Connect(function(dt)
     end
 end)
 
--- ============ ESP ============
 local espF = nil
 local espCache, gunDropCache = {}, {}
 local function getOrCreateEspFolder()
@@ -3723,7 +3709,6 @@ task.spawn(function()
     end
 end)
 
--- ============ FARM LOOP ============
 local HIDE_POS = CFrame.new(0,-300,0)
 local lastCoinFoundTime = tick()
 local NO_COIN_TIMEOUT = 12
@@ -3810,10 +3795,8 @@ end)
 
 print("AppleWare fully loaded - made by p04j on discord")
 
-end)  -- end of top-level pcall
+end)
 
 if not ok then
-    warn("[Appleware] FATAL ERROR:")
-    warn(tostring(err))
-    print("[Appleware] FATAL ERROR: " .. tostring(err))
+    warn("[Appleware] FATAL ERROR: " .. tostring(err))
 end
