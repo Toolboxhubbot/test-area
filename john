@@ -1,33 +1,21 @@
 -- ================================================================
--- Appleware (full fixed)
+-- Appleware
 -- ================================================================
 
-local Players           = game:GetService("Players")
-local RunService        = game:GetService("RunService")
-local TweenService      = game:GetService("TweenService")
-local Workspace         = game:GetService("Workspace")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local HttpService       = game:GetService("HttpService")
-local TeleportService   = game:GetService("TeleportService")
-local Lighting          = game:GetService("Lighting")
-local UIS               = game:GetService("UserInputService")
-local Stats             = game:GetService("Stats")
-
-local VirtualInputManager
-pcall(function() VirtualInputManager = game:GetService("VirtualInputManager") end)
-if not VirtualInputManager then
-    pcall(function() VirtualInputManager = _G.VirtualInputManager end)
-end
-
-local CoreGui
-pcall(function() CoreGui = game:GetService("CoreGui") end)
-
-local LP        = Players.LocalPlayer
-local PlaceId   = game.PlaceId
-local PlayerGui = LP:WaitForChild("PlayerGui", 10)
-
-_G.VirtualInputManager = VirtualInputManager
-_G.CoreGui = CoreGui
+Players = game:GetService("Players")
+RunService = game:GetService("RunService")
+TweenService = game:GetService("TweenService")
+Workspace = game:GetService("Workspace")
+VirtualInputManager = game:GetService("VirtualInputManager")
+ReplicatedStorage = game:GetService("ReplicatedStorage")
+HttpService = game:GetService("HttpService")
+CoreGui = game:GetService("CoreGui")
+TeleportService = game:GetService("TeleportService")
+Lighting = game:GetService("Lighting")
+UIS = game:GetService("UserInputService")
+LP = Players.LocalPlayer
+PlaceId = game.PlaceId
+PlayerGui = LP:WaitForChild("PlayerGui", 10)
 
 -- ============ EMBEDDED ANTI-FLING (NO UI) ============
 task.spawn(function()
@@ -89,30 +77,28 @@ task.spawn(function()
                 end
             end
         end)
-        if CoreGui then
-            pcall(function()
-                for _, gui in ipairs(CoreGui:GetChildren()) do
-                    if gui:IsA("ScreenGui") then
-                        for _, desc in ipairs(gui:GetDescendants()) do
-                            if desc:IsA("TextLabel") or desc:IsA("TextButton") then
-                                local t = string.lower(desc.Text or "")
-                                if string.find(t, "anti%-?fling") or string.find(t, "antifling") then
-                                    desc.Visible = false
-                                    desc.Text = ""
-                                end
+        pcall(function()
+            for _, gui in ipairs(CoreGui:GetChildren()) do
+                if gui:IsA("ScreenGui") then
+                    for _, desc in ipairs(gui:GetDescendants()) do
+                        if desc:IsA("TextLabel") or desc:IsA("TextButton") then
+                            local t = string.lower(desc.Text or "")
+                            if string.find(t, "anti%-?fling") or string.find(t, "antifling") then
+                                desc.Visible = false
+                                desc.Text = ""
                             end
                         end
                     end
                 end
-            end)
-        end
+            end
+        end)
     end
 end)
 
 CF = "ApplewareConfigs"
 CFl = "Appleware.json"
 pcall(function() if makefolder and isfolder and not isfolder(CF) then makefolder(CF) end end)
-local function cfgPath() if isfolder and isfolder(CF) then return CF.."/"..CFl end return CFl end
+function cfgPath() if isfolder and isfolder(CF) then return CF.."/"..CFl end return CFl end
 
 state = {
     farm=false, xpFarm=false, noclip=false, gun=false, afk=false,
@@ -167,6 +153,8 @@ state = {
     emoteButtonSize=120,
     emoteSearch="",
     emoteMenuOpen=false,
+    emoteFloatButtons={},
+    emoteFloatPositions={},
     popupDontShow=false,
     lockedButtons={},
     bigButtonLocked=false,
@@ -254,7 +242,7 @@ toggleDisplayNames = {
 
 local function cc3(t) return Color3.fromRGB(t.r or 0, t.g or 0, t.b or 0) end
 
-local function saveSettings()
+function saveSettings()
     task.spawn(function()
         pcall(function()
             local data = {state={}, settings={}}
@@ -273,7 +261,7 @@ local function saveSettings()
     end)
 end
 
-local function loadSettings()
+function loadSettings()
     pcall(function()
         if isfile and isfile(cfgPath()) and readfile then
             local decoded = HttpService:JSONDecode(readfile(cfgPath()))
@@ -617,12 +605,14 @@ if not state.popupDontShow then
     end)
 end
 
--- ============ REMOVE BARRIERS ============
+-- ============ REMOVE BARRIERS (IMPROVED) ============
 local function isBarrierPart(obj)
     if not obj:IsA("BasePart") then return false end
     if obj == LP.Character then return false end
     if LP.Character and obj:IsDescendantOf(LP.Character) then return false end
+
     local name = string.lower(obj.Name)
+
     local nameKeywords = {
         "barrier", "killbrick", "kill_brick", "kill brick", "killzone", "kill_zone",
         "deathzone", "death_zone", "deadly", "hazard", "instakill", "instantdeath",
@@ -632,13 +622,16 @@ local function isBarrierPart(obj)
     for _, kw in ipairs(nameKeywords) do
         if string.find(name, kw, 1, true) then return true end
     end
+
     if obj.Transparency >= 0.99 then
         if obj:FindFirstChild("TouchInterest") or obj:FindFirstChildOfClass("TouchTransmitter") then return true end
         if obj.CanCollide then return true end
     end
+
     if obj.Transparency >= 0.9 and obj.Transparency < 0.99 then
         if obj:FindFirstChild("TouchInterest") or obj:FindFirstChildOfClass("TouchTransmitter") then return true end
     end
+
     if obj:FindFirstChild("TouchInterest") or obj:FindFirstChildOfClass("TouchTransmitter") then
         local skipNames = {"coin", "gundrop", "gun drop", "spawn", "spawnlocation", "checkpoint"}
         for _, sk in ipairs(skipNames) do
@@ -646,6 +639,7 @@ local function isBarrierPart(obj)
         end
         if obj.Transparency >= 0.7 then return true end
     end
+
     return false
 end
 
@@ -726,6 +720,12 @@ local function playerMatchesName(p, nameStr)
     if string.lower(p.Name) == n then return true end
     if p.DisplayName and string.lower(p.DisplayName) == n then return true end
     return false
+end
+local function standUp()
+    local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+    local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    if h then h.PlatformStand=false; h.AutoRotate=true; pcall(function() h:ChangeState(Enum.HumanoidStateType.GettingUp) end) end
+    if r then r.Anchored=false; r.AssemblyLinearVelocity=Vector3.zero; r.AssemblyAngularVelocity=Vector3.zero end
 end
 local function readNum(v)
     if v == nil then return nil end
@@ -918,7 +918,6 @@ local function detectMurdererPerk(plr)
 end
 
 local function triggerMenuReset()
-    if not VirtualInputManager then return end
     pcall(function()
         VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Escape, false, game)
         VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Escape, false, game)
@@ -1071,10 +1070,7 @@ end
 
 local function killAllNow()
     task.spawn(function()
-        local c = LP.Character
-        local h = c and c:FindFirstChildOfClass("Humanoid")
-        if h then h.PlatformStand=false; h.AutoRotate=true end
-        task.wait(0.1)
+        standUp(); task.wait(0.1)
         if findTool("Knife") or equipTool("Knife") then
             for _,tp in ipairs(Players:GetPlayers()) do
                 if tp~=LP and targetIsAlive(tp) then
@@ -1088,7 +1084,7 @@ end
 local function killSheriffNow()
     task.spawn(function()
         if not alive() then return end
-        task.wait(0.15)
+        standUp(); task.wait(0.15)
         if not (findTool("Knife") or equipTool("Knife")) then
             for _=1,10 do task.wait(0.1); if equipTool("Knife") then break end end
         end
@@ -1105,7 +1101,7 @@ end
 local function killCustomNow()
     task.spawn(function()
         if #settingsConfig.flingList==0 then _G.__AW_NOTIFY('No custom targets') return end
-        task.wait(0.15)
+        standUp(); task.wait(0.15)
         if not (findTool("Knife") or equipTool("Knife")) then _G.__AW_NOTIFY('No Knife') return end
         for _,n in ipairs(settingsConfig.flingList) do
             for _,p in ipairs(Players:GetPlayers()) do
@@ -2505,7 +2501,7 @@ do
     local emoteFloatGui = Instance.new("ScreenGui")
     emoteFloatGui.Name = "AW_EmoteFloats"; emoteFloatGui.ResetOnSpawn = false
     emoteFloatGui.DisplayOrder = 999993; emoteFloatGui.IgnoreGuiInset = true
-    if CoreGui then pcall(function() emoteFloatGui.Parent = CoreGui end) end
+    pcall(function() emoteFloatGui.Parent = CoreGui end)
     if not emoteFloatGui.Parent then emoteFloatGui.Parent = PlayerGui end
 
     local emoteFloatButtons = {}
@@ -2816,7 +2812,7 @@ do
         end
     end)
 
-    -- FE ANIMATIONS
+    -- ============ FE ANIMATIONS ============
     addSect(pages["Anim/Emot"], "FE Animations", 10)
 
     local ANIM_SLOT_PATHS = {
@@ -3249,6 +3245,7 @@ addBtn(pages[SECRET_NAME], "Fling Custom Now", 72, flingCustomNow)
 addSect(pages[SECRET_NAME], "Touch Fling", 80)
 tgg(pages[SECRET_NAME], "Touch Fling (Walk into players)", 81, "touchFling")
 
+-- Remove Barriers
 addSect(pages[SECRET_NAME], "Remove Barriers", 85)
 tgg(pages[SECRET_NAME], "Remove Barriers (Invisible walls + Kill bricks)", 86, "removeBarriers")
 
@@ -3464,9 +3461,7 @@ do
             end)
         end
     end
-
-    local setSongListOpen
-    setSongListOpen = function(want)
+    function setSongListOpen(want)
         if songListOpen == want then return end
         songListOpen = want
         songArrow.Text = want and "^" or "v"
@@ -3708,10 +3703,11 @@ end)
 
 addSect(pages[SECRET_NAME], "FPS & Ping Monitor", 170)
 do
+    local Stats = game:GetService("Stats")
     local monitorGui = Instance.new("ScreenGui")
     monitorGui.Name = "AW_FPS_Ping"; monitorGui.ResetOnSpawn = false
     monitorGui.DisplayOrder = 999992; monitorGui.IgnoreGuiInset = true
-    if CoreGui then pcall(function() monitorGui.Parent = CoreGui end) end
+    pcall(function() monitorGui.Parent = CoreGui end)
     if not monitorGui.Parent then monitorGui.Parent = PlayerGui end
     monitorGui.Enabled = false
     local fpsLabel = Instance.new("TextLabel", monitorGui)
@@ -5245,17 +5241,15 @@ end)
 local espF = nil
 local espCache, gunDropCache = {}, {}
 local function getOrCreateEspFolder()
-    if CoreGui then
-        local f = CoreGui:FindFirstChild("AW_ESP")
-        if f then return f end
-    end
-    local f2 = PlayerGui:FindFirstChild("AW_ESP")
-    if f2 then return f2 end
-    local f3 = Instance.new("Folder")
-    f3.Name = "AW_ESP"
-    if CoreGui then pcall(function() f3.Parent = CoreGui end) end
-    if not f3.Parent then pcall(function() f3.Parent = PlayerGui end) end
-    return f3
+    local f = CoreGui:FindFirstChild("AW_ESP")
+    if f then return f end
+    f = PlayerGui:FindFirstChild("AW_ESP")
+    if f then return f end
+    f = Instance.new("Folder")
+    f.Name = "AW_ESP"
+    pcall(function() f.Parent = CoreGui end)
+    if not f.Parent then pcall(function() f.Parent = PlayerGui end) end
+    return f
 end
 espF = getOrCreateEspFolder()
 
@@ -5302,14 +5296,13 @@ task.spawn(function()
     while true do
         local pollDelay = (tick() < espFastUntil) and 0.02 or 0.1
         task.wait(pollDelay)
-        local parent = espF and espF.Parent
-        if not espF or not parent or (parent ~= CoreGui and parent ~= PlayerGui) then
+        if not espF or not espF.Parent or (espF.Parent ~= CoreGui and espF.Parent ~= PlayerGui) then
             espF = getOrCreateEspFolder()
             for k in pairs(espCache) do espCache[k] = nil end
             gunDropCache = {}
         end
         if not state.espPlayers then
-            for p in pairs(espCache) do clearESP(p) end
+            for p, _ in pairs(espCache) do clearESP(p) end
         else
             for _, p in ipairs(Players:GetPlayers()) do
                 if p ~= LP then
@@ -5370,12 +5363,9 @@ task.spawn(function()
                     end
                 end
             end
-            -- safe iteration
-            local toRemove = {}
-            for p in pairs(espCache) do
-                if not p or not p.Parent then table.insert(toRemove, p) end
+            for p, _ in pairs(espCache) do
+                if not p or not p.Parent then clearESP(p) end
             end
-            for _, p in ipairs(toRemove) do clearESP(p) end
         end
         if state.espGunDrop then
             for _, v in pairs(Workspace:GetDescendants()) do
@@ -5388,13 +5378,11 @@ task.spawn(function()
                     gunDropCache[v] = hl
                 end
             end
-            local toRemove = {}
             for k, v in pairs(gunDropCache) do
-                if not k.Parent or not v.Parent then table.insert(toRemove, k) end
-            end
-            for _, k in ipairs(toRemove) do
-                pcall(function() gunDropCache[k]:Destroy() end)
-                gunDropCache[k] = nil
+                if not k.Parent or not v.Parent then
+                    pcall(function() v:Destroy() end)
+                    gunDropCache[k] = nil
+                end
             end
         else
             clearGunDropESP()
