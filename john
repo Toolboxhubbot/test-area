@@ -1,7 +1,7 @@
 -- ================================================================
 -- Appleware
 -- ================================================================
-
+local __aw_ok, __aw_err = xpcall(function()
 Players = game:GetService("Players")
 RunService = game:GetService("RunService")
 TweenService = game:GetService("TweenService")
@@ -6391,3 +6391,11 @@ end)
 
 print("AppleWare fully loaded - made by p04j on discord")
 print("Credits: lzzzx, noir (7yd7)")
+end, function(e)
+    return tostring(e) .. "\n\n===== TRACEBACK =====\n" .. debug.traceback()
+end)
+if not __aw_ok then
+    warn("[Appleware FATAL]\n" .. tostring(__aw_err))
+else
+    print("[Appleware] Loaded OK, no error.")
+end
