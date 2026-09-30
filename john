@@ -47,8 +47,8 @@ state = {
     autoKillAll=false, autoShootMurderer=false,
     autoResetMurderer=false, autoResetSheriff=false, autoResetInnocent=false,
     aimbotMurderer=false, aimbotSheriff=false,
-    aimbotFOV=250, aimbotSmooth=4, aimbotPredict=true, aimbotVisCheck=false,
-    aimbotSnap=false, aimbotSticky=true,
+    aimbotFOV=250, aimbotSmooth=1, aimbotPredict=true, aimbotVisCheck=false,
+    aimbotSnap=true, aimbotSticky=true,
     silentAimEnabled=false, silentAimWallCheck=true, silentAimYHeight=2,
     shootThroughWall=false, pingPreset="medium",
     loopFlingAll=false, loopFlingMur=false, loopFlingSheriff=false, loopFlingCustom=false,
@@ -97,6 +97,7 @@ state = {
     emoteFloatButtons={},
     emoteFloatPositions={},
     removeBarriers=false,
+    thicc=false,
     lockedButtons={},
     bigButtonLocked=false,
 }
@@ -125,6 +126,7 @@ KEYBIND_FEATURES = {
     {key="blueAura",          label="Blue Aura",            default="G"},
     {key="feAnimEnabled",     label="FE Animations",        default="Q"},
     {key="removeBarriers",    label="Remove Barriers",      default=""},
+    {key="thicc",             label="THICC",                default=""},
 }
 
 NO_SAVE_STATE_KEYS = {
@@ -180,6 +182,7 @@ toggleDisplayNames = {
     blueAura="Blue Aura",
     feAnimEnabled="FE Animations",
     removeBarriers="Remove Barriers",
+    thicc="THICC",
 }
 
 function saveSettings()
@@ -766,18 +769,37 @@ local function detectMurdererPerk(plr)
     return nil
 end
 
--- ============ REMOVE BARRIERS (only targets "Glitch Proof") ============
+-- ============ REMOVE BARRIERS (Glitch Proof + Kill Bricks) ============
 local function isBarrierPart(obj)
     if not obj:IsA("BasePart") then return false end
     if obj == LP.Character then return false end
     if LP.Character and obj:IsDescendantOf(LP.Character) then return false end
 
-    -- Only remove parts whose name contains "glitch proof"
     local name = string.lower(obj.Name)
+
     if string.find(name, "glitchproof", 1, true)
         or string.find(name, "glitch_proof", 1, true)
         or string.find(name, "glitch proof", 1, true) then
         return true
+    end
+    if string.find(name, "kill", 1, true) then
+        return true
+    end
+
+    local anc = obj.Parent
+    local depth = 0
+    while anc and anc ~= Workspace and depth < 4 do
+        local an = string.lower(anc.Name)
+        if string.find(an, "killbrick", 1, true)
+            or string.find(an, "kill_brick", 1, true)
+            or string.find(an, "kill brick", 1, true)
+            or string.find(an, "killzone", 1, true)
+            or string.find(an, "kill_zone", 1, true)
+            or string.find(an, "kill zone", 1, true) then
+            return true
+        end
+        anc = anc.Parent
+        depth = depth + 1
     end
 
     return false
@@ -798,10 +820,37 @@ local function removeAllBarriers()
     return count
 end
 
+-- ============ THICC (removes the entire Glitchproof parent) ============
+local function removeThiccParents()
+    local count = 0
+    local toRemove = {}
+    for _, obj in ipairs(Workspace:GetChildren()) do
+        local n = string.lower(obj.Name)
+        if string.find(n, "glitchproof", 1, true)
+            or string.find(n, "glitch_proof", 1, true)
+            or string.find(n, "glitch proof", 1, true) then
+            table.insert(toRemove, obj)
+        end
+    end
+    for _, obj in ipairs(toRemove) do
+        if obj and obj.Parent then
+            pcall(function() obj:Destroy() end)
+            count = count + 1
+        end
+    end
+    return count
+end
+
 task.spawn(function()
     while true do
         task.wait(0.3)
         if state.removeBarriers then pcall(removeAllBarriers) end
+    end
+end)
+task.spawn(function()
+    while true do
+        task.wait(0.3)
+        if state.thicc then pcall(removeThiccParents) end
     end
 end)
 
@@ -1031,52 +1080,6 @@ local function handleTouchKillCustom()
     end
     if #targets == 0 then _G.__AW_NOTIFY("No custom targets in server") return end
     fireHandleTouchedKill(targets)
-end
-
-local function killAllHitboxNow()
-    task.spawn(function()
-        standUp(); task.wait(0.1)
-        if findTool("Knife") or equipTool("Knife") then
-            for _,tp in ipairs(Players:GetPlayers()) do
-                if tp~=LP and targetIsAlive(tp) then
-                    task.spawn(function() executeHitboxKill(tp) end)
-                    task.wait(0.05)
-                end
-            end
-        else _G.__AW_NOTIFY('No Knife - must be Murderer') end
-    end)
-end
-local function killSheriffNow()
-    task.spawn(function()
-        if not alive() then return end
-        standUp(); task.wait(0.15)
-        if not (findTool("Knife") or equipTool("Knife")) then
-            for _=1,10 do task.wait(0.1); if equipTool("Knife") then break end end
-        end
-        if not findTool("Knife") then _G.__AW_NOTIFY('No Knife') return end
-        local live = getLiveSheriffHeroes()
-        for _, target in ipairs(live) do
-            if target and target ~= LP and targetIsAlive(target) then
-                task.spawn(function() executeHitboxKill(target) end)
-                task.wait(0.1)
-            end
-        end
-    end)
-end
-local function killCustomNow()
-    task.spawn(function()
-        if #settingsConfig.flingList==0 then _G.__AW_NOTIFY('No custom targets') return end
-        standUp(); task.wait(0.15)
-        if not (findTool("Knife") or equipTool("Knife")) then _G.__AW_NOTIFY('No Knife') return end
-        for _,n in ipairs(settingsConfig.flingList) do
-            for _,p in ipairs(Players:GetPlayers()) do
-                if playerMatchesName(p, n) and targetIsAlive(p) then
-                    task.spawn(function() executeHitboxKill(p) end)
-                    task.wait(0.1)
-                end
-            end
-        end
-    end)
 end
 
 local function flingAllNow()
@@ -1658,8 +1661,8 @@ floatGui.Parent = PlayerGui
 
 local FLOAT_BUTTON_DEFS = {
     {id="killAll",       label="Kill All",        type="action", cb=handleTouchKillAll},
-    {id="killSheriff",   label="Kill Sheriff",    type="action", cb=killSheriffNow},
-    {id="killCustom",    label="Kill Custom",     type="action", cb=killCustomNow},
+    {id="killSheriff",   label="Kill Sheriff",    type="action", cb=handleTouchKillSheriff},
+    {id="killCustom",    label="Kill Custom",     type="action", cb=handleTouchKillCustom},
     {id="flingMurAction",label="Fling Murderer",  type="action", cb=flingMurdererNow},
     {id="flingSherAction",label="Fling Sheriff",  type="action", cb=flingSheriffNow},
     {id="flingAllAction",label="Fling All",       type="action", cb=flingAllNow},
@@ -1715,6 +1718,7 @@ local FLOAT_BUTTON_DEFS = {
     {id="blueAura",      label="Blue Aura",       type="toggle", key="blueAura"},
     {id="feAnim",        label="FE Anim",         type="toggle", key="feAnimEnabled"},
     {id="removeBarriers",label="No Barriers",     type="toggle", key="removeBarriers"},
+    {id="thicc",         label="THICC",           type="toggle", key="thicc"},
 }
 local FLOAT_BUTTON_MAP = {}
 for _, def in ipairs(FLOAT_BUTTON_DEFS) do FLOAT_BUTTON_MAP[def.id] = def end
@@ -3243,7 +3247,6 @@ do
     end)
 end
 
--- ============ SECRET TAB ============
 addSect(pages[SECRET_NAME], "Hitbox Expander", 1)
 tgg(pages[SECRET_NAME], "Hitbox Expander", 2, "hitboxExpander")
 makeSlider(pages[SECRET_NAME], "Hitbox Size", 3, state.hitboxExpanderSize or 15, 5, 60, "hitboxExpanderSize")
@@ -3305,8 +3308,8 @@ tgg(pages[SECRET_NAME], "Invisible", 56, "invisibleEnabled")
 tgg(pages[SECRET_NAME], "Click Teleport", 57, "clickTP")
 tgg(pages[SECRET_NAME], "Freeze", 58, "freeze")
 
+-- Combat Aura section: Kill Aura removed as requested
 addSect(pages[SECRET_NAME], "Combat Aura", 60)
-tgg(pages[SECRET_NAME], "Kill Aura", 61, "killAura")
 tgg(pages[SECRET_NAME], "Fling Aura", 62, "flingAura")
 tgg(pages[SECRET_NAME], "Auto Dodge", 63, "autoDodge")
 
@@ -3317,14 +3320,23 @@ addBtn(pages[SECRET_NAME], "Fling Custom Now", 72, flingCustomNow)
 addSect(pages[SECRET_NAME], "Touch Fling", 80)
 tgg(pages[SECRET_NAME], "Touch Fling (Walk into players)", 81, "touchFling")
 
-addSect(pages[SECRET_NAME], "Remove Barriers", 85)
-tgg(pages[SECRET_NAME], "Remove Barriers (Glitch Proof walls)", 86, "removeBarriers")
-addBtn(pages[SECRET_NAME], "Remove All Barriers Now", 87, function()
+addSect(pages[SECRET_NAME], "Remove Barriers / THICC", 85)
+tgg(pages[SECRET_NAME], "Remove Barriers (Glitch Proof parts + Kill Bricks)", 86, "removeBarriers")
+tgg(pages[SECRET_NAME], "THICC (removes entire Glitchproof parent)", 87, "thicc")
+addBtn(pages[SECRET_NAME], "Remove All Barriers Now", 88, function()
     local count = removeAllBarriers()
     if count > 0 then
-        _G.__AW_NOTIFY('Removed <font color="#5aff8c">' .. count .. '</font> Glitch Proof wall(s)')
+        _G.__AW_NOTIFY('Removed <font color="#5aff8c">' .. count .. '</font> barrier(s)')
     else
-        _G.__AW_NOTIFY('No Glitch Proof parts found')
+        _G.__AW_NOTIFY('No barriers found')
+    end
+end)
+addBtn(pages[SECRET_NAME], "Trigger THICC Now", 89, function()
+    local count = removeThiccParents()
+    if count > 0 then
+        _G.__AW_NOTIFY('Removed <font color="#5aff8c">' .. count .. '</font> Glitchproof parent(s)')
+    else
+        _G.__AW_NOTIFY('No Glitchproof parent found')
     end
 end)
 
@@ -4107,8 +4119,7 @@ addSect(pages["Combat"], "Manual Actions", 30)
 addBtn(pages["Combat"], "Kill All (HandleTouched)", 31, handleTouchKillAll)
 addBtn(pages["Combat"], "Kill Sheriff (HandleTouched)", 32, handleTouchKillSheriff)
 addBtn(pages["Combat"], "Kill Custom (HandleTouched)", 33, handleTouchKillCustom)
-addBtn(pages["Combat"], "Kill Sheriff (Hitbox)", 34, killSheriffNow)
-addBtn(pages["Combat"], "Kill All (Hitbox)", 35, killAllHitboxNow)
+-- Hitbox kill buttons removed as requested
 addBtn(pages["Combat"], "Grab Gun Now", 36, grabGunNow)
 addBtn(pages["Combat"], "Fling Murderer Now", 37, flingMurdererNow)
 addBtn(pages["Combat"], "Fling Sheriff Now", 38, flingSheriffNow)
@@ -4117,7 +4128,7 @@ addSect(pages["Combat"], "Aimbot", 60)
 tgg(pages["Combat"], "Aimbot: Murderer", 61, "aimbotMurderer")
 tgg(pages["Combat"], "Aimbot: Sheriff", 62, "aimbotSheriff")
 makeSlider(pages["Combat"], "Aimbot FOV", 63, state.aimbotFOV or 250, 30, 800, "aimbotFOV")
-makeSlider(pages["Combat"], "Aimbot Smoothness", 64, state.aimbotSmooth or 4, 1, 20, "aimbotSmooth")
+makeSlider(pages["Combat"], "Aimbot Smoothness", 64, state.aimbotSmooth or 1, 1, 20, "aimbotSmooth")
 tgg(pages["Combat"], "Aimbot Prediction", 65, "aimbotPredict")
 tgg(pages["Combat"], "Aimbot Visibility Check", 66, "aimbotVisCheck")
 tgg(pages["Combat"], "Aimbot Instant Snap", 67, "aimbotSnap")
@@ -5513,65 +5524,155 @@ task.spawn(function()
     end
 end)
 
+-- ============ AIMBOT (Sharper, Sticky, Always On Target) ============
 local currentAimTarget = nil
+local lockedAimTarget = nil
+local lockedAimPart = nil
+
+-- Reset lock when aimbot toggles change
+task.spawn(function()
+    local lastM = state.aimbotMurderer
+    local lastS = state.aimbotSheriff
+    while true do
+        task.wait(0.1)
+        if state.aimbotMurderer ~= lastM or state.aimbotSheriff ~= lastS then
+            lastM = state.aimbotMurderer
+            lastS = state.aimbotSheriff
+            lockedAimTarget = nil
+            lockedAimPart = nil
+        end
+    end
+end)
+
 RunService.RenderStepped:Connect(function(dt)
-    if not alive() then currentAimTarget = nil; return end
-    if not (state.aimbotMurderer or state.aimbotSheriff) then currentAimTarget = nil; return end
+    if not alive() then
+        currentAimTarget = nil
+        lockedAimTarget = nil
+        lockedAimPart = nil
+        return
+    end
+    if not (state.aimbotMurderer or state.aimbotSheriff) then
+        currentAimTarget = nil
+        lockedAimTarget = nil
+        lockedAimPart = nil
+        return
+    end
     local cam = Workspace.CurrentCamera
     if not cam then return end
     local vps = cam.ViewportSize
     local center = Vector2.new(vps.X*0.5, vps.Y*0.5)
-    local candidates = {}
-    if state.aimbotMurderer then
-        local m = getMurd()
-        if m then table.insert(candidates, m) end
-    elseif state.aimbotSheriff then
-        for _, s in ipairs(getLiveSheriffHeroes()) do table.insert(candidates, s) end
-    end
-    if #candidates == 0 then currentAimTarget = nil; return end
     local fovR = state.aimbotFOV or 250
-    local best, bestScore = nil, -math.huge
-    for _, tp in ipairs(candidates) do
-        local ch = tp.Character
+
+    -- ===== STICKY LOGIC =====
+    -- If sticky is on and we already have a locked target that is still valid
+    -- and within FOV, keep using it. This is what makes it feel "always on".
+    local keepLocked = false
+    if state.aimbotSticky and lockedAimTarget and lockedAimTarget.Parent then
+        local ch = lockedAimTarget.Character
         if ch then
             local hh = ch:FindFirstChildOfClass("Humanoid")
-            if hh and hh.Health > 0 then
-                local tpart = ch:FindFirstChild("Head") or ch:FindFirstChild("HumanoidRootPart")
-                if tpart then
-                    local sp, onScreen = cam:WorldToViewportPoint(tpart.Position)
-                    if onScreen and sp.Z > 0 then
-                        local sd = (Vector2.new(sp.X, sp.Y) - center).Magnitude
-                        if sd <= fovR then
-                            local score = -sd
-                            if tpart.Name == "Head" then score = score + 50 end
-                            if score > bestScore then bestScore = score; best = tp end
-                        end
+            local tpart = ch:FindFirstChild("Head") or ch:FindFirstChild("HumanoidRootPart")
+            if hh and hh.Health > 0 and tpart then
+                local sp, onScreen = cam:WorldToViewportPoint(tpart.Position)
+                if onScreen and sp.Z > 0 then
+                    local sd = (Vector2.new(sp.X, sp.Y) - center).Magnitude
+                    -- Keep lock even if slightly outside FOV (fov * 1.35) so
+                    -- it never "loses" the target mid-strafe
+                    if sd <= fovR * 1.35 then
+                        keepLocked = true
+                        lockedAimPart = tpart
                     end
                 end
             end
         end
     end
-    if not best or not best.Character then currentAimTarget = nil; return end
-    currentAimTarget = best
-    local ch = best.Character
-    local tpart = ch:FindFirstChild("Head") or ch:FindFirstChild("HumanoidRootPart")
-    if not tpart then return end
-    local aimPos = tpart.Position
+
+    local target = nil
+    local targetPart = nil
+
+    if keepLocked then
+        target = lockedAimTarget
+        targetPart = lockedAimPart
+    else
+        -- Need to acquire a new target
+        local candidates = {}
+        if state.aimbotMurderer then
+            local m = getMurd()
+            if m then table.insert(candidates, m) end
+        elseif state.aimbotSheriff then
+            for _, s in ipairs(getLiveSheriffHeroes()) do table.insert(candidates, s) end
+        end
+        if #candidates == 0 then
+            lockedAimTarget = nil
+            lockedAimPart = nil
+            return
+        end
+
+        local best, bestScore = nil, -math.huge
+        local bestPart = nil
+        for _, tp in ipairs(candidates) do
+            local ch = tp.Character
+            if ch then
+                local hh = ch:FindFirstChildOfClass("Humanoid")
+                if hh and hh.Health > 0 then
+                    local tpart = ch:FindFirstChild("Head") or ch:FindFirstChild("HumanoidRootPart")
+                    if tpart then
+                        local sp, onScreen = cam:WorldToViewportPoint(tpart.Position)
+                        if onScreen and sp.Z > 0 then
+                            local sd = (Vector2.new(sp.X, sp.Y) - center).Magnitude
+                            if sd <= fovR then
+                                -- Prefer closest to crosshair, prefer head
+                                local score = -sd
+                                if tpart.Name == "Head" then score = score + 100 end
+                                if score > bestScore then
+                                    bestScore = score
+                                    best = tp
+                                    bestPart = tpart
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        target = best
+        targetPart = bestPart
+        if target and targetPart then
+            lockedAimTarget = target
+            lockedAimPart = targetPart
+        else
+            lockedAimTarget = nil
+            lockedAimPart = nil
+        end
+    end
+
+    if not target or not targetPart then return end
+    currentAimTarget = target
+
+    local aimPos = targetPart.Position
     if state.aimbotPredict then
-        local vel = tpart.AssemblyLinearVelocity
+        local vel = targetPart.AssemblyLinearVelocity
         if vel.Magnitude > 1 then
-            local dist = (tpart.Position - cam.CFrame.Position).Magnitude
-            local t = dist / 800
-            aimPos = tpart.Position + vel * t
+            local dist = (targetPart.Position - cam.CFrame.Position).Magnitude
+            local t = dist / 1000
+            aimPos = targetPart.Position + vel * t
         end
     end
     local desired = CFrame.new(cam.CFrame.Position, aimPos)
-    if state.aimbotSnap then cam.CFrame = desired
+
+    -- ===== SHARPER AIM =====
+    -- When Snap is on -> instant
+    -- When Snap is off -> ultra-fast lerp (always keeps target centered)
+    if state.aimbotSnap then
+        cam.CFrame = desired
     else
-        local smooth = state.aimbotSmooth or 4
-        if smooth <= 1 then cam.CFrame = desired
+        local smooth = state.aimbotSmooth or 1
+        if smooth <= 1 then
+            cam.CFrame = desired
         else
-            local alpha = math.clamp(1 - math.exp(-dt * (60 / smooth) * 0.15), 0.05, 1)
+            -- Much sharper than before: previous formula used * 0.15,
+            -- now we use * 0.9 so it locks on within a couple frames.
+            local alpha = math.clamp(1 - math.exp(-dt * (60 / smooth) * 0.9), 0.35, 1)
             cam.CFrame = cam.CFrame:Lerp(desired, alpha)
         end
     end
