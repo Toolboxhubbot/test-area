@@ -1,7 +1,7 @@
 -- ================================================================
 -- Appleware
 -- ================================================================
-local __aw_ok, __aw_err = xpcall(function()
+
 Players = game:GetService("Players")
 RunService = game:GetService("RunService")
 TweenService = game:GetService("TweenService")
@@ -250,6 +250,29 @@ local PULSE_MAX = 1.8
 
 local BLACK = Color3.new(0,0,0)
 local WHITE = Color3.new(1,1,1)
+
+-- ============================================================
+-- SAFE ANIMATION STOP HELPER (fixes Humanoid:GetPlayingAnimationTracks nil)
+-- ============================================================
+local function stopAllAnimations(hum)
+    if not hum or not hum.Parent then return end
+    local animator = hum:FindFirstChildOfClass("Animator")
+    if animator and type(animator.GetPlayingAnimationTracks) == "function" then
+        pcall(function()
+            for _, t in ipairs(animator:GetPlayingAnimationTracks()) do
+                pcall(function() t:Stop(0) end)
+            end
+        end)
+        return
+    end
+    if type(hum.GetPlayingAnimationTracks) == "function" then
+        pcall(function()
+            for _, t in ipairs(hum:GetPlayingAnimationTracks()) do
+                pcall(function() t:Stop(0) end)
+            end
+        end)
+    end
+end
 
 local function buildAltSeq(firstColor, secondColor)
     return ColorSequence.new({
@@ -888,6 +911,10 @@ local function isResetActive(userId)
     if tick()-t > RESET_DURATION + 0.5 then activeResets[userId] = nil; return false end
     return true
 end
+
+-- ============================================================
+-- RELIABLE FLING (fixed: uses safe stopAllAnimations)
+-- ============================================================
 local function reliableFling(tp, forceManual)
     if not tp or tp==LP or not tp.Parent then return false end
     if not targetIsAlive(tp) then return false end
@@ -935,14 +962,16 @@ local function reliableFling(tp, forceManual)
             if bg and bg.Parent then bg:Destroy() end
             if Humanoid and Humanoid.Parent then
                 Humanoid.PlatformStand = false
-                for _,t in ipairs(Humanoid:GetPlayingAnimationTracks()) do t:Stop() end
+                stopAllAnimations(Humanoid)  -- <<< FIX
             end
             if RootPart and RootPart.Parent then
                 RootPart.AssemblyLinearVelocity = Vector3.zero
                 RootPart.AssemblyAngularVelocity = Vector3.zero
                 RootPart.CFrame = savedCF
             end
-            if Humanoid and Humanoid.Parent then pcall(function() Humanoid:ChangeState(Enum.HumanoidStateType.GettingUp) end) end
+            if Humanoid and Humanoid.Parent then
+                pcall(function() Humanoid:ChangeState(Enum.HumanoidStateType.GettingUp) end)
+            end
             if Character and Character.Parent then
                 for _,p in ipairs(Character:GetDescendants()) do
                     if p:IsA("BasePart") then p.CanCollide = true end
@@ -1158,7 +1187,7 @@ local function teleportToLobby()
 end
 
 -- ============================================================
--- VOID PLATFORM SYSTEM
+-- VOID PLATFORM
 -- ============================================================
 VOID_PLATFORM_POS = Vector3.new(100, 5000, 2000)
 VOID_PLATFORM_NAME = "AW_VoidPlatform"
@@ -3041,12 +3070,7 @@ do
         task.spawn(function()
             pcall(function()
                 local hum = char:FindFirstChildOfClass("Humanoid")
-                local animator = hum and hum:FindFirstChildOfClass("Animator")
-                if animator then
-                    for _, t in ipairs(animator:GetPlayingAnimationTracks()) do
-                        pcall(function() t:Stop(0) end)
-                    end
-                end
+                stopAllAnimations(hum)  -- <<< FIX
                 if animate:IsA("LocalScript") or animate:IsA("Script") then
                     animate.Disabled = true
                     task.wait()
@@ -5255,7 +5279,7 @@ UIS.InputBegan:Connect(function(inp, g)
 end)
 
 -- ============================================================
--- TRUE ANTI-VOID (FallenPartsDestroyHeight = NaN)
+-- TRUE ANTI-VOID
 -- ============================================================
 local ORIGINAL_DESTROY_HEIGHT = Workspace.FallenPartsDestroyHeight
 task.spawn(function()
@@ -6391,11 +6415,3 @@ end)
 
 print("AppleWare fully loaded - made by p04j on discord")
 print("Credits: lzzzx, noir (7yd7)")
-end, function(e)
-    return tostring(e) .. "\n\n===== TRACEBACK =====\n" .. debug.traceback()
-end)
-if not __aw_ok then
-    warn("[Appleware FATAL]\n" .. tostring(__aw_err))
-else
-    print("[Appleware] Loaded OK, no error.")
-end
