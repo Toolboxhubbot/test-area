@@ -1,7 +1,3 @@
--- ================================================================
--- Appleware
--- ================================================================
-
 task.spawn(function()
     pcall(function()
         local url = "https://raw.githubusercontent.com/Toolboxhubbot/antifling/refs/heads/main/antifling"
