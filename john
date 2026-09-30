@@ -766,73 +766,17 @@ local function detectMurdererPerk(plr)
     return nil
 end
 
--- ============ REMOVE BARRIERS (FIXED — only skips specific voting/map icon folders) ============
+-- ============ REMOVE BARRIERS (only targets "Glitch Proof") ============
 local function isBarrierPart(obj)
     if not obj:IsA("BasePart") then return false end
     if obj == LP.Character then return false end
     if LP.Character and obj:IsDescendantOf(LP.Character) then return false end
 
-    -- Walk ancestors looking ONLY for the specific voting/map icon folder names.
-    local anc = obj.Parent
-    local depth = 0
-    while anc and anc ~= Workspace and depth < 6 do
-        local an = string.lower(anc.Name)
-        if string.find(an, "votingicon", 1, true)
-            or string.find(an, "voting_icon", 1, true)
-            or string.find(an, "voting icon", 1, true)
-            or string.find(an, "votingicons", 1, true)
-            or string.find(an, "mapicon", 1, true)
-            or string.find(an, "map_icon", 1, true)
-            or string.find(an, "map icon", 1, true)
-            or string.find(an, "mapicons", 1, true) then
-            return false
-        end
-        anc = anc.Parent
-        depth = depth + 1
-    end
-
+    -- Only remove parts whose name contains "glitch proof"
     local name = string.lower(obj.Name)
-
-    -- Skip parts that carry visible GUI/decal children (map displays)
-    if obj:FindFirstChildOfClass("Decal")
-        or obj:FindFirstChildOfClass("Texture")
-        or obj:FindFirstChildOfClass("SurfaceGui")
-        or obj:FindFirstChildOfClass("BillboardGui") then
-        return false
-    end
-
-    -- Strict kill-brick name keywords
-    local strictKeywords = {
-        "killbrick", "kill_brick", "kill brick", "killzone", "kill_zone",
-        "deathzone", "death_zone", "instakill", "instantdeath", "instant_kill",
-        "inviswall", "invis_wall", "invisiblewall", "invisible_wall",
-        "wall_kill", "wallkill", "trapzone", "trap_zone", "barrier",
-    }
-    for _, kw in ipairs(strictKeywords) do
-        if string.find(name, kw, 1, true) then return true end
-    end
-
-    -- Invisible touch part
-    local hasTouch = obj:FindFirstChild("TouchInterest") or obj:FindFirstChildOfClass("TouchTransmitter")
-    if hasTouch and obj.Transparency >= 0.99 then
-        local skipNames = {
-            "coin", "gundrop", "gun drop", "spawn", "spawnlocation",
-            "checkpoint", "chair", "seat", "trigger",
-            "shop", "button", "prompt",
-        }
-        for _, sk in ipairs(skipNames) do
-            if string.find(name, sk, 1, true) then return false end
-        end
-
-        local parent = obj.Parent
-        if parent and parent:IsA("Model") then
-            for _, sib in ipairs(parent:GetChildren()) do
-                if sib:IsA("BasePart") and sib ~= obj and sib.Transparency < 0.99 then
-                    return false
-                end
-            end
-        end
-
+    if string.find(name, "glitchproof", 1, true)
+        or string.find(name, "glitch_proof", 1, true)
+        or string.find(name, "glitch proof", 1, true) then
         return true
     end
 
@@ -2422,7 +2366,6 @@ local function makeDropdown(page, label, order, options, initial, onSelect)
     end
 end
 
--- ============ ANIM / EMOT TAB ============
 do
     local EMOTES = {
         {id=3360689775,name="Salute"},{id=5915779043,name="Applaud"},{id=3360692915,name="Tilt"},
@@ -2872,7 +2815,6 @@ do
         end
     end)
 
-    -- ============ FE ANIMATIONS ============
     addSect(pages["Anim/Emot"], "FE Animations", 10)
 
     local ANIM_SLOT_PATHS = {
@@ -3375,15 +3317,14 @@ addBtn(pages[SECRET_NAME], "Fling Custom Now", 72, flingCustomNow)
 addSect(pages[SECRET_NAME], "Touch Fling", 80)
 tgg(pages[SECRET_NAME], "Touch Fling (Walk into players)", 81, "touchFling")
 
--- ============ REMOVE BARRIERS (in Secret tab) ============
 addSect(pages[SECRET_NAME], "Remove Barriers", 85)
-tgg(pages[SECRET_NAME], "Remove Barriers (Kill bricks + Invisible walls)", 86, "removeBarriers")
+tgg(pages[SECRET_NAME], "Remove Barriers (Glitch Proof walls)", 86, "removeBarriers")
 addBtn(pages[SECRET_NAME], "Remove All Barriers Now", 87, function()
     local count = removeAllBarriers()
     if count > 0 then
-        _G.__AW_NOTIFY('Removed <font color="#5aff8c">' .. count .. '</font> barrier(s)')
+        _G.__AW_NOTIFY('Removed <font color="#5aff8c">' .. count .. '</font> Glitch Proof wall(s)')
     else
-        _G.__AW_NOTIFY('No barriers found')
+        _G.__AW_NOTIFY('No Glitch Proof parts found')
     end
 end)
 
@@ -4138,7 +4079,6 @@ do
     creditBody.TextYAlignment = Enum.TextYAlignment.Top
 end
 
--- ============ FARM TAB ============
 tgg(pages["Farm"], "Farm", 1, "farm")
 tgg(pages["Farm"], "XP Farm", 2, "xpFarm")
 makeSlider(pages["Farm"], "Tween Speed", 3, settingsConfig.tweenSpeed or 25, 1, 100, "tweenSpeed", function(v) settingsConfig.tweenSpeed = v end)
@@ -4146,7 +4086,6 @@ tgg(pages["Farm"], "Disable 3D Rendering", 4, "disable3d")
 tgg(pages["Farm"], "FPS Boost", 5, "fpsBoost")
 tgg(pages["Farm"], "Full Bag Gate", 6, "fullBagGate")
 
--- ============ COMBAT TAB ============
 addSect(pages["Combat"], "Silent Aim", 1)
 tgg(pages["Combat"], "Silent Aim", 2, "silentAimEnabled")
 tgg(pages["Combat"], "Silent Aim Wall Check", 3, "silentAimWallCheck")
@@ -4184,7 +4123,6 @@ tgg(pages["Combat"], "Aimbot Visibility Check", 66, "aimbotVisCheck")
 tgg(pages["Combat"], "Aimbot Instant Snap", 67, "aimbotSnap")
 tgg(pages["Combat"], "Aimbot Sticky Target", 68, "aimbotSticky")
 
--- ============ PLAYERS TAB ============
 addSect(pages["Players"], "Add Player (Type Name)", 1)
 makeInput(pages["Players"], 2, "Username or display name...", state.playerSearchText or "", function(t)
     state.playerSearchText = t
@@ -4408,7 +4346,6 @@ end)
 refreshCustomListUI()
 task.defer(refreshPlayerList)
 
--- ============ TELEPORT TAB ============
 addSect(pages["Teleport"], "Locations", 1)
 addBtn(pages["Teleport"], "Teleport to Lobby", 2, teleportToLobby)
 addBtn(pages["Teleport"], "Teleport to Map", 3, teleportToMap)
@@ -4417,18 +4354,15 @@ addBtn(pages["Teleport"], "Teleport to Murderer", 5, teleportToMurderer)
 addBtn(pages["Teleport"], "Teleport to Sheriff", 6, teleportToSheriff)
 addBtn(pages["Teleport"], "Teleport to Custom", 7, teleportToCustom)
 
--- ============ ESP TAB ============
 addSect(pages["ESP"], "Player ESP", 1)
 tgg(pages["ESP"], "Player ESP", 2, "espPlayers")
 tgg(pages["ESP"], "Team Colors (Red/Blue/Green)", 3, "espTeamColor")
 tgg(pages["ESP"], "Gun Drop ESP", 4, "espGunDrop")
 
--- ============ WEBHOOK TAB ============
 tgg(pages["Webhook"], "Auto Send on Timer", 1, "sendOnFull")
 makeInput(pages["Webhook"], 3, "Webhook URL...", settingsConfig.webhookUrl, function(t) settingsConfig.webhookUrl = t saveSettings() end)
 makeInput(pages["Webhook"], 4, "Discord User ID...", settingsConfig.discordUserId, function(t) settingsConfig.discordUserId = t saveSettings() end)
 
--- ============ MISC TAB ============
 tgg(pages["Misc"], "Anti AFK", 1, "afk")
 tgg(pages["Misc"], "Auto Grab Gun", 2, "gun")
 tgg(pages["Misc"], "Auto Rejoin", 3, "autoRejoin")
@@ -4440,7 +4374,6 @@ tgg(pages["Misc"], "Round Timer", 8, "showRoundTimerCountdown")
 tgg(pages["Misc"], "Murderer Predictor", 9, "murdererPredictor")
 tgg(pages["Misc"], "Murderer Perk Notify", 10, "murdererPerkNotify")
 
--- ============ VOTING TAB ============
 addSect(pages["Voting"], "Live Vote Map Names", 1)
 local voteMapLabels = {}
 for slot = 1, 3 do
@@ -4479,7 +4412,6 @@ task.spawn(function()
     end
 end)
 
--- ============ BUTTON TAB ============
 addSect(pages["Button"], "Shoot Murderer Button", 1)
 tgg(pages["Button"], "Enable Shoot Murderer Button", 2, "bigButtonEnabled")
 makeSlider(pages["Button"], "Button Width", 3, state.bigButtonW or 230, 80, 400, "bigButtonW", function(v)
@@ -4674,7 +4606,6 @@ do
     refreshManagerFB("")
 end
 
--- ============ KEYBINDS TAB ============
 addSect(pages["Keybinds"], "Instructions", 1)
 do
     local info = Instance.new("TextLabel", pages["Keybinds"])
@@ -4799,7 +4730,6 @@ UIS.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
--- ============ UI TAB ============
 addSect(pages["UI"], "UI Scale", 1)
 do
     local sr = Instance.new("Frame", pages["UI"])
@@ -4861,7 +4791,6 @@ addSect(pages["UI"], "Toggles", 4)
 tgg(pages["UI"], "Notification Sound", 6, "notifySound")
 tgg(pages["UI"], "Enable Animations", 7, "animationsEnabled")
 
--- ============ OPEN/CLOSE BUTTON ============
 local fb = Instance.new("TextButton", sg)
 fb.Size = UDim2.new(0,78,0,34)
 fb.Position = UDim2.new(state.openX, 0, state.openY, 0)
@@ -4893,7 +4822,6 @@ fb.MouseButton1Click:Connect(function()
     fb.Text = isOpen and "Close" or "Open"
 end)
 
--- ============ FLY ============
 local flyBV = nil
 local flyBG = nil
 local flyConnection = nil
