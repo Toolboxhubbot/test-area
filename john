@@ -1,3 +1,13 @@
+-- ===== compatibility shim =====
+if typeof(task) ~= "table" then
+    task = {
+        spawn = spawn,
+        wait = wait,
+        delay = delay,
+        defer = function(fn) delay(0, fn) end,
+    }
+end
+-- ==============================
 -- ================================================================
 -- Appleware
 -- ================================================================
