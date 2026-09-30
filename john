@@ -97,7 +97,6 @@ state = {
     emoteFloatButtons={},
     emoteFloatPositions={},
     removeBarriers=false,
-    thicc=false,
     lockedButtons={},
     bigButtonLocked=false,
 }
@@ -126,7 +125,6 @@ KEYBIND_FEATURES = {
     {key="blueAura",          label="Blue Aura",            default="G"},
     {key="feAnimEnabled",     label="FE Animations",        default="Q"},
     {key="removeBarriers",    label="Remove Barriers",      default=""},
-    {key="thicc",             label="THICC",                default=""},
 }
 
 NO_SAVE_STATE_KEYS = {
@@ -182,7 +180,6 @@ toggleDisplayNames = {
     blueAura="Blue Aura",
     feAnimEnabled="FE Animations",
     removeBarriers="Remove Barriers",
-    thicc="THICC",
 }
 
 function saveSettings()
@@ -769,7 +766,7 @@ local function detectMurdererPerk(plr)
     return nil
 end
 
--- ============ REMOVE BARRIERS (Glitch Proof + Kill Bricks) ============
+-- ============ REMOVE BARRIERS (GlitchProof parent + Kill Bricks) ============
 local function isBarrierPart(obj)
     if not obj:IsA("BasePart") then return false end
     if obj == LP.Character then return false end
@@ -777,15 +774,19 @@ local function isBarrierPart(obj)
 
     local name = string.lower(obj.Name)
 
+    -- Any leftover GlitchProof part
     if string.find(name, "glitchproof", 1, true)
         or string.find(name, "glitch_proof", 1, true)
         or string.find(name, "glitch proof", 1, true) then
         return true
     end
+
+    -- Kill bricks
     if string.find(name, "kill", 1, true) then
         return true
     end
 
+    -- Kill-brick folders
     local anc = obj.Parent
     local depth = 0
     while anc and anc ~= Workspace and depth < 4 do
@@ -805,32 +806,49 @@ local function isBarrierPart(obj)
     return false
 end
 
-local function removeAllBarriers()
+-- Nukes the entire "GlitchProof" object that lives under
+-- Workspace.Map.Base.GlitchProof   or   Workspace.Lobby.Base.GlitchProof
+local function removeGlitchProofParents()
     local count = 0
-    local toRemove = {}
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if isBarrierPart(obj) then table.insert(toRemove, obj) end
+    local bases = {}
+    for _, top in ipairs(Workspace:GetChildren()) do
+        local tn = string.lower(top.Name)
+        if tn == "map" or tn == "lobby" then
+            local base = top:FindFirstChild("Base")
+            if base then
+                table.insert(bases, base)
+            else
+                -- Fallback: GlitchProof directly under Map / Lobby
+                local gp = top:FindFirstChild("GlitchProof")
+                if gp then
+                    pcall(function() gp:Destroy() end)
+                    count = count + 1
+                end
+            end
+        end
     end
-    for _, obj in ipairs(toRemove) do
-        if obj and obj.Parent then
-            pcall(function() obj:Destroy() end)
-            count = count + 1
+    for _, base in ipairs(bases) do
+        for _, child in ipairs(base:GetChildren()) do
+            local cn = string.lower(child.Name)
+            if string.find(cn, "glitchproof", 1, true)
+                or string.find(cn, "glitch_proof", 1, true)
+                or string.find(cn, "glitch proof", 1, true) then
+                pcall(function() child:Destroy() end)
+                count = count + 1
+            end
         end
     end
     return count
 end
 
--- ============ THICC (removes the entire Glitchproof parent) ============
-local function removeThiccParents()
+local function removeAllBarriers()
     local count = 0
+    -- 1) Nuke the whole GlitchProof parent
+    count = count + removeGlitchProofParents()
+    -- 2) Sweep any remaining barrier / kill-brick parts
     local toRemove = {}
-    for _, obj in ipairs(Workspace:GetChildren()) do
-        local n = string.lower(obj.Name)
-        if string.find(n, "glitchproof", 1, true)
-            or string.find(n, "glitch_proof", 1, true)
-            or string.find(n, "glitch proof", 1, true) then
-            table.insert(toRemove, obj)
-        end
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if isBarrierPart(obj) then table.insert(toRemove, obj) end
     end
     for _, obj in ipairs(toRemove) do
         if obj and obj.Parent then
@@ -845,12 +863,6 @@ task.spawn(function()
     while true do
         task.wait(0.3)
         if state.removeBarriers then pcall(removeAllBarriers) end
-    end
-end)
-task.spawn(function()
-    while true do
-        task.wait(0.3)
-        if state.thicc then pcall(removeThiccParents) end
     end
 end)
 
@@ -1718,7 +1730,6 @@ local FLOAT_BUTTON_DEFS = {
     {id="blueAura",      label="Blue Aura",       type="toggle", key="blueAura"},
     {id="feAnim",        label="FE Anim",         type="toggle", key="feAnimEnabled"},
     {id="removeBarriers",label="No Barriers",     type="toggle", key="removeBarriers"},
-    {id="thicc",         label="THICC",           type="toggle", key="thicc"},
 }
 local FLOAT_BUTTON_MAP = {}
 for _, def in ipairs(FLOAT_BUTTON_DEFS) do FLOAT_BUTTON_MAP[def.id] = def end
@@ -3308,7 +3319,6 @@ tgg(pages[SECRET_NAME], "Invisible", 56, "invisibleEnabled")
 tgg(pages[SECRET_NAME], "Click Teleport", 57, "clickTP")
 tgg(pages[SECRET_NAME], "Freeze", 58, "freeze")
 
--- Combat Aura section: Kill Aura removed as requested
 addSect(pages[SECRET_NAME], "Combat Aura", 60)
 tgg(pages[SECRET_NAME], "Fling Aura", 62, "flingAura")
 tgg(pages[SECRET_NAME], "Auto Dodge", 63, "autoDodge")
@@ -3320,23 +3330,14 @@ addBtn(pages[SECRET_NAME], "Fling Custom Now", 72, flingCustomNow)
 addSect(pages[SECRET_NAME], "Touch Fling", 80)
 tgg(pages[SECRET_NAME], "Touch Fling (Walk into players)", 81, "touchFling")
 
-addSect(pages[SECRET_NAME], "Remove Barriers / THICC", 85)
-tgg(pages[SECRET_NAME], "Remove Barriers (Glitch Proof parts + Kill Bricks)", 86, "removeBarriers")
-tgg(pages[SECRET_NAME], "THICC (removes entire Glitchproof parent)", 87, "thicc")
-addBtn(pages[SECRET_NAME], "Remove All Barriers Now", 88, function()
+addSect(pages[SECRET_NAME], "Remove Barriers", 85)
+tgg(pages[SECRET_NAME], "Remove Barriers (GlitchProof + Kill Bricks)", 86, "removeBarriers")
+addBtn(pages[SECRET_NAME], "Remove All Barriers Now", 87, function()
     local count = removeAllBarriers()
     if count > 0 then
         _G.__AW_NOTIFY('Removed <font color="#5aff8c">' .. count .. '</font> barrier(s)')
     else
         _G.__AW_NOTIFY('No barriers found')
-    end
-end)
-addBtn(pages[SECRET_NAME], "Trigger THICC Now", 89, function()
-    local count = removeThiccParents()
-    if count > 0 then
-        _G.__AW_NOTIFY('Removed <font color="#5aff8c">' .. count .. '</font> Glitchproof parent(s)')
-    else
-        _G.__AW_NOTIFY('No Glitchproof parent found')
     end
 end)
 
@@ -4119,7 +4120,6 @@ addSect(pages["Combat"], "Manual Actions", 30)
 addBtn(pages["Combat"], "Kill All (HandleTouched)", 31, handleTouchKillAll)
 addBtn(pages["Combat"], "Kill Sheriff (HandleTouched)", 32, handleTouchKillSheriff)
 addBtn(pages["Combat"], "Kill Custom (HandleTouched)", 33, handleTouchKillCustom)
--- Hitbox kill buttons removed as requested
 addBtn(pages["Combat"], "Grab Gun Now", 36, grabGunNow)
 addBtn(pages["Combat"], "Fling Murderer Now", 37, flingMurdererNow)
 addBtn(pages["Combat"], "Fling Sheriff Now", 38, flingSheriffNow)
@@ -5529,7 +5529,6 @@ local currentAimTarget = nil
 local lockedAimTarget = nil
 local lockedAimPart = nil
 
--- Reset lock when aimbot toggles change
 task.spawn(function()
     local lastM = state.aimbotMurderer
     local lastS = state.aimbotSheriff
@@ -5563,9 +5562,6 @@ RunService.RenderStepped:Connect(function(dt)
     local center = Vector2.new(vps.X*0.5, vps.Y*0.5)
     local fovR = state.aimbotFOV or 250
 
-    -- ===== STICKY LOGIC =====
-    -- If sticky is on and we already have a locked target that is still valid
-    -- and within FOV, keep using it. This is what makes it feel "always on".
     local keepLocked = false
     if state.aimbotSticky and lockedAimTarget and lockedAimTarget.Parent then
         local ch = lockedAimTarget.Character
@@ -5576,8 +5572,6 @@ RunService.RenderStepped:Connect(function(dt)
                 local sp, onScreen = cam:WorldToViewportPoint(tpart.Position)
                 if onScreen and sp.Z > 0 then
                     local sd = (Vector2.new(sp.X, sp.Y) - center).Magnitude
-                    -- Keep lock even if slightly outside FOV (fov * 1.35) so
-                    -- it never "loses" the target mid-strafe
                     if sd <= fovR * 1.35 then
                         keepLocked = true
                         lockedAimPart = tpart
@@ -5594,7 +5588,6 @@ RunService.RenderStepped:Connect(function(dt)
         target = lockedAimTarget
         targetPart = lockedAimPart
     else
-        -- Need to acquire a new target
         local candidates = {}
         if state.aimbotMurderer then
             local m = getMurd()
@@ -5621,7 +5614,6 @@ RunService.RenderStepped:Connect(function(dt)
                         if onScreen and sp.Z > 0 then
                             local sd = (Vector2.new(sp.X, sp.Y) - center).Magnitude
                             if sd <= fovR then
-                                -- Prefer closest to crosshair, prefer head
                                 local score = -sd
                                 if tpart.Name == "Head" then score = score + 100 end
                                 if score > bestScore then
@@ -5660,9 +5652,6 @@ RunService.RenderStepped:Connect(function(dt)
     end
     local desired = CFrame.new(cam.CFrame.Position, aimPos)
 
-    -- ===== SHARPER AIM =====
-    -- When Snap is on -> instant
-    -- When Snap is off -> ultra-fast lerp (always keeps target centered)
     if state.aimbotSnap then
         cam.CFrame = desired
     else
@@ -5670,8 +5659,6 @@ RunService.RenderStepped:Connect(function(dt)
         if smooth <= 1 then
             cam.CFrame = desired
         else
-            -- Much sharper than before: previous formula used * 0.15,
-            -- now we use * 0.9 so it locks on within a couple frames.
             local alpha = math.clamp(1 - math.exp(-dt * (60 / smooth) * 0.9), 0.35, 1)
             cam.CFrame = cam.CFrame:Lerp(desired, alpha)
         end
