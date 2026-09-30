@@ -2,29 +2,6 @@
 -- Appleware
 -- ================================================================
 
--- OPTIONAL: enable external antifling (DISABLED by default because it can
--- throw "attempt to call a nil value" from inside its own callbacks).
--- Uncomment ONLY if you trust the source AND wrap it in a stronger pcall.
---[[
-task.spawn(function()
-    pcall(function()
-        local url = "https://raw.githubusercontent.com/Toolboxhubbot/antifling/refs/heads/main/antifling"
-        local src
-        pcall(function() if game.HttpGet then src = game.HttpGet(url) end end)
-        if not src and syn and syn.request then
-            pcall(function() local r = syn.request({Url=url, Method="GET"}); if r and r.Body then src = r.Body end end)
-        end
-        if not src and request then
-            pcall(function() local r = request({Url=url, Method="GET"}); if r and r.Body then src = r.Body end end)
-        end
-        if not src or #src < 10 then return end
-        local fn
-        pcall(function() fn = loadstring(src) end)
-        if fn then pcall(fn) end
-    end)
-end)
---]]
-
 Players = game:GetService("Players")
 RunService = game:GetService("RunService")
 TweenService = game:GetService("TweenService")
@@ -48,7 +25,7 @@ function cfgPath() if isfolder and isfolder(CF) then return CF.."/"..CFl end ret
 
 state = {
     farm=false, xpFarm=false, noclip=false, gun=false, afk=false,
-    antiVoid=false, notifyMapName=false, showRoundTimerCountdown=false,
+    antiVoid=false, antiFling=true, notifyMapName=false, showRoundTimerCountdown=false,
     autoKillAll=false, autoShootMurderer=false,
     autoResetMurderer=false, autoResetSheriff=false, autoResetInnocent=false,
     aimbotMurderer=false, aimbotSheriff=false,
@@ -160,7 +137,8 @@ settingsConfig = {
 
 toggleDisplayNames = {
     farm="Farm", xpFarm="XP Farm", noclip="Noclip", gun="Auto Grab Gun",
-    afk="Anti AFK", antiVoid="Anti-Void", notifyMapName="Notify Map Name",
+    afk="Anti AFK", antiVoid="Anti-Void", antiFling="Anti-Fling (IY)",
+    notifyMapName="Notify Map Name",
     showRoundTimerCountdown="Round Timer", autoKillAll="Auto Kill All",
     autoShootMurderer="Auto Shoot Murderer",
     autoResetMurderer="Auto Reset: Murderer", autoResetSheriff="Auto Reset: Sheriff",
@@ -458,9 +436,7 @@ pcall(function() notifyGui.Parent = PlayerGui end)
 if not notifyGui.Parent then pcall(function() notifyGui.Parent = CoreGui end) end
 
 local notifyContainer = Instance.new("Frame")
-pcall(function()
-    notifyContainer.Parent = notifyGui
-end)
+pcall(function() notifyContainer.Parent = notifyGui end)
 notifyContainer.AnchorPoint = Vector2.new(0,1)
 notifyContainer.Position = UDim2.new(0,14,1,-14)
 notifyContainer.AutomaticSize = Enum.AutomaticSize.Y
@@ -552,7 +528,6 @@ _G.__AW_NOTIFY = function(text)
     end)
 end
 
--- Fail-safe
 if type(_G.__AW_NOTIFY) ~= "function" then
     _G.__AW_NOTIFY = function(t) print("[AW]", tostring(t)) end
 end
@@ -1846,6 +1821,7 @@ local FLOAT_BUTTON_DEFS = {
     {id="esp",           label="Player ESP",      type="toggle", key="espPlayers"},
     {id="gunEsp",        label="Gun Drop ESP",    type="toggle", key="espGunDrop"},
     {id="antiVoid",      label="Anti Void",       type="toggle", key="antiVoid"},
+    {id="antiFling",     label="Anti Fling",      type="toggle", key="antiFling"},
     {id="antiAfk",       label="Anti AFK",        type="toggle", key="afk"},
     {id="autoGrabGun",   label="Auto Grab Gun",   type="toggle", key="gun"},
     {id="murdererPred",  label="Murderer Predict",type="toggle", key="murdererPredictor"},
@@ -4594,6 +4570,7 @@ tgg(pages["Misc"], "Notify Map Name", 7, "notifyMapName")
 tgg(pages["Misc"], "Round Timer", 8, "showRoundTimerCountdown")
 tgg(pages["Misc"], "Murderer Predictor", 9, "murdererPredictor")
 tgg(pages["Misc"], "Murderer Perk Notify", 10, "murdererPerkNotify")
+tgg(pages["Misc"], "Anti-Fling (IY)", 11, "antiFling")
 
 -- ============================================================
 -- VOTING
@@ -5292,6 +5269,135 @@ end)
 LP.CharacterAdded:Connect(function()
     task.wait(0.15)
     if state.antiVoid then Workspace.FallenPartsDestroyHeight = 0/0 end
+end)
+
+-- ============================================================
+-- INLINE ANTI-FLING (IY method)
+-- ============================================================
+local antiFlingConnections = {}
+local antiFlingStatusLabel, antiFlingStroke
+
+do
+    local afScreenGui = Instance.new("ScreenGui")
+    afScreenGui.Name = "AW_AntiFlingIndicator"
+    afScreenGui.ResetOnSpawn = false
+    afScreenGui.DisplayOrder = 999996
+    afScreenGui.IgnoreGuiInset = true
+    pcall(function() afScreenGui.Parent = CoreGui end)
+    if not afScreenGui.Parent then afScreenGui.Parent = PlayerGui end
+
+    antiFlingStatusLabel = Instance.new("TextButton")
+    antiFlingStatusLabel.Name = "AntiFlingStatus"
+    antiFlingStatusLabel.Size = UDim2.new(0, 200, 0, 30)
+    antiFlingStatusLabel.Position = UDim2.new(0, 15, 1, -45)
+    antiFlingStatusLabel.BackgroundTransparency = 1
+    antiFlingStatusLabel.TextColor3 = Color3.fromRGB(0, 255, 140)
+    antiFlingStatusLabel.TextSize = 16
+    antiFlingStatusLabel.Font = Enum.Font.SourceSansBold
+    antiFlingStatusLabel.TextXAlignment = Enum.TextXAlignment.Left
+    antiFlingStatusLabel.Parent = afScreenGui
+
+    antiFlingStroke = Instance.new("UIStroke")
+    antiFlingStroke.Thickness = 1.5
+    antiFlingStroke.Color = Color3.new(0, 0, 0)
+    antiFlingStroke.Transparency = 0.3
+    antiFlingStroke.Parent = antiFlingStatusLabel
+end
+
+local function updateAntiFlingUI()
+    if not antiFlingStatusLabel then return end
+    if state.antiFling then
+        antiFlingStatusLabel.Text = "Anti-Fling: Enabled"
+        antiFlingStatusLabel.TextColor3 = Color3.fromRGB(0, 255, 140)
+    else
+        antiFlingStatusLabel.Text = "Anti-Fling: Disabled"
+        antiFlingStatusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
+    end
+end
+
+local function setupAntiFlingCharacter(character)
+    if not character then return end
+
+    local function disableCollide(part)
+        if state.antiFling and part:IsA("BasePart") then
+            part.CanCollide = false
+        end
+    end
+
+    for _, part in ipairs(character:GetChildren()) do
+        disableCollide(part)
+    end
+
+    local childAddedConn = character.ChildAdded:Connect(disableCollide)
+
+    local steppedConn = RunService.Stepped:Connect(function()
+        if state.antiFling and character:IsDescendantOf(Workspace) then
+            for _, part in ipairs(character:GetChildren()) do
+                if part:IsA("BasePart") and part.CanCollide then
+                    part.CanCollide = false
+                end
+            end
+        end
+    end)
+
+    character.Destroying:Connect(function()
+        if childAddedConn then childAddedConn:Disconnect() end
+        if steppedConn then steppedConn:Disconnect() end
+    end)
+end
+
+local function trackAntiFlingPlayer(player)
+    if player == LP then return end
+    local charAddedConn = player.CharacterAdded:Connect(setupAntiFlingCharacter)
+    if player.Character then
+        setupAntiFlingCharacter(player.Character)
+    end
+    antiFlingConnections[player] = charAddedConn
+end
+
+local function untrackAntiFlingPlayer(player)
+    local c = antiFlingConnections[player]
+    if c then c:Disconnect() end
+    antiFlingConnections[player] = nil
+end
+
+for _, player in ipairs(Players:GetPlayers()) do
+    trackAntiFlingPlayer(player)
+end
+Players.PlayerAdded:Connect(trackAntiFlingPlayer)
+Players.PlayerRemoving:Connect(untrackAntiFlingPlayer)
+
+antiFlingStatusLabel.MouseButton1Click:Connect(function()
+    state.antiFling = not state.antiFling
+    updateAntiFlingUI()
+    _G.__AW_NOTIFY('<font color="'..(state.antiFling and "#5aff8c" or "#ff5a5a")..'">Anti-Fling</font> '..(state.antiFling and "on" or "off"))
+    saveSettings()
+end)
+
+LP.Chatted:Connect(function(msg)
+    local m = string.lower(msg)
+    if m == ";af on" or m == ";antifling on" then
+        state.antiFling = true
+    elseif m == ";af off" or m == ";antifling off" then
+        state.antiFling = false
+    else
+        return
+    end
+    updateAntiFlingUI()
+    _G.__AW_NOTIFY('<font color="'..(state.antiFling and "#5aff8c" or "#ff5a5a")..'">Anti-Fling</font> '..(state.antiFling and "on" or "off"))
+    saveSettings()
+end)
+
+task.spawn(function()
+    local last = state.antiFling
+    updateAntiFlingUI()
+    while true do
+        task.wait(0.25)
+        if state.antiFling ~= last then
+            last = state.antiFling
+            updateAntiFlingUI()
+        end
+    end
 end)
 
 -- ============================================================
