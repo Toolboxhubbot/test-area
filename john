@@ -2,6 +2,80 @@
 -- Appleware
 -- ================================================================
 
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local localPlayer = Players.LocalPlayer
+local connections = {}
+local isEnabled = true
+
+local function setupCharacterCollision(character)
+	local function disableCollide(part)
+		if isEnabled and part:IsA("BasePart") then
+			part.CanCollide = false
+		end
+	end
+
+	for _, part in ipairs(character:GetChildren()) do
+		disableCollide(part)
+	end
+
+	local childAddedConn = character.ChildAdded:Connect(disableCollide)
+
+	local steppedConn = RunService.Stepped:Connect(function()
+		if isEnabled and character:IsDescendantOf(workspace) then
+			for _, part in ipairs(character:GetChildren()) do
+				if part:IsA("BasePart") and part.CanCollide then
+					part.CanCollide = false
+				end
+			end
+		end
+	end)
+
+	character.Destroying:Connect(function()
+		childAddedConn:Disconnect()
+		steppedConn:Disconnect()
+	end)
+end
+
+local function trackPlayer(player)
+	if player == localPlayer then
+		return
+	end
+
+	local charAddedConn = player.CharacterAdded:Connect(setupCharacterCollision)
+
+	if player.Character then
+		setupCharacterCollision(player.Character)
+	end
+
+	connections[player] = charAddedConn
+end
+
+local function untrackPlayer(player)
+	if connections[player] then
+		connections[player]:Disconnect()
+		connections[player] = nil
+	end
+end
+
+for _, player in ipairs(Players:GetPlayers()) do
+	trackPlayer(player)
+end
+
+Players.PlayerAdded:Connect(trackPlayer)
+Players.PlayerRemoving:Connect(untrackPlayer)
+
+localPlayer.Chatted:Connect(function(msg)
+	msg = msg:lower()
+
+	if msg == ";af on" or msg == ";antifling on" then
+		isEnabled = true
+	elseif msg == ";af off" or msg == ";antifling off" then
+		isEnabled = false
+	end
+end)
+
 Players = game:GetService("Players")
 RunService = game:GetService("RunService")
 TweenService = game:GetService("TweenService")
@@ -16,103 +90,6 @@ UIS = game:GetService("UserInputService")
 LP = Players.LocalPlayer
 PlaceId = game.PlaceId
 PlayerGui = LP:WaitForChild("PlayerGui", 10)
-
--- ============ EMBEDDED ANTI-FLING (NO UI) ============
-task.spawn(function()
-    local afConnections = {}
-    local afEnabled = true
-
-    local function setupCharacterCollision(character)
-        local function disableCollide(part)
-            if afEnabled and part:IsA("BasePart") then
-                part.CanCollide = false
-            end
-        end
-        for _, part in ipairs(character:GetChildren()) do
-            disableCollide(part)
-        end
-        local childAddedConn = character.ChildAdded:Connect(disableCollide)
-        local steppedConn = RunService.Stepped:Connect(function()
-            if afEnabled and character:IsDescendantOf(workspace) then
-                for _, part in ipairs(character:GetChildren()) do
-                    if part:IsA("BasePart") and part.CanCollide then
-                        part.CanCollide = false
-                    end
-                end
-            end
-        end)
-        character.Destroying:Connect(function()
-            childAddedConn:Disconnect()
-            steppedConn:Disconnect()
-        end)
-    end
-
-    local function trackPlayer(player)
-        if player == LP then return end
-        local charAddedConn = player.CharacterAdded:Connect(setupCharacterCollision)
-        if player.Character then setupCharacterCollision(player.Character) end
-        afConnections[player] = charAddedConn
-    end
-
-    local function untrackPlayer(player)
-        if afConnections[player] then
-            afConnections[player]:Disconnect()
-            afConnections[player] = nil
-        end
-    end
-
-    for _, player in ipairs(Players:GetPlayers()) do
-        trackPlayer(player)
-    end
-    Players.PlayerAdded:Connect(trackPlayer)
-    Players.PlayerRemoving:Connect(untrackPlayer)
-
-    LP.Chatted:Connect(function(msg)
-        msg = msg:lower()
-        if msg == ";af on" or msg == ";antifling on" then
-            afEnabled = true
-        elseif msg == ";af off" or msg == ";antifling off" then
-            afEnabled = false
-        end
-    end)
-end)
-
--- ============ HIDE ANY ANTI-FLING UI FROM OTHER SCRIPTS ============
-task.spawn(function()
-    while true do
-        task.wait(0.5)
-        for _, gui in ipairs(PlayerGui:GetChildren()) do
-            if gui:IsA("ScreenGui") then
-                local hideGui = false
-                for _, desc in ipairs(gui:GetDescendants()) do
-                    if desc:IsA("TextLabel") or desc:IsA("TextButton") then
-                        local t = string.lower(desc.Text or "")
-                        if string.find(t, "anti%-?fling") or string.find(t, "antifling") then
-                            desc.Visible = false
-                            desc.Text = ""
-                        end
-                    end
-                end
-            end
-        end
-        -- Also check CoreGui
-        pcall(function()
-            for _, gui in ipairs(CoreGui:GetChildren()) do
-                if gui:IsA("ScreenGui") then
-                    for _, desc in ipairs(gui:GetDescendants()) do
-                        if desc:IsA("TextLabel") or desc:IsA("TextButton") then
-                            local t = string.lower(desc.Text or "")
-                            if string.find(t, "anti%-?fling") or string.find(t, "antifling") then
-                                desc.Visible = false
-                                desc.Text = ""
-                            end
-                        end
-                    end
-                end
-            end
-        end)
-    end
-end)
 
 CF = "ApplewareConfigs"
 CFl = "Appleware.json"
@@ -144,8 +121,11 @@ state = {
     touchFling=false,
     murdererPredictor=true, murdererPerkNotify=true, notifySound=false,
     animationsEnabled=true,
+    characterNoAnims=false,
     bigButtonEnabled=true, bigButtonW=230, bigButtonH=82,
     bigButtonX=0.72, bigButtonY=0.42,
+    bigButtonLocked=false,
+    lockedButtons={},
     mainX=0.5, mainY=0.5, openX=0.014, openY=0.28,
     fullBagGate=true, bagTarget=40,
     floatButtonsEnabled=true, floatButtonSize=68, floatButtonShape="circle",
@@ -174,9 +154,6 @@ state = {
     emoteMenuOpen=false,
     emoteFloatButtons={},
     emoteFloatPositions={},
-    popupDontShow=false,
-    lockedButtons={},
-    bigButtonLocked=false,
     removeBarriers=false,
 }
 
@@ -203,25 +180,26 @@ KEYBIND_FEATURES = {
     {key="wallHop",           label="Wall Hop",             default="Y"},
     {key="blueAura",          label="Blue Aura",            default="G"},
     {key="feAnimEnabled",     label="FE Animations",        default="Q"},
+    {key="characterNoAnims",  label="No Character Anims",   default=""},
+    {key="removeBarriers",    label="Remove Barriers",      default=""},
 }
 
 NO_SAVE_STATE_KEYS = {
     bigButtonX=true, bigButtonY=true, mainX=true, mainY=true,
     openX=true, openY=true,
     floatButtonPositions=true,
-    lockedButtons=true,
 }
 
 settingsConfig = {
     webhookUrl="", discordUserId="",
     tweenSpeed=25, selectedScale=1, roundLength=200,
     flingList={}, whitelist={},
-    bgColor={r=10,g=10,b=14}, textColor={r=240,g=240,b=245},
-    cardColor={r=22,g=22,b=28}, cardHoverColor={r=36,g=36,b=44},
-    borderColor={r=55,g=55,b=65}, accentColor={r=255,g=80,b=80},
-    tabBgColor={r=6,g=6,b=10}, tabTextColor={r=165,g=165,b=180},
+    bgColor={r=0,g=0,b=0}, textColor={r=255,g=255,b=255},
+    cardColor={r=18,g=18,b=22}, cardHoverColor={r=38,g=38,b=46},
+    borderColor={r=60,g=60,b=70}, accentColor={r=255,g=80,b=80},
+    tabBgColor={r=0,g=0,b=0}, tabTextColor={r=170,g=170,b=180},
     tabTextActiveColor={r=255,g=255,b=255},
-    openBtnColor={r=10,g=10,b=14}, openBtnTextColor={r=255,g=255,b=255},
+    openBtnColor={r=0,g=0,b=0}, openBtnTextColor={r=255,g=255,b=255},
 }
 
 toggleDisplayNames = {
@@ -243,9 +221,11 @@ toggleDisplayNames = {
     freeze="Freeze", fullbright="Fullbright", fovEnabled="FOV Changer",
     cameraZoomEnabled="Camera Zoom", clickTP="Click Teleport",
     animationsEnabled="Animations", notifySound="Notify Sound",
+    characterNoAnims="No Character Animations",
     murdererPredictor="Murderer Predictor", murdererPerkNotify="Perk Notify",
     speedEnabled="Speed Changer", jumpEnabled="Jump Power",
-    bigButtonEnabled="Shoot Murderer Button", fullBagGate="Full Bag Gate",
+    bigButtonEnabled="Shoot Murderer Button", bigButtonLocked="Lock Shoot Murderer Button",
+    fullBagGate="Full Bag Gate",
     espPlayers="Player ESP", espGunDrop="Gun Drop ESP", espTeamColor="Team Colors",
     touchFling="Touch Fling", hitboxExpander="Hitbox Expander",
     radioAutoPlay="Auto Play Audio",
@@ -311,33 +291,15 @@ EASE_SOFT = Enum.EasingStyle.Sine
 EASE_OUT = Enum.EasingDirection.Out
 EASE_IN = Enum.EasingDirection.In
 
--- ============ STYLE HELPERS ============
-local BLACK = Color3.new(0,0,0)
-local WHITE = Color3.new(1,1,1)
-local DARK = Color3.fromRGB(6,6,10)
-
--- Returns the correct UI color based on animation state.
--- When animations are off, everything becomes black (except text which stays white).
-local function skinColor(c)
-    if state.animationsEnabled == false then
-        return DARK
-    end
-    return c
-end
-
-local function accentColor()
-    if state.animationsEnabled == false then
-        return DARK
-    end
-    return cc3(settingsConfig.accentColor)
-end
-
 -- ============ SPINNING STROKE GRADIENT ============
 spinGradients = {}
 local SPIN_SPEED = 130
 local PULSE_SPEED = 0.9
 local PULSE_MIN = 0.6
 local PULSE_MAX = 1.8
+
+local BLACK = Color3.new(0,0,0)
+local WHITE = Color3.new(1,1,1)
 
 local function buildAltSeq(firstColor, secondColor)
     return ColorSequence.new({
@@ -412,7 +374,11 @@ task.spawn(function()
         if state.animationsEnabled == false then
             for i = #spinGradients, 1, -1 do
                 local g = spinGradients[i]
-                if not g or not g.Parent then table.remove(spinGradients, i) end
+                if g and g.Parent then
+                    pcall(function() g.Rotation = 0 end)
+                else
+                    table.remove(spinGradients, i)
+                end
             end
         else
             wobbleT = wobbleT + dt
@@ -554,7 +520,7 @@ _G.__AW_NOTIFY = function(text)
     f.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
     f.BackgroundTransparency = 0.05
     f.BorderSizePixel = 0
-    Instance.new("UICorner", f).CornerRadius = UDim.new(0, 12)
+    Instance.new("UICorner", f).CornerRadius = UDim.new(0, 10)
 
     local grad = Instance.new("UIGradient", f)
     grad.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(22, 22, 28)), ColorSequenceKeypoint.new(1, Color3.fromRGB(12, 12, 16))})
@@ -616,162 +582,6 @@ _G.__AW_NOTIFY = function(text)
         nCount = math.max(0, nCount - 1)
     end)
 end
-
--- ============ POPUP AT START ============
-if not state.popupDontShow then
-    task.spawn(function()
-        local popupGui = Instance.new("ScreenGui")
-        popupGui.Name = "AW_Popup"
-        popupGui.ResetOnSpawn = false
-        popupGui.DisplayOrder = 1000000
-        popupGui.IgnoreGuiInset = true
-        popupGui.Parent = PlayerGui
-
-        local popupFrame = Instance.new("Frame", popupGui)
-        popupFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-        popupFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-        popupFrame.Size = UDim2.new(0, 400, 0, 200)
-        popupFrame.BackgroundColor3 = cc3(settingsConfig.bgColor)
-        popupFrame.BackgroundTransparency = 0.05
-        popupFrame.BorderSizePixel = 0
-        Instance.new("UICorner", popupFrame).CornerRadius = UDim.new(0, 18)
-
-        local popupStroke = Instance.new("UIStroke", popupFrame)
-        popupStroke.Color = cc3(settingsConfig.accentColor)
-        popupStroke.Thickness = 2
-
-        local popupTitle = Instance.new("TextLabel", popupFrame)
-        popupTitle.Size = UDim2.new(1, -20, 0, 40)
-        popupTitle.Position = UDim2.new(0, 10, 0, 10)
-        popupTitle.BackgroundTransparency = 1
-        popupTitle.Text = "Appleware"
-        popupTitle.TextColor3 = cc3(settingsConfig.accentColor)
-        popupTitle.Font = Enum.Font.GothamBold
-        popupTitle.TextSize = 22
-
-        local popupDesc = Instance.new("TextLabel", popupFrame)
-        popupDesc.Size = UDim2.new(1, -20, 0, 30)
-        popupDesc.Position = UDim2.new(0, 10, 0, 55)
-        popupDesc.BackgroundTransparency = 1
-        popupDesc.Text = "Join our community for updates and support."
-        popupDesc.TextColor3 = cc3(settingsConfig.textColor)
-        popupDesc.Font = Enum.Font.Gotham
-        popupDesc.TextSize = 13
-
-        local copyWeb = Instance.new("TextButton", popupFrame)
-        copyWeb.Size = UDim2.new(0, 120, 0, 36)
-        copyWeb.Position = UDim2.new(0, 10, 0, 100)
-        copyWeb.BackgroundColor3 = cc3(settingsConfig.accentColor)
-        copyWeb.Text = "Copy Website"
-        copyWeb.TextColor3 = Color3.new(0,0,0)
-        copyWeb.Font = Enum.Font.GothamBold
-        copyWeb.TextSize = 12
-        Instance.new("UICorner", copyWeb).CornerRadius = UDim.new(0, 10)
-
-        local copyDisc = Instance.new("TextButton", popupFrame)
-        copyDisc.Size = UDim2.new(0, 120, 0, 36)
-        copyDisc.Position = UDim2.new(0, 140, 0, 100)
-        copyDisc.BackgroundColor3 = cc3(settingsConfig.cardHoverColor)
-        copyDisc.Text = "Copy Discord"
-        copyDisc.TextColor3 = cc3(settingsConfig.textColor)
-        copyDisc.Font = Enum.Font.GothamBold
-        copyDisc.TextSize = 12
-        Instance.new("UICorner", copyDisc).CornerRadius = UDim.new(0, 10)
-
-        local noThanks = Instance.new("TextButton", popupFrame)
-        noThanks.Size = UDim2.new(0, 100, 0, 36)
-        noThanks.Position = UDim2.new(1, -110, 0, 100)
-        noThanks.BackgroundColor3 = Color3.fromRGB(40,40,45)
-        noThanks.Text = "No Thanks"
-        noThanks.TextColor3 = cc3(settingsConfig.textColor)
-        noThanks.Font = Enum.Font.GothamBold
-        noThanks.TextSize = 12
-        Instance.new("UICorner", noThanks).CornerRadius = UDim.new(0, 10)
-
-        local dontShow = Instance.new("TextButton", popupFrame)
-        dontShow.Size = UDim2.new(0, 140, 0, 24)
-        dontShow.Position = UDim2.new(0, 10, 1, -34)
-        dontShow.BackgroundTransparency = 1
-        dontShow.Text = "☐ Don't show again"
-        dontShow.TextColor3 = cc3(settingsConfig.tabTextColor)
-        dontShow.Font = Enum.Font.Gotham
-        dontShow.TextSize = 11
-        dontShow.TextXAlignment = Enum.TextXAlignment.Left
-
-        local function closePopup()
-            TweenService:Create(popupFrame, TweenInfo.new(0.25, EASE_SMOOTH, EASE_IN), {Size = UDim2.new(0,0,0,0), BackgroundTransparency = 1}):Play()
-            task.delay(0.3, function() popupGui:Destroy() end)
-        end
-
-        copyWeb.MouseButton1Click:Connect(function()
-            pcall(function() setclipboard("https://awh.filho.wtf") end)
-            _G.__AW_NOTIFY("Website copied to clipboard")
-            closePopup()
-        end)
-        copyDisc.MouseButton1Click:Connect(function()
-            pcall(function() setclipboard("https://discord.gg/B3FmVJrMX7") end)
-            _G.__AW_NOTIFY("Discord copied to clipboard")
-            closePopup()
-        end)
-        noThanks.MouseButton1Click:Connect(closePopup)
-        dontShow.MouseButton1Click:Connect(function()
-            state.popupDontShow = not state.popupDontShow
-            dontShow.Text = (state.popupDontShow and "☑" or "☐") .. " Don't show again"
-            saveSettings()
-        end)
-    end)
-end
-
--- ============ REMOVE BARRIERS ============
--- Aggressively removes invisible kill bricks, barriers, invisible collision parts,
--- and any part named with kill/barrier/lava/damage keywords.
-local function isBarrierPart(obj)
-    if not obj:IsA("BasePart") then return false end
-    -- Invisible or near-invisible
-    if obj.Transparency >= 0.9 then
-        -- Has touch/damage interaction
-        if obj:FindFirstChild("TouchInterest") or obj:FindFirstChildOfClass("TouchTransmitter") then
-            return true
-        end
-        -- Has collision (invisible barrier)
-        if obj.CanCollide then return true end
-        -- Has a SurfaceGui showing kill/damage
-        for _, c in ipairs(obj:GetChildren()) do
-            if c:IsA("SurfaceGui") then return true end
-        end
-    end
-    -- Name-based detection
-    local n = string.lower(obj.Name)
-    if string.find(n, "kill") or string.find(n, "barrier") or string.find(n, "lava")
-        or string.find(n, "damage") or string.find(n, "invisible")
-        or string.find(n, "inviswall") or string.find(n, "killbrick") then
-        if obj.Transparency >= 0.5 then return true end
-    end
-    return false
-end
-
-local function removeAllBarriers()
-    if not state.removeBarriers then return end
-    local count = 0
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if isBarrierPart(obj) then
-            if obj.Parent and obj ~= LP.Character then
-                pcall(function() obj:Destroy() end)
-                count = count + 1
-            end
-        end
-    end
-    return count
-end
-
-task.spawn(function()
-    while true do
-        task.wait(0.75)
-        if state.removeBarriers then
-            pcall(removeAllBarriers)
-        end
-    end
-end)
 
 local function isInRound()
     for _,m in ipairs(Workspace:GetChildren()) do
@@ -1023,6 +833,84 @@ local function detectMurdererPerk(plr)
     end
     return nil
 end
+
+-- ============ REMOVE BARRIERS ============
+local function isBarrierPart(obj)
+    if not obj:IsA("BasePart") then return false end
+    if obj == LP.Character then return false end
+    if LP.Character and obj:IsDescendantOf(LP.Character) then return false end
+
+    local name = string.lower(obj.Name)
+
+    local nameKeywords = {
+        "barrier", "killbrick", "kill_brick", "kill brick", "killzone", "kill_zone",
+        "deathzone", "death_zone", "deadly", "hazard", "instakill", "instantdeath",
+        "inviswall", "invis_wall", "invisiblewall", "invisible_wall", "invis",
+        "wall_kill", "wallkill", "lava", "trap", "trapzone"
+    }
+    for _, kw in ipairs(nameKeywords) do
+        if string.find(name, kw, 1, true) then return true end
+    end
+
+    if obj.Transparency >= 0.99 then
+        if obj:FindFirstChild("TouchInterest") or obj:FindFirstChildOfClass("TouchTransmitter") then return true end
+        if obj.CanCollide and obj.Anchored and obj.Size.Magnitude < 500 then return true end
+    end
+
+    if obj.Transparency >= 0.85 and obj.Transparency < 0.99 then
+        if obj:FindFirstChild("TouchInterest") or obj:FindFirstChildOfClass("TouchTransmitter") then return true end
+    end
+
+    if obj:FindFirstChild("TouchInterest") or obj:FindFirstChildOfClass("TouchTransmitter") then
+        local skipNames = {"coin", "gundrop", "gun drop", "spawn", "spawnlocation", "checkpoint", "chair", "seat"}
+        for _, sk in ipairs(skipNames) do
+            if string.find(name, sk, 1, true) then return false end
+        end
+        if obj.Transparency >= 0.7 then return true end
+    end
+
+    return false
+end
+
+local function removeAllBarriers()
+    local count = 0
+    local toRemove = {}
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if isBarrierPart(obj) then table.insert(toRemove, obj) end
+    end
+    for _, obj in ipairs(toRemove) do
+        if obj and obj.Parent then
+            pcall(function() obj:Destroy() end)
+            count = count + 1
+        end
+    end
+    return count
+end
+
+task.spawn(function()
+    while true do
+        task.wait(0.3)
+        if state.removeBarriers then pcall(removeAllBarriers) end
+    end
+end)
+
+-- ============ NO CHARACTER ANIMATIONS LOOP ============
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        if state.characterNoAnims and LP.Character then
+            local hum = LP.Character:FindFirstChildOfClass("Humanoid")
+            if hum then
+                local animator = hum:FindFirstChildOfClass("Animator")
+                if animator then
+                    for _, t in ipairs(animator:GetPlayingAnimationTracks()) do
+                        pcall(function() t:Stop(0) end)
+                    end
+                end
+            end
+        end
+    end
+end)
 
 local function triggerMenuReset()
     pcall(function()
@@ -1760,7 +1648,7 @@ roundTimerFrame.BackgroundTransparency = 0.1
 roundTimerFrame.Visible = false
 roundTimerFrame.Active = true
 roundTimerFrame.Draggable = true
-Instance.new("UICorner", roundTimerFrame).CornerRadius = UDim.new(0,12)
+Instance.new("UICorner", roundTimerFrame).CornerRadius = UDim.new(0,10)
 local rtValue = Instance.new("TextLabel", roundTimerFrame)
 rtValue.Size = UDim2.new(1,0,1,0)
 rtValue.BackgroundTransparency = 1
@@ -1800,7 +1688,7 @@ bigBtn.AutoButtonColor = false
 bigBtn.BorderSizePixel = 0
 bigBtn.Active = true
 bigBtn.Parent = bigWrap
-Instance.new("UICorner", bigBtn).CornerRadius = UDim.new(0, 14)
+Instance.new("UICorner", bigBtn).CornerRadius = UDim.new(0, 12)
 local bigStroke = Instance.new("UIStroke", bigBtn)
 bigStroke.Color = WHITE
 bigStroke.Thickness = 3
@@ -1925,6 +1813,8 @@ local FLOAT_BUTTON_DEFS = {
     {id="wallHop",       label="Wall Hop",        type="toggle", key="wallHop"},
     {id="blueAura",      label="Blue Aura",       type="toggle", key="blueAura"},
     {id="feAnim",        label="FE Anim",         type="toggle", key="feAnimEnabled"},
+    {id="noAnims",       label="No Anims",        type="toggle", key="characterNoAnims"},
+    {id="removeBarriers",label="No Barriers",     type="toggle", key="removeBarriers"},
 }
 local FLOAT_BUTTON_MAP = {}
 for _, def in ipairs(FLOAT_BUTTON_DEFS) do FLOAT_BUTTON_MAP[def.id] = def end
@@ -1935,7 +1825,7 @@ for _, def in ipairs(FLOAT_BUTTON_DEFS) do
 end
 state.floatButtonPositions = state.floatButtonPositions or {}
 if not state.floatButtonShape then state.floatButtonShape = "circle" end
-state.lockedButtons = state.lockedButtons or {}
+if not state.lockedButtons then state.lockedButtons = {} end
 
 local floatButtons = {}
 local START_Y_OFFSET = 180
@@ -1953,22 +1843,12 @@ local function refreshFloatVisual(def)
     local isOn = false
     if def.type == "toggle" then isOn = state[def.key] and true or false end
     if data.inner then
-        if state.animationsEnabled == false then
-            data.inner.Color = Color3.new(1,1,1)
-            data.inner.Transparency = 0
-        else
-            data.inner.Color = WHITE
-            local g = data.inner:FindFirstChild("SpinGrad")
-            if g then setSpinGradColors(g, isOn) end
-        end
+        data.inner.Color = WHITE
+        local g = data.inner:FindFirstChild("SpinGrad")
+        if g then setSpinGradColors(g, isOn) end
     end
-    if state.animationsEnabled == false then
-        data.btn.TextColor3 = Color3.new(1,1,1)
-        data.btn.TextStrokeColor3 = Color3.new(0,0,0)
-    else
-        data.btn.TextColor3 = isOn and Color3.new(0,0,0) or Color3.new(1,1,1)
-        data.btn.TextStrokeColor3 = isOn and Color3.new(1,1,1) or Color3.new(0,0,0)
-    end
+    data.btn.TextColor3 = isOn and Color3.new(0,0,0) or Color3.new(1,1,1)
+    data.btn.TextStrokeColor3 = isOn and Color3.new(1,1,1) or Color3.new(0,0,0)
 end
 local function applyShape(btn, shape)
     for _, c in ipairs(btn:GetChildren()) do
@@ -1978,7 +1858,7 @@ local function applyShape(btn, shape)
     local rot = 0
     if shape == "circle" then corner.CornerRadius = UDim.new(1, 0)
     elseif shape == "square" then corner.CornerRadius = UDim.new(0, 0)
-    elseif shape == "rounded" then corner.CornerRadius = UDim.new(0, 16)
+    elseif shape == "rounded" then corner.CornerRadius = UDim.new(0, 14)
     elseif shape == "diamond" then corner.CornerRadius = UDim.new(0, 4); rot = 45
     else corner.CornerRadius = UDim.new(1, 0) end
     btn.Rotation = rot
@@ -2095,7 +1975,7 @@ local mainWrap = Instance.new("Frame", sg)
 mainWrap.Name = "MainWrap"
 mainWrap.AnchorPoint = Vector2.new(0.5,0.5)
 mainWrap.Position = UDim2.new(state.mainX, 0, state.mainY, 0)
-mainWrap.Size = UDim2.new(0,560,0,440)
+mainWrap.Size = UDim2.new(0,540,0,420)
 mainWrap.BackgroundTransparency = 1
 local mainScale = Instance.new("UIScale", mainWrap)
 mainScale.Scale = settingsConfig.selectedScale or 1
@@ -2105,21 +1985,10 @@ main.Size = UDim2.new(1,0,1,0)
 main.BackgroundColor3 = cc3(settingsConfig.bgColor)
 main.Active = true
 main.ClipsDescendants = true
-Instance.new("UICorner", main).CornerRadius = UDim.new(0,20)
+Instance.new("UICorner", main).CornerRadius = UDim.new(0,14)
 local ms = Instance.new("UIStroke", main)
 ms.Color = cc3(settingsConfig.borderColor)
-ms.Transparency = 0.35
-ms.Thickness = 1.2
-
--- Subtle top sheen
-local sheen = Instance.new("Frame", main)
-sheen.Size = UDim2.new(1, 0, 0, 60)
-sheen.BackgroundColor3 = cc3(settingsConfig.cardColor)
-sheen.BackgroundTransparency = 0.6
-sheen.BorderSizePixel = 0
-sheen.ZIndex = 0
-Instance.new("UICorner", sheen).CornerRadius = UDim.new(0, 20)
-
+ms.Transparency = 0.3
 local dragStrip = Instance.new("TextButton", main)
 dragStrip.Size = UDim2.new(1, -140, 0, 34)
 dragStrip.Position = UDim2.new(0, 140, 0, 0)
@@ -2150,40 +2019,37 @@ UIS.InputEnded:Connect(function(input)
 end)
 
 local sb = Instance.new("Frame", main)
-sb.Size = UDim2.new(0,144,1,0)
+sb.Size = UDim2.new(0,138,1,0)
 sb.BackgroundColor3 = cc3(settingsConfig.tabBgColor)
-sb.ZIndex = 1
-Instance.new("UICorner", sb).CornerRadius = UDim.new(0,20)
+Instance.new("UICorner", sb).CornerRadius = UDim.new(0,14)
 local logo = Instance.new("TextButton", sb)
-logo.Size = UDim2.new(1,-12,0,52)
-logo.Position = UDim2.new(0,6,0,6)
+logo.Size = UDim2.new(1,-12,0,48)
+logo.Position = UDim2.new(0,6,0,4)
 logo.BackgroundTransparency = 1
-logo.Text = "  Appleware"
+logo.Text = "Appleware"
 logo.TextColor3 = cc3(settingsConfig.textColor)
 logo.Font = Enum.Font.GothamBold
-logo.TextSize = 17
+logo.TextSize = 16
 logo.TextXAlignment = Enum.TextXAlignment.Left
 logo.AutoButtonColor = false
 logo.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then beginMainDrag(input) end
 end)
 local tlb = Instance.new("ScrollingFrame", sb)
-tlb.Size = UDim2.new(1,-12,1,-72)
-tlb.Position = UDim2.new(0,6,0,62)
+tlb.Size = UDim2.new(1,-12,1,-68)
+tlb.Position = UDim2.new(0,6,0,58)
 tlb.BackgroundTransparency = 1
 tlb.ScrollBarThickness = 2
-tlb.ScrollBarImageColor3 = cc3(settingsConfig.accentColor)
 tlb.CanvasSize = UDim2.new(0,0,0,0)
 tlb.AutomaticCanvasSize = Enum.AutomaticSize.Y
 local tll = Instance.new("UIListLayout", tlb)
 tll.SortOrder = Enum.SortOrder.LayoutOrder
-tll.Padding = UDim.new(0,4)
+tll.Padding = UDim.new(0,3)
 local ct = Instance.new("Frame", main)
-ct.Size = UDim2.new(1,-156,1,-56)
-ct.Position = UDim2.new(0,152,0,10)
+ct.Size = UDim2.new(1,-148,1,-56)
+ct.Position = UDim2.new(0,148,0,10)
 ct.BackgroundTransparency = 1
 ct.ClipsDescendants = true
-ct.ZIndex = 2
 
 local tabs = {"Farm","Combat","Players","Teleport","ESP","Webhook","Misc","Voting","Button","Keybinds","UI","Anim/Emot","Secret"}
 local pages, pageGs, btns = {}, {}, {}
@@ -2201,12 +2067,11 @@ local function makePage(n)
     pg.Size = UDim2.new(1,0,1,0)
     pg.BackgroundTransparency = 1
     pg.ScrollBarThickness = 3
-    pg.ScrollBarImageColor3 = cc3(settingsConfig.accentColor)
     pg.CanvasSize = UDim2.new(0,0,0,0)
     pg.AutomaticCanvasSize = Enum.AutomaticSize.Y
     local l = Instance.new("UIListLayout", pg)
     l.SortOrder = Enum.SortOrder.LayoutOrder
-    if n == SECRET_NAME then l.Padding = UDim.new(0, 16) else l.Padding = UDim.new(0, 8) end
+    if n == SECRET_NAME then l.Padding = UDim.new(0, 16) else l.Padding = UDim.new(0, 7) end
     local p = Instance.new("UIPadding", pg)
     p.PaddingTop = UDim.new(0, 4)
     p.PaddingBottom = UDim.new(0, 30)
@@ -2227,7 +2092,7 @@ local function switchTab(n)
         else txtCol = ia and cc3(settingsConfig.tabTextActiveColor) or cc3(settingsConfig.tabTextColor) end
         if state.animationsEnabled == false then
             b.BackgroundTransparency = ia and 0 or 1
-            b.BackgroundColor3 = Color3.new(0,0,0)
+            b.BackgroundColor3 = ia and cc3(settingsConfig.cardHoverColor) or cc3(settingsConfig.tabBgColor)
             b.TextColor3 = txtCol
         else
             TweenService:Create(b, TweenInfo.new(0.32, EASE_SMOOTH), {BackgroundTransparency = ia and 0 or 1, BackgroundColor3 = ia and cc3(settingsConfig.cardHoverColor) or cc3(settingsConfig.tabBgColor), TextColor3 = txtCol}):Play()
@@ -2258,17 +2123,17 @@ local function switchTab(n)
 end
 local function createTabButton(name, isFirst)
     local b = Instance.new("TextButton", tlb)
-    b.Size = UDim2.new(1,0,0,34)
+    b.Size = UDim2.new(1,0,0,32)
     b.BackgroundColor3 = isFirst and cc3(settingsConfig.cardHoverColor) or cc3(settingsConfig.tabBgColor)
     b.BackgroundTransparency = isFirst and 0 or 1
     if name == SECRET_NAME then b.TextColor3 = Color3.fromRGB(0,0,0)
     else b.TextColor3 = isFirst and cc3(settingsConfig.tabTextActiveColor) or cc3(settingsConfig.tabTextColor) end
-    b.Text = "   " .. name
+    b.Text = "  " .. name
     b.Font = Enum.Font.GothamBold
     b.TextSize = 12.5
     b.TextXAlignment = Enum.TextXAlignment.Left
     b.AutoButtonColor = false
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0,10)
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0,8)
     btns[name] = b
     if state.animationsEnabled then attachRipple(b, cc3(settingsConfig.accentColor)) end
     if not pages[name] then makePage(name) end
@@ -2281,18 +2146,18 @@ for i, n in ipairs(tabs) do createTabButton(n, i==1) end
 mainTgls = {}
 local function tgg(page, name, order, key)
     local row = Instance.new("Frame", page)
-    row.Size = UDim2.new(1,0,0,44)
+    row.Size = UDim2.new(1,0,0,40)
     row.LayoutOrder = order
     row.BackgroundColor3 = cc3(settingsConfig.cardColor)
-    Instance.new("UICorner", row).CornerRadius = UDim.new(0,12)
+    Instance.new("UICorner", row).CornerRadius = UDim.new(0,10)
     local rowStroke = Instance.new("UIStroke", row)
     rowStroke.Color = WHITE
     rowStroke.Transparency = 0
     rowStroke.Thickness = 1.5
     attachSpinStroke(rowStroke, state[key] and true or false)
     local lbl = Instance.new("TextLabel", row)
-    lbl.Size = UDim2.new(1,-68,1,0)
-    lbl.Position = UDim2.new(0,16,0,0)
+    lbl.Size = UDim2.new(1,-64,1,0)
+    lbl.Position = UDim2.new(0,14,0,0)
     lbl.BackgroundTransparency = 1
     lbl.Text = name
     lbl.TextColor3 = cc3(settingsConfig.textColor)
@@ -2300,19 +2165,18 @@ local function tgg(page, name, order, key)
     lbl.TextSize = 12.5
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     local pill = Instance.new("Frame", row)
-    pill.Size = UDim2.new(0,46,0,26)
-    pill.Position = UDim2.new(1,-58,0.5,-13)
-    local onColor = (state.animationsEnabled == false) and Color3.fromRGB(20,20,20) or (state[key] and cc3(settingsConfig.accentColor) or Color3.fromRGB(32,32,32))
-    pill.BackgroundColor3 = onColor
+    pill.Size = UDim2.new(0,44,0,24)
+    pill.Position = UDim2.new(1,-54,0.5,-12)
+    pill.BackgroundColor3 = state[key] and cc3(settingsConfig.accentColor) or Color3.fromRGB(32,32,32)
     Instance.new("UICorner", pill).CornerRadius = UDim.new(1,0)
     local pI = Instance.new("Frame", pill)
     pI.Size = UDim2.new(1,-4,1,-4)
     pI.Position = UDim2.new(0,2,0,2)
-    pI.BackgroundColor3 = (state.animationsEnabled == false) and Color3.fromRGB(10,10,10) or (state[key] and cc3(settingsConfig.accentColor) or Color3.fromRGB(22,22,22))
+    pI.BackgroundColor3 = state[key] and cc3(settingsConfig.accentColor) or Color3.fromRGB(22,22,22)
     Instance.new("UICorner", pI).CornerRadius = UDim.new(1,0)
     local dot = Instance.new("Frame", pill)
-    dot.Size = UDim2.new(0,18,0,18)
-    dot.Position = state[key] and UDim2.new(1,-22,0.5,-9) or UDim2.new(0,4,0.5,-9)
+    dot.Size = UDim2.new(0,16,0,16)
+    dot.Position = state[key] and UDim2.new(1,-20,0.5,-8) or UDim2.new(0,4,0.5,-8)
     dot.BackgroundColor3 = state[key] and Color3.new(0,0,0) or Color3.fromRGB(200,200,200)
     Instance.new("UICorner", dot).CornerRadius = UDim.new(1,0)
     mainTgls[key] = {pill=pill, dot=dot, inner=pI, row=row, lbl=lbl, stroke=rowStroke}
@@ -2324,22 +2188,12 @@ local function tgg(page, name, order, key)
     hit.MouseButton1Click:Connect(function()
         local ns = not state[key]
         state[key] = ns
-        local off = (state.animationsEnabled == false)
-        local ac = off and Color3.fromRGB(20,20,20) or cc3(settingsConfig.accentColor)
-        local bgOff = Color3.fromRGB(32,32,32)
-        local pIOff = Color3.fromRGB(22,22,22)
-        if off then
-            pill.BackgroundColor3 = Color3.fromRGB(20,20,20)
-            pI.BackgroundColor3 = Color3.fromRGB(10,10,10)
-            dot.Position = ns and UDim2.new(1,-22,0.5,-9) or UDim2.new(0,4,0.5,-9)
-            dot.BackgroundColor3 = ns and Color3.new(0,0,0) or Color3.fromRGB(200,200,200)
-        else
-            TweenService:Create(pill, TweenInfo.new(0.28, EASE_BOUNCE, EASE_OUT), {BackgroundColor3 = ns and ac or bgOff}):Play()
-            TweenService:Create(pI, TweenInfo.new(0.28, EASE_BOUNCE, EASE_OUT), {BackgroundColor3 = ns and ac or pIOff}):Play()
-            TweenService:Create(dot, TweenInfo.new(0.4, Enum.EasingStyle.Elastic, EASE_OUT), {Position = ns and UDim2.new(1,-22,0.5,-9) or UDim2.new(0,4,0.5,-9), BackgroundColor3 = ns and Color3.new(0,0,0) or Color3.fromRGB(200,200,200)}):Play()
-            local g = rowStroke:FindFirstChild("SpinGrad")
-            if g then setSpinGradColors(g, ns) end
-        end
+        local ac = cc3(settingsConfig.accentColor)
+        TweenService:Create(pill, TweenInfo.new(0.28, EASE_BOUNCE, EASE_OUT), {BackgroundColor3 = ns and ac or Color3.fromRGB(32,32,32)}):Play()
+        TweenService:Create(pI, TweenInfo.new(0.28, EASE_BOUNCE, EASE_OUT), {BackgroundColor3 = ns and ac or Color3.fromRGB(22,22,22)}):Play()
+        TweenService:Create(dot, TweenInfo.new(0.4, Enum.EasingStyle.Elastic, EASE_OUT), {Position = ns and UDim2.new(1,-20,0.5,-8) or UDim2.new(0,4,0.5,-8), BackgroundColor3 = ns and Color3.new(0,0,0) or Color3.fromRGB(200,200,200)}):Play()
+        local g = rowStroke:FindFirstChild("SpinGrad")
+        if g then setSpinGradColors(g, ns) end
         if key == "bigButtonEnabled" and bigWrap then bigWrap.Visible = ns end
         if key == "floatButtonsEnabled" then setFloatVisible(ns) end
         if FLOAT_BUTTON_MAP[key] then refreshFloatVisual(FLOAT_BUTTON_MAP[key]) end
@@ -2350,21 +2204,21 @@ local function tgg(page, name, order, key)
 end
 local function addBtn(page, name, order, cb)
     local b = Instance.new("TextButton", page)
-    b.Size = UDim2.new(1,0,0,40)
+    b.Size = UDim2.new(1,0,0,38)
     b.LayoutOrder = order
     b.BackgroundColor3 = cc3(settingsConfig.cardColor)
     b.Text = ""
     b.ClipsDescendants = true
     b.AutoButtonColor = false
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0,12)
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0,10)
     local st = Instance.new("UIStroke", b)
     st.Color = WHITE
     st.Transparency = 0
     st.Thickness = 1.5
     attachSpinStroke(st, false)
     local l = Instance.new("TextLabel", b)
-    l.Size = UDim2.new(1,-14,1,0)
-    l.Position = UDim2.new(0,14,0,0)
+    l.Size = UDim2.new(1,-12,1,0)
+    l.Position = UDim2.new(0,12,0,0)
     l.BackgroundTransparency = 1
     l.Text = name
     l.TextColor3 = cc3(settingsConfig.textColor)
@@ -2377,7 +2231,7 @@ local function addBtn(page, name, order, cb)
 end
 local function addSect(page, text, order)
     local w = Instance.new("Frame", page)
-    w.Size = UDim2.new(1,0,0,24)
+    w.Size = UDim2.new(1,0,0,22)
     w.LayoutOrder = order
     w.BackgroundTransparency = 1
     local bar = Instance.new("Frame", w)
@@ -2397,10 +2251,10 @@ local function addSect(page, text, order)
 end
 local function makeSlider(page, label, order, iv, minV, maxV, sK, onChange)
     local row = Instance.new("Frame", page)
-    row.Size = UDim2.new(1,0,0,58)
+    row.Size = UDim2.new(1,0,0,56)
     row.LayoutOrder = order
     row.BackgroundColor3 = cc3(settingsConfig.cardColor)
-    Instance.new("UICorner", row).CornerRadius = UDim.new(0,12)
+    Instance.new("UICorner", row).CornerRadius = UDim.new(0,10)
     local lbl = Instance.new("TextLabel", row)
     lbl.Size = UDim2.new(0.6,0,0,24)
     lbl.Position = UDim2.new(0,14,0,4)
@@ -2411,15 +2265,15 @@ local function makeSlider(page, label, order, iv, minV, maxV, sK, onChange)
     lbl.TextSize = 11
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     local ib = Instance.new("TextBox", row)
-    ib.Size = UDim2.new(0,52,0,24)
-    ib.Position = UDim2.new(1,-66,0,4)
+    ib.Size = UDim2.new(0,50,0,24)
+    ib.Position = UDim2.new(1,-64,0,4)
     ib.BackgroundColor3 = Color3.fromRGB(20,20,20)
     ib.Text = tostring(iv)
     ib.TextColor3 = cc3(settingsConfig.accentColor)
     ib.Font = Enum.Font.Gotham
     ib.TextSize = 11
     ib.ClearTextOnFocus = false
-    Instance.new("UICorner", ib).CornerRadius = UDim.new(0,7)
+    Instance.new("UICorner", ib).CornerRadius = UDim.new(0,6)
     local tr = Instance.new("Frame", row)
     tr.Size = UDim2.new(1,-28,0,8)
     tr.Position = UDim2.new(0,14,1,-18)
@@ -2472,7 +2326,7 @@ local function makeSlider(page, label, order, iv, minV, maxV, sK, onChange)
 end
 local function makeInput(page, order, ph, val, onC)
     local box = Instance.new("TextBox", page)
-    box.Size = UDim2.new(1,0,0,38)
+    box.Size = UDim2.new(1,0,0,36)
     box.LayoutOrder = order
     box.BackgroundColor3 = cc3(settingsConfig.cardColor)
     box.PlaceholderText = ph
@@ -2482,24 +2336,25 @@ local function makeInput(page, order, ph, val, onC)
     box.Font = Enum.Font.Gotham
     box.TextSize = 12
     box.ClearTextOnFocus = false
-    Instance.new("UICorner", box).CornerRadius = UDim.new(0,12)
+    Instance.new("UICorner", box).CornerRadius = UDim.new(0,10)
     box.FocusLost:Connect(function() onC(box.Text) end)
     return box
 end
 
+-- ============ DROPDOWN ============
 local function makeDropdown(page, label, order, options, initial, onSelect)
     local wrapper = Instance.new("Frame", page)
-    wrapper.Size = UDim2.new(1, 0, 0, 46)
+    wrapper.Size = UDim2.new(1, 0, 0, 44)
     wrapper.LayoutOrder = order
     wrapper.BackgroundTransparency = 1
     wrapper.ClipsDescendants = false
 
     local header = Instance.new("TextButton", wrapper)
-    header.Size = UDim2.new(1, 0, 0, 46)
+    header.Size = UDim2.new(1, 0, 0, 44)
     header.BackgroundColor3 = cc3(settingsConfig.cardColor)
     header.Text = ""
     header.AutoButtonColor = false
-    Instance.new("UICorner", header).CornerRadius = UDim.new(0, 12)
+    Instance.new("UICorner", header).CornerRadius = UDim.new(0, 10)
     local headerStroke = Instance.new("UIStroke", header)
     headerStroke.Color = cc3(settingsConfig.accentColor)
     headerStroke.Thickness = 1
@@ -2530,14 +2385,14 @@ local function makeDropdown(page, label, order, options, initial, onSelect)
     arrow.Size = UDim2.new(0, 24, 0, 24)
     arrow.Position = UDim2.new(1, -32, 0.5, -12)
     arrow.BackgroundTransparency = 1
-    arrow.Text = "▼"
+    arrow.Text = "v"
     arrow.TextColor3 = cc3(settingsConfig.textColor)
     arrow.Font = Enum.Font.GothamBold
     arrow.TextSize = 13
 
     local list = Instance.new("ScrollingFrame", wrapper)
     list.Size = UDim2.new(1, 0, 0, 0)
-    list.Position = UDim2.new(0, 0, 0, 48)
+    list.Position = UDim2.new(0, 0, 0, 46)
     list.BackgroundColor3 = cc3(settingsConfig.cardColor)
     list.BorderSizePixel = 0
     list.Visible = false
@@ -2547,7 +2402,7 @@ local function makeDropdown(page, label, order, options, initial, onSelect)
     list.ScrollBarImageColor3 = cc3(settingsConfig.accentColor)
     list.CanvasSize = UDim2.new(0, 0, 0, 0)
     list.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    Instance.new("UICorner", list).CornerRadius = UDim.new(0, 12)
+    Instance.new("UICorner", list).CornerRadius = UDim.new(0, 10)
 
     local listLayout = Instance.new("UIListLayout", list)
     listLayout.SortOrder = Enum.SortOrder.LayoutOrder
@@ -2567,17 +2422,17 @@ local function makeDropdown(page, label, order, options, initial, onSelect)
     local function setOpen(want)
         if open == want then return end
         open = want
-        arrow.Text = want and "▲" or "▼"
+        arrow.Text = want and "^" or "v"
         if want then
             local visibleCount = math.min(#options, MAX_VISIBLE)
             local targetH = 10 + visibleCount * OPTION_H + math.max(0, visibleCount - 1) * 3
             list.Visible = true
             list.Size = UDim2.new(1, 0, 0, 0)
             TweenService:Create(list, TweenInfo.new(0.30, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, targetH)}):Play()
-            TweenService:Create(wrapper, TweenInfo.new(0.30, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, 46 + targetH + 2)}):Play()
+            TweenService:Create(wrapper, TweenInfo.new(0.30, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, 44 + targetH + 2)}):Play()
         else
             TweenService:Create(list, TweenInfo.new(0.22, EASE_SMOOTH, EASE_IN), {Size = UDim2.new(1, 0, 0, 0)}):Play()
-            TweenService:Create(wrapper, TweenInfo.new(0.22, EASE_SMOOTH, EASE_IN), {Size = UDim2.new(1, 0, 0, 46)}):Play()
+            TweenService:Create(wrapper, TweenInfo.new(0.22, EASE_SMOOTH, EASE_IN), {Size = UDim2.new(1, 0, 0, 44)}):Play()
             task.delay(0.24, function() if not open then list.Visible = false end end)
         end
     end
@@ -2596,7 +2451,7 @@ local function makeDropdown(page, label, order, options, initial, onSelect)
         optBtn.ZIndex = 6
         local pad = Instance.new("UIPadding", optBtn)
         pad.PaddingLeft = UDim.new(0, 12)
-        Instance.new("UICorner", optBtn).CornerRadius = UDim.new(0, 8)
+        Instance.new("UICorner", optBtn).CornerRadius = UDim.new(0, 6)
         optBtn.MouseEnter:Connect(function()
             if state.animationsEnabled == false then return end
             TweenService:Create(optBtn, TweenInfo.new(0.15), {BackgroundColor3 = cc3(settingsConfig.accentColor), TextColor3 = Color3.new(0,0,0)}):Play()
@@ -2756,7 +2611,7 @@ do
         btn.BackgroundTransparency = 0.3
         btn.Text = ""
         btn.AutoButtonColor = false
-        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 12)
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
         local stroke = Instance.new("UIStroke", btn)
         stroke.Color = cc3(settingsConfig.accentColor)
         stroke.Thickness = 1.5
@@ -2817,12 +2672,12 @@ do
     addSect(pages["Anim/Emot"], "Emote Browser", 1)
 
     local toggleBtn = Instance.new("TextButton", pages["Anim/Emot"])
-    toggleBtn.Size = UDim2.new(1, 0, 0, 44)
+    toggleBtn.Size = UDim2.new(1, 0, 0, 42)
     toggleBtn.LayoutOrder = 2
     toggleBtn.BackgroundColor3 = cc3(settingsConfig.cardColor)
     toggleBtn.Text = ""
     toggleBtn.AutoButtonColor = false
-    Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 12)
+    Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 10)
     local tbStroke = Instance.new("UIStroke", toggleBtn)
     tbStroke.Color = cc3(settingsConfig.accentColor)
     tbStroke.Thickness = 1.5
@@ -2863,7 +2718,7 @@ do
     searchBox.TextSize = 13
     searchBox.ClearTextOnFocus = false
     searchBox.TextXAlignment = Enum.TextXAlignment.Left
-    Instance.new("UICorner", searchBox).CornerRadius = UDim.new(0, 12)
+    Instance.new("UICorner", searchBox).CornerRadius = UDim.new(0, 10)
     local sbPad = Instance.new("UIPadding", searchBox)
     sbPad.PaddingLeft = UDim.new(0, 10)
     local searchStroke = Instance.new("UIStroke", searchBox)
@@ -2890,7 +2745,7 @@ do
     sizeBtn.Font = Enum.Font.GothamBold
     sizeBtn.TextSize = 11
     sizeBtn.AutoButtonColor = false
-    Instance.new("UICorner", sizeBtn).CornerRadius = UDim.new(0, 12)
+    Instance.new("UICorner", sizeBtn).CornerRadius = UDim.new(0, 10)
 
     local gridScroll = Instance.new("ScrollingFrame", menuContainer)
     gridScroll.Size = UDim2.new(1, 0, 0, 420)
@@ -2901,7 +2756,7 @@ do
     gridScroll.ScrollBarThickness = 3
     gridScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
     gridScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    Instance.new("UICorner", gridScroll).CornerRadius = UDim.new(0, 12)
+    Instance.new("UICorner", gridScroll).CornerRadius = UDim.new(0, 10)
     local gridLayout = Instance.new("UIGridLayout", gridScroll)
     gridLayout.CellSize = UDim2.new(0, state.emoteButtonSize or 120, 0, (state.emoteButtonSize or 120) + 30)
     gridLayout.CellPadding = UDim2.new(0, 6, 0, 6)
@@ -2919,7 +2774,7 @@ do
                 local card = Instance.new("Frame", gridScroll)
                 card.LayoutOrder = i
                 card.BackgroundColor3 = cc3(settingsConfig.cardColor)
-                Instance.new("UICorner", card).CornerRadius = UDim.new(0, 10)
+                Instance.new("UICorner", card).CornerRadius = UDim.new(0, 8)
                 local stroke = Instance.new("UIStroke", card)
                 stroke.Color = cc3(settingsConfig.accentColor)
                 stroke.Thickness = 1
@@ -2947,10 +2802,10 @@ do
                 playBtn.Size = UDim2.new(1, -32, 0, 20)
                 playBtn.Position = UDim2.new(0, 4, 0, currentSize - 14)
                 playBtn.BackgroundColor3 = cc3(settingsConfig.accentColor)
-                playBtn.Text = "▶"
+                playBtn.Text = "PLAY"
                 playBtn.TextColor3 = Color3.new(0,0,0)
                 playBtn.Font = Enum.Font.GothamBold
-                playBtn.TextSize = 13
+                playBtn.TextSize = 11
                 playBtn.AutoButtonColor = false
                 Instance.new("UICorner", playBtn).CornerRadius = UDim.new(0, 6)
 
@@ -2958,10 +2813,10 @@ do
                 circleBtn.Size = UDim2.new(0, 24, 0, 24)
                 circleBtn.Position = UDim2.new(1, -28, 0, currentSize - 16)
                 circleBtn.BackgroundColor3 = state.emoteFloatButtons[tostring(emote.id)] and cc3(settingsConfig.accentColor) or Color3.fromRGB(40,40,40)
-                circleBtn.Text = "●"
+                circleBtn.Text = "*"
                 circleBtn.TextColor3 = Color3.new(1,1,1)
                 circleBtn.Font = Enum.Font.GothamBold
-                circleBtn.TextSize = 12
+                circleBtn.TextSize = 13
                 circleBtn.AutoButtonColor = false
                 Instance.new("UICorner", circleBtn).CornerRadius = UDim.new(1, 0)
 
@@ -3095,37 +2950,9 @@ do
         if not path then return end
         local folder = animate:FindFirstChild(path[1])
         if not folder then return end
-        local animObj = folder:FindFirstChild(path[2])
-        if animObj and animObj:IsA("Animation") then
-            local humanoid = char:FindFirstChildOfClass("Humanoid")
-            if humanoid then
-                local animator = humanoid:FindFirstChildOfClass("Animator")
-                if animator then
-                    for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
-                        pcall(function()
-                            if track.Animation and track.Animation.AnimationId == animObj.AnimationId then
-                                track:Stop(0)
-                                track:Destroy()
-                            end
-                        end)
-                    end
-                end
-            end
-            animObj.AnimationId = id
-            pcall(function()
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                local animator = hum and hum:FindFirstChildOfClass("Animator")
-                if animator then
-                    local newAnim = Instance.new("Animation")
-                    newAnim.AnimationId = id
-                    local newTrack = animator:LoadAnimation(newAnim)
-                    newTrack.Looped = true
-                    newTrack.Priority = Enum.AnimationPriority.Core
-                    task.defer(function()
-                        if newTrack then pcall(function() newTrack:Play(0, 1) end) end
-                    end)
-                end
-            end)
+        local anim = folder:FindFirstChild(path[2])
+        if anim and anim:IsA("Animation") then
+            anim.AnimationId = id
         end
     end
 
@@ -3146,6 +2973,30 @@ do
         if char:FindFirstChild("UpperTorso") then return "R15" end
         if char:FindFirstChild("Torso") then return "R6" end
         return "Unknown"
+    end
+
+    -- Force reload: stop playing tracks AND restart the Animate script
+    local function reloadAnimations(char)
+        if not char then return end
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        local animator = hum and hum:FindFirstChildOfClass("Animator")
+        if animator then
+            for _, t in ipairs(animator:GetPlayingAnimationTracks()) do
+                pcall(function() t:Stop(0) end)
+            end
+        end
+        local animate = char:FindFirstChild("Animate")
+        if animate and (animate:IsA("LocalScript") or animate:IsA("Script")) then
+            task.spawn(function()
+                pcall(function()
+                    animate.Disabled = true
+                    task.wait(0.05)
+                    if animate and animate.Parent then
+                        animate.Disabled = false
+                    end
+                end)
+            end)
+        end
     end
 
     local FE_PRESETS = {
@@ -3238,6 +3089,7 @@ do
                 if id then setAnimIdOnChar(char, slot, id) end
             end
         end
+        reloadAnimations(char)
     end
 
     local function reapplyAll()
@@ -3264,9 +3116,10 @@ do
     if LP.Character then task.spawn(function() onCharSpawn(LP.Character) end) end
 
     tgg(pages["Anim/Emot"], "Enable FE Animations", 11, "feAnimEnabled")
+    tgg(pages["Anim/Emot"], "Disable Character Animations (Plain)", 11.5, "characterNoAnims")
 
     local animSearchBox = Instance.new("TextBox", pages["Anim/Emot"])
-    animSearchBox.Size = UDim2.new(1, 0, 0, 42)
+    animSearchBox.Size = UDim2.new(1, 0, 0, 40)
     animSearchBox.LayoutOrder = 12
     animSearchBox.BackgroundColor3 = cc3(settingsConfig.cardColor)
     animSearchBox.PlaceholderText = "Search animations..."
@@ -3277,7 +3130,7 @@ do
     animSearchBox.TextSize = 13
     animSearchBox.ClearTextOnFocus = false
     animSearchBox.TextXAlignment = Enum.TextXAlignment.Left
-    Instance.new("UICorner", animSearchBox).CornerRadius = UDim.new(0, 12)
+    Instance.new("UICorner", animSearchBox).CornerRadius = UDim.new(0, 10)
     local asp = Instance.new("UIPadding", animSearchBox)
     asp.PaddingLeft = UDim.new(0, 12)
     local animSearchStroke = Instance.new("UIStroke", animSearchBox)
@@ -3296,7 +3149,7 @@ do
     animResultsScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
     animResultsScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
     animResultsScroll.Visible = false
-    Instance.new("UICorner", animResultsScroll).CornerRadius = UDim.new(0, 12)
+    Instance.new("UICorner", animResultsScroll).CornerRadius = UDim.new(0, 10)
     local arl = Instance.new("UIListLayout", animResultsScroll)
     arl.SortOrder = Enum.SortOrder.LayoutOrder
     arl.Padding = UDim.new(0, 3)
@@ -3316,12 +3169,12 @@ do
         if name == "R6 Animation Pack" then
             local rig = getRigType(LP.Character)
             if rig == "R15" then
-                _G.__AW_NOTIFY("Note: R6 pack only works on R6 avatars — your rig is R15")
+                _G.__AW_NOTIFY("Note: R6 pack only animates R6 avatars — your rig is R15")
             elseif rig == "R6" then
                 _G.__AW_NOTIFY("R6 pack applied")
             end
         else
-            _G.__AW_NOTIFY("All anims → " .. name)
+            _G.__AW_NOTIFY("All anims -> " .. name)
         end
         for key, setter in pairs(animSetters) do
             if setter then pcall(setter, name) end
@@ -3367,7 +3220,7 @@ do
             btn.TextSize = 14
             btn.TextXAlignment = Enum.TextXAlignment.Left
             btn.AutoButtonColor = false
-            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
             local bp = Instance.new("UIPadding", btn); bp.PaddingLeft = UDim.new(0, 12)
             btn.MouseButton1Click:Connect(function()
                 applyAllAndSync(name)
@@ -3401,7 +3254,7 @@ do
         local _, _, s1 = makeDropdown(pages["Anim/Emot"], "Idle Animation", 15, presetOptions, state.feAnimIdle or "Default", function(v)
             state.feAnimIdle = v; saveSettings()
             applyPresetToSlots(v, {"idle1","idle2"})
-            _G.__AW_NOTIFY("Idle → " .. v)
+            _G.__AW_NOTIFY("Idle -> " .. v)
         end)
         animSetters.idle = s1
     end
@@ -3409,7 +3262,7 @@ do
         local _, _, s2 = makeDropdown(pages["Anim/Emot"], "Walk Animation", 16, presetOptions, state.feAnimWalk or "Default", function(v)
             state.feAnimWalk = v; saveSettings()
             applyPresetToSlots(v, {"walk"})
-            _G.__AW_NOTIFY("Walk → " .. v)
+            _G.__AW_NOTIFY("Walk -> " .. v)
         end)
         animSetters.walk = s2
     end
@@ -3417,7 +3270,7 @@ do
         local _, _, s3 = makeDropdown(pages["Anim/Emot"], "Run Animation", 17, presetOptions, state.feAnimRun or "Default", function(v)
             state.feAnimRun = v; saveSettings()
             applyPresetToSlots(v, {"run"})
-            _G.__AW_NOTIFY("Run → " .. v)
+            _G.__AW_NOTIFY("Run -> " .. v)
         end)
         animSetters.run = s3
     end
@@ -3425,7 +3278,7 @@ do
         local _, _, s4 = makeDropdown(pages["Anim/Emot"], "Jump Animation", 18, presetOptions, state.feAnimJump or "Default", function(v)
             state.feAnimJump = v; saveSettings()
             applyPresetToSlots(v, {"jump"})
-            _G.__AW_NOTIFY("Jump → " .. v)
+            _G.__AW_NOTIFY("Jump -> " .. v)
         end)
         animSetters.jump = s4
     end
@@ -3433,7 +3286,7 @@ do
         local _, _, s5 = makeDropdown(pages["Anim/Emot"], "Climb Animation", 19, presetOptions, state.feAnimClimb or "Default", function(v)
             state.feAnimClimb = v; saveSettings()
             applyPresetToSlots(v, {"climb"})
-            _G.__AW_NOTIFY("Climb → " .. v)
+            _G.__AW_NOTIFY("Climb -> " .. v)
         end)
         animSetters.climb = s5
     end
@@ -3441,7 +3294,7 @@ do
         local _, _, s6 = makeDropdown(pages["Anim/Emot"], "Fall Animation", 20, presetOptions, state.feAnimFall or "Default", function(v)
             state.feAnimFall = v; saveSettings()
             applyPresetToSlots(v, {"fall"})
-            _G.__AW_NOTIFY("Fall → " .. v)
+            _G.__AW_NOTIFY("Fall -> " .. v)
         end)
         animSetters.fall = s6
     end
@@ -3449,7 +3302,7 @@ do
         local _, _, s7 = makeDropdown(pages["Anim/Emot"], "Swim Animation", 21, presetOptions, state.feAnimSwim or "Default", function(v)
             state.feAnimSwim = v; saveSettings()
             applyPresetToSlots(v, {"swim"})
-            _G.__AW_NOTIFY("Swim → " .. v)
+            _G.__AW_NOTIFY("Swim -> " .. v)
         end)
         animSetters.swim = s7
     end
@@ -3486,12 +3339,12 @@ do
     local modes = {"murderer", "sheriff", "all"}
     local modeNames = {murderer = "Murderer Only", sheriff = "Sheriff / Hero Only", all = "Everyone"}
     local hbBtn = Instance.new("TextButton", pages[SECRET_NAME])
-    hbBtn.Size = UDim2.new(1, 0, 0, 40)
+    hbBtn.Size = UDim2.new(1, 0, 0, 38)
     hbBtn.LayoutOrder = 4
     hbBtn.BackgroundColor3 = cc3(settingsConfig.cardColor)
     hbBtn.Text = ""
     hbBtn.AutoButtonColor = false
-    Instance.new("UICorner", hbBtn).CornerRadius = UDim.new(0, 12)
+    Instance.new("UICorner", hbBtn).CornerRadius = UDim.new(0, 10)
     local hbLbl = Instance.new("TextLabel", hbBtn)
     hbLbl.Size = UDim2.new(1, -12, 1, 0)
     hbLbl.Position = UDim2.new(0, 12, 0, 0)
@@ -3552,11 +3405,17 @@ addBtn(pages[SECRET_NAME], "Fling Custom Now", 72, flingCustomNow)
 addSect(pages[SECRET_NAME], "Touch Fling", 80)
 tgg(pages[SECRET_NAME], "Touch Fling (Walk into players)", 81, "touchFling")
 
--- Remove Barriers in Secret tab
 addSect(pages[SECRET_NAME], "Remove Barriers", 85)
-tgg(pages[SECRET_NAME], "Remove Barriers", 86, "removeBarriers")
+tgg(pages[SECRET_NAME], "Remove Barriers (Kill bricks + Invisible walls)", 86, "removeBarriers")
+addBtn(pages[SECRET_NAME], "Remove All Barriers Now", 87, function()
+    local count = removeAllBarriers()
+    if count > 0 then
+        _G.__AW_NOTIFY('Removed <font color="#5aff8c">' .. count .. '</font> barrier(s)')
+    else
+        _G.__AW_NOTIFY('No barriers found')
+    end
+end)
 
--- ============ RADIO ABUSE ============
 addSect(pages[SECRET_NAME], "Radio Abuse", 100)
 do
     local function findPlaySong()
@@ -3691,17 +3550,17 @@ do
     end
 
     local songWrapper = Instance.new("Frame", pages[SECRET_NAME])
-    songWrapper.Size = UDim2.new(1, 0, 0, 46)
+    songWrapper.Size = UDim2.new(1, 0, 0, 44)
     songWrapper.LayoutOrder = 101
     songWrapper.BackgroundTransparency = 1
     songWrapper.ClipsDescendants = false
 
     local songHeader = Instance.new("TextButton", songWrapper)
-    songHeader.Size = UDim2.new(1, 0, 0, 46)
+    songHeader.Size = UDim2.new(1, 0, 0, 44)
     songHeader.BackgroundColor3 = cc3(settingsConfig.cardColor)
     songHeader.Text = ""
     songHeader.AutoButtonColor = false
-    Instance.new("UICorner", songHeader).CornerRadius = UDim.new(0, 12)
+    Instance.new("UICorner", songHeader).CornerRadius = UDim.new(0, 10)
     local songHeaderStroke = Instance.new("UIStroke", songHeader)
     songHeaderStroke.Color = cc3(settingsConfig.accentColor)
     songHeaderStroke.Thickness = 1
@@ -3732,14 +3591,14 @@ do
     songArrow.Size = UDim2.new(0, 24, 0, 24)
     songArrow.Position = UDim2.new(1, -32, 0.5, -12)
     songArrow.BackgroundTransparency = 1
-    songArrow.Text = "▼"
+    songArrow.Text = "v"
     songArrow.TextColor3 = cc3(settingsConfig.textColor)
     songArrow.Font = Enum.Font.GothamBold
     songArrow.TextSize = 13
 
     local songList = Instance.new("ScrollingFrame", songWrapper)
     songList.Size = UDim2.new(1, 0, 0, 0)
-    songList.Position = UDim2.new(0, 0, 0, 48)
+    songList.Position = UDim2.new(0, 0, 0, 46)
     songList.BackgroundColor3 = cc3(settingsConfig.cardColor)
     songList.BorderSizePixel = 0
     songList.Visible = false
@@ -3749,7 +3608,7 @@ do
     songList.ScrollBarImageColor3 = cc3(settingsConfig.accentColor)
     songList.CanvasSize = UDim2.new(0, 0, 0, 0)
     songList.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    Instance.new("UICorner", songList).CornerRadius = UDim.new(0, 12)
+    Instance.new("UICorner", songList).CornerRadius = UDim.new(0, 10)
     local songListLayout = Instance.new("UIListLayout", songList)
     songListLayout.SortOrder = Enum.SortOrder.LayoutOrder
     songListLayout.Padding = UDim.new(0, 3)
@@ -3789,7 +3648,7 @@ do
             empty.Size = UDim2.new(1, 0, 0, 34)
             empty.LayoutOrder = 1
             empty.BackgroundTransparency = 1
-            empty.Text = "(no saved songs — add one below)"
+            empty.Text = "(no saved songs - add one below)"
             empty.TextColor3 = cc3(settingsConfig.tabTextColor)
             empty.Font = Enum.Font.Gotham
             empty.TextSize = 12
@@ -3807,7 +3666,7 @@ do
             btn.TextXAlignment = Enum.TextXAlignment.Left
             btn.AutoButtonColor = false
             btn.ZIndex = 6
-            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
             local bp = Instance.new("UIPadding", btn); bp.PaddingLeft = UDim.new(0, 12)
             btn.MouseEnter:Connect(function()
                 if state.animationsEnabled == false then return end
@@ -3842,7 +3701,7 @@ do
     function setSongListOpen(want)
         if songListOpen == want then return end
         songListOpen = want
-        songArrow.Text = want and "▲" or "▼"
+        songArrow.Text = want and "^" or "v"
         if want then
             rebuildSongList()
             local visibleCount = math.min(math.max(#savedSongs, 1), 5)
@@ -3850,10 +3709,10 @@ do
             songList.Visible = true
             songList.Size = UDim2.new(1, 0, 0, 0)
             TweenService:Create(songList, TweenInfo.new(0.30, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, targetH)}):Play()
-            TweenService:Create(songWrapper, TweenInfo.new(0.30, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, 46 + targetH + 2)}):Play()
+            TweenService:Create(songWrapper, TweenInfo.new(0.30, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, 44 + targetH + 2)}):Play()
         else
             TweenService:Create(songList, TweenInfo.new(0.22, EASE_SMOOTH, EASE_IN), {Size = UDim2.new(1, 0, 0, 0)}):Play()
-            TweenService:Create(songWrapper, TweenInfo.new(0.22, EASE_SMOOTH, EASE_IN), {Size = UDim2.new(1, 0, 0, 46)}):Play()
+            TweenService:Create(songWrapper, TweenInfo.new(0.22, EASE_SMOOTH, EASE_IN), {Size = UDim2.new(1, 0, 0, 44)}):Play()
             task.delay(0.24, function() if not songListOpen then songList.Visible = false end end)
         end
     end
@@ -3902,7 +3761,7 @@ do
         if stopAudio() then
             _G.__AW_NOTIFY("Audio stopped")
         else
-            _G.__AW_NOTIFY("Could not stop audio — no stop remote or PlaySong missing")
+            _G.__AW_NOTIFY("Could not stop audio")
         end
     end)
 
@@ -3961,14 +3820,45 @@ do
             if stopRemote then
                 _G.__AW_NOTIFY("PlaySong: " .. PlaySong:GetFullName() .. " | Stop: " .. stopRemote:GetFullName())
             else
-                _G.__AW_NOTIFY("PlaySong found at: " .. PlaySong:GetFullName() .. " (no stop remote found — fallback will be used)")
+                _G.__AW_NOTIFY("PlaySong found at: " .. PlaySong:GetFullName() .. " (no stop remote found)")
             end
         else
-            _G.__AW_NOTIFY("PlaySong remote NOT FOUND anywhere in ReplicatedStorage")
+            _G.__AW_NOTIFY("PlaySong remote NOT FOUND")
         end
     end)
 
-    tgg(pages[SECRET_NAME], "Auto Play Audio", 110, "radioAutoPlay")
+    tgg(pages[SECRET_NAME], "Auto Play Audio (loops when finished)", 110, "radioAutoPlay")
+
+    -- ===== Track Sounds so we can replay when they finish =====
+    local trackedSounds = setmetatable({}, {__mode = "k"})
+    local SoundService = game:GetService("SoundService")
+
+    local function bindSoundRestart(s)
+        if not s:IsA("Sound") then return end
+        if trackedSounds[s] then return end
+        trackedSounds[s] = true
+        s.Ended:Connect(function()
+            if state.radioAutoPlay and state.radioSelectedSongId and state.radioSelectedSongId ~= "" then
+                task.wait(0.3)
+                firePlaySong(state.radioSelectedSongId, true)
+            end
+        end)
+    end
+
+    task.spawn(function()
+        while true do
+            task.wait(0.5)
+            if state.radioAutoPlay then
+                pcall(function()
+                    for _, s in ipairs(SoundService:GetDescendants()) do bindSoundRestart(s) end
+                    for _, s in ipairs(Workspace:GetDescendants()) do bindSoundRestart(s) end
+                    for _, s in ipairs(LP:GetDescendants()) do bindSoundRestart(s) end
+                end)
+            end
+        end
+    end)
+
+    -- Play once when character spawns
     LP.CharacterAdded:Connect(function()
         if state.radioAutoPlay and state.radioSelectedSongId and state.radioSelectedSongId ~= "" then
             task.wait(1.5)
@@ -4109,7 +3999,7 @@ task.spawn(function()
             pcall(function()
                 local extra = ReplicatedStorage:FindFirstChild("Remotes")
                 extra = extra and extra:FindFirstChild("Extras")
-                extra = extra and ReplicateToy
+                extra = extra and extra:FindFirstChild("ReplicateToy")
                 if extra and extra:IsA("RemoteFunction") then extra:InvokeServer("GGSign") end
             end)
         end
@@ -4137,7 +4027,7 @@ do
     fpsLabel.TextSize = 14
     fpsLabel.TextXAlignment = Enum.TextXAlignment.Left
     fpsLabel.Text = "FPS: --"
-    Instance.new("UICorner", fpsLabel).CornerRadius = UDim.new(0, 8)
+    Instance.new("UICorner", fpsLabel).CornerRadius = UDim.new(0, 6)
     local fpsPad = Instance.new("UIPadding", fpsLabel)
     fpsPad.PaddingLeft = UDim.new(0, 8)
     local pingLabel = Instance.new("TextLabel", monitorGui)
@@ -4150,7 +4040,7 @@ do
     pingLabel.TextSize = 14
     pingLabel.TextXAlignment = Enum.TextXAlignment.Left
     pingLabel.Text = "PING: --"
-    Instance.new("UICorner", pingLabel).CornerRadius = UDim.new(0, 8)
+    Instance.new("UICorner", pingLabel).CornerRadius = UDim.new(0, 6)
     local pingPad = Instance.new("UIPadding", pingLabel)
     pingPad.PaddingLeft = UDim.new(0, 8)
     local fpsAccum, fpsTime = 0, 0
@@ -4229,7 +4119,7 @@ do
     creditCard.Size = UDim2.new(1, 0, 0, 80)
     creditCard.LayoutOrder = 901
     creditCard.BackgroundColor3 = cc3(settingsConfig.cardColor)
-    Instance.new("UICorner", creditCard).CornerRadius = UDim.new(0, 12)
+    Instance.new("UICorner", creditCard).CornerRadius = UDim.new(0, 10)
     local creditStroke = Instance.new("UIStroke", creditCard)
     creditStroke.Color = cc3(settingsConfig.accentColor)
     creditStroke.Thickness = 1.5
@@ -4247,7 +4137,7 @@ do
     creditBody.Size = UDim2.new(1, -20, 1, -40)
     creditBody.Position = UDim2.new(0, 10, 0, 32)
     creditBody.BackgroundTransparency = 1
-    creditBody.Text = "• lzzzx\n• noir (7yd7)"
+    creditBody.Text = "lzzzx\nnoir (7yd7)"
     creditBody.TextColor3 = cc3(settingsConfig.textColor)
     creditBody.Font = Enum.Font.Gotham
     creditBody.TextSize = 12
@@ -4267,11 +4157,11 @@ tgg(pages["Farm"], "Full Bag Gate", 6, "fullBagGate")
 addSect(pages["Combat"], "Silent Aim", 1)
 tgg(pages["Combat"], "Silent Aim", 2, "silentAimEnabled")
 tgg(pages["Combat"], "Silent Aim Wall Check", 3, "silentAimWallCheck")
-makeSlider(pages["Combat"], "Silent Aim Height (0=feet, 2=head)", 4, state.silentAimYHeight or 2, 0, 2, "silentAimYHeight")
+makeSlider(pages["Combat"], "Silent Aim Height", 4, state.silentAimYHeight or 2, 0, 2, "silentAimYHeight")
 tgg(pages["Combat"], "Shoot Through Walls", 10, "shootThroughWall")
 tgg(pages["Combat"], "Auto Shoot Murderer", 11, "autoShootMurderer")
 addBtn(pages["Combat"], "Shoot Murderer Now", 12, fullShootSequence)
-addBtn(pages["Combat"], "Shoot Through Wall (Magic Bullet)", 13, fireThroughWall)
+addBtn(pages["Combat"], "Shoot Through Wall", 13, fireThroughWall)
 addSect(pages["Combat"], "Auto Actions", 20)
 tgg(pages["Combat"], "Auto Kill All", 21, "autoKillAll")
 tgg(pages["Combat"], "Loop Fling All", 22, "loopFlingAll")
@@ -4395,7 +4285,7 @@ playerListScroll.ScrollBarThickness = 3
 playerListScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 playerListScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 playerListScroll.Visible = state.playerListOpen
-Instance.new("UICorner", playerListScroll).CornerRadius = UDim.new(0, 12)
+Instance.new("UICorner", playerListScroll).CornerRadius = UDim.new(0, 10)
 local plsLayout = Instance.new("UIListLayout", playerListScroll)
 plsLayout.SortOrder = Enum.SortOrder.LayoutOrder
 plsLayout.Padding = UDim.new(0, 4)
@@ -4419,7 +4309,7 @@ local function buildPlayerRow(parent, plr, order)
     row.Size = UDim2.new(1, -12, 0, 52)
     row.LayoutOrder = order
     row.BackgroundColor3 = cc3(settingsConfig.cardHoverColor)
-    Instance.new("UICorner", row).CornerRadius = UDim.new(0, 10)
+    Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
     local avatar = Instance.new("ImageLabel", row)
     avatar.Size = UDim2.new(0, 40, 0, 40)
     avatar.Position = UDim2.new(0, 5, 0.5, -20)
@@ -4620,72 +4510,65 @@ makeSlider(pages["Button"], "Button Size", 12, state.floatButtonSize or 68, 44, 
     end
 end)
 
+-- ===== Lock System =====
 addSect(pages["Button"], "Lock System", 20)
-addBtn(pages["Button"], "Lock All Floating Buttons", 21, function()
+
+local function getLockableButtonNames()
+    local list = {}
     for _, def in ipairs(FLOAT_BUTTON_DEFS) do
-        if state.floatEnabledButtons[def.id] then
-            state.lockedButtons[def.id] = true
-        end
+        table.insert(list, def.label)
+    end
+    table.insert(list, "Shoot Murderer Button")
+    return list
+end
+
+local function findDefByLabel(label)
+    for _, def in ipairs(FLOAT_BUTTON_DEFS) do
+        if def.label == label then return def end
+    end
+    return nil
+end
+
+addBtn(pages["Button"], "Lock All Buttons", 21, function()
+    for _, def in ipairs(FLOAT_BUTTON_DEFS) do
+        state.lockedButtons[def.id] = true
     end
     state.bigButtonLocked = true
     saveSettings()
-    _G.__AW_NOTIFY("All buttons locked in place")
+    _G.__AW_NOTIFY("All buttons locked")
 end)
-addBtn(pages["Button"], "Unlock All Floating Buttons", 22, function()
+addBtn(pages["Button"], "Unlock All Buttons", 22, function()
     state.lockedButtons = {}
     state.bigButtonLocked = false
     saveSettings()
     _G.__AW_NOTIFY("All buttons unlocked")
 end)
-makeDropdown(pages["Button"], "Lock Specific Button", 23, (function()
-    local opts = {}
-    for _, def in ipairs(FLOAT_BUTTON_DEFS) do
-        if state.floatEnabledButtons[def.id] then
-            table.insert(opts, def.label)
-        end
-    end
-    table.insert(opts, "Shoot Murderer Button")
-    if #opts == 0 then table.insert(opts, "(no buttons enabled)") end
-    return opts
-end)(), "Select...", function(choice)
+makeDropdown(pages["Button"], "Lock Specific Button", 23, getLockableButtonNames(), "Select...", function(choice)
     if choice == "Shoot Murderer Button" then
         state.bigButtonLocked = true
         saveSettings()
         _G.__AW_NOTIFY("Shoot Murderer Button locked")
         return
     end
-    for _, def in ipairs(FLOAT_BUTTON_DEFS) do
-        if def.label == choice and state.floatEnabledButtons[def.id] then
-            state.lockedButtons[def.id] = true
-            saveSettings()
-            _G.__AW_NOTIFY(def.label .. " locked")
-            return
-        end
+    local def = findDefByLabel(choice)
+    if def then
+        state.lockedButtons[def.id] = true
+        saveSettings()
+        _G.__AW_NOTIFY(def.label .. " locked")
     end
 end)
-makeDropdown(pages["Button"], "Unlock Specific Button", 24, (function()
-    local opts = {}
-    for id, _ in pairs(state.lockedButtons) do
-        local def = FLOAT_BUTTON_MAP[id]
-        if def then table.insert(opts, def.label) end
-    end
-    if state.bigButtonLocked then table.insert(opts, "Shoot Murderer Button") end
-    if #opts == 0 then table.insert(opts, "(no buttons locked)") end
-    return opts
-end)(), "Select...", function(choice)
+makeDropdown(pages["Button"], "Unlock Specific Button", 24, getLockableButtonNames(), "Select...", function(choice)
     if choice == "Shoot Murderer Button" then
         state.bigButtonLocked = false
         saveSettings()
         _G.__AW_NOTIFY("Shoot Murderer Button unlocked")
         return
     end
-    for _, def in ipairs(FLOAT_BUTTON_DEFS) do
-        if def.label == choice and state.lockedButtons[def.id] then
-            state.lockedButtons[def.id] = nil
-            saveSettings()
-            _G.__AW_NOTIFY(def.label .. " unlocked")
-            return
-        end
+    local def = findDefByLabel(choice)
+    if def then
+        state.lockedButtons[def.id] = nil
+        saveSettings()
+        _G.__AW_NOTIFY(def.label .. " unlocked")
     end
 end)
 
@@ -4713,7 +4596,7 @@ for i, sp in ipairs(SHAPES) do
     sb2.Font = Enum.Font.GothamBold
     sb2.TextSize = 11
     sb2.AutoButtonColor = false
-    Instance.new("UICorner", sb2).CornerRadius = UDim.new(0, 10)
+    Instance.new("UICorner", sb2).CornerRadius = UDim.new(0, 8)
     sb2.MouseButton1Click:Connect(function()
         state.floatButtonShape = sp.id
         saveSettings()
@@ -4734,7 +4617,7 @@ do
     mSearch.Font = Enum.Font.Gotham
     mSearch.TextSize = 12
     mSearch.ClearTextOnFocus = false
-    Instance.new("UICorner", mSearch).CornerRadius = UDim.new(0, 12)
+    Instance.new("UICorner", mSearch).CornerRadius = UDim.new(0, 10)
     local mList = Instance.new("ScrollingFrame", pages["Button"])
     mList.Size = UDim2.new(1, 0, 0, 300)
     mList.LayoutOrder = 42
@@ -4760,7 +4643,7 @@ do
                 row.Size = UDim2.new(1, 0, 0, 32)
                 row.LayoutOrder = i
                 row.BackgroundColor3 = cc3(settingsConfig.cardColor)
-                Instance.new("UICorner", row).CornerRadius = UDim.new(0, 10)
+                Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
                 local nl = Instance.new("TextLabel", row)
                 nl.Size = UDim2.new(0.6, 0, 1, 0)
                 nl.Position = UDim2.new(0, 10, 0, 0)
@@ -4806,7 +4689,7 @@ do
     info.TextSize = 11
     info.TextWrapped = true
     info.TextXAlignment = Enum.TextXAlignment.Left
-    Instance.new("UICorner", info).CornerRadius = UDim.new(0, 10)
+    Instance.new("UICorner", info).CornerRadius = UDim.new(0, 8)
     local pad = Instance.new("UIPadding", info)
     pad.PaddingLeft = UDim.new(0, 10)
 end
@@ -4826,7 +4709,7 @@ for i, kb in ipairs(KEYBIND_FEATURES) do
     row.Size = UDim2.new(1, 0, 0, 40)
     row.LayoutOrder = 10 + i
     row.BackgroundColor3 = cc3(settingsConfig.cardColor)
-    Instance.new("UICorner", row).CornerRadius = UDim.new(0, 12)
+    Instance.new("UICorner", row).CornerRadius = UDim.new(0, 10)
     local nameLbl = Instance.new("TextLabel", row)
     nameLbl.Size = UDim2.new(0.5, 0, 1, 0)
     nameLbl.Position = UDim2.new(0, 12, 0, 0)
@@ -4925,7 +4808,7 @@ do
     sr.Size = UDim2.new(1,0,0,44)
     sr.LayoutOrder = 2
     sr.BackgroundColor3 = cc3(settingsConfig.cardColor)
-    Instance.new("UICorner", sr).CornerRadius = UDim.new(0,12)
+    Instance.new("UICorner", sr).CornerRadius = UDim.new(0,10)
     local srl = Instance.new("TextLabel", sr)
     srl.Size = UDim2.new(0.5,0,1,0)
     srl.Position = UDim2.new(0,14,0,0)
@@ -4944,7 +4827,7 @@ do
     minus.Font = Enum.Font.GothamBold
     minus.TextSize = 16
     minus.AutoButtonColor = false
-    Instance.new("UICorner", minus).CornerRadius = UDim.new(0,8)
+    Instance.new("UICorner", minus).CornerRadius = UDim.new(0,7)
     local val = Instance.new("TextLabel", sr)
     val.Size = UDim2.new(0,60,0,30)
     val.Position = UDim2.new(1,-104,0.5,-15)
@@ -4962,7 +4845,7 @@ do
     plus.Font = Enum.Font.GothamBold
     plus.TextSize = 16
     plus.AutoButtonColor = false
-    Instance.new("UICorner", plus).CornerRadius = UDim.new(0,8)
+    Instance.new("UICorner", plus).CornerRadius = UDim.new(0,7)
     local function refresh()
         val.Text = string.format("%.1fx", settingsConfig.selectedScale or 1)
         if _G.__AW_MAINSCALE then TweenService:Create(_G.__AW_MAINSCALE, TweenInfo.new(0.22, EASE_SMOOTH), {Scale = settingsConfig.selectedScale or 1}):Play() end
@@ -4978,11 +4861,11 @@ do
 end
 addSect(pages["UI"], "Toggles", 4)
 tgg(pages["UI"], "Notification Sound", 6, "notifySound")
-tgg(pages["UI"], "Enable Animations", 7, "animationsEnabled")
+tgg(pages["UI"], "Enable Animations (uncheck for plain look)", 7, "animationsEnabled")
 
 -- ============ OPEN/CLOSE BUTTON ============
 local fb = Instance.new("TextButton", sg)
-fb.Size = UDim2.new(0,80,0,36)
+fb.Size = UDim2.new(0,78,0,34)
 fb.Position = UDim2.new(state.openX, 0, state.openY, 0)
 fb.BackgroundColor3 = cc3(settingsConfig.openBtnColor)
 fb.Text = "Close"
@@ -4991,7 +4874,7 @@ fb.Font = Enum.Font.GothamBold
 fb.TextSize = 12.5
 fb.ZIndex = 99999
 fb.Active = true
-Instance.new("UICorner", fb).CornerRadius = UDim.new(0,10)
+Instance.new("UICorner", fb).CornerRadius = UDim.new(0,9)
 local fbStroke = Instance.new("UIStroke", fb)
 fbStroke.Color = WHITE
 fbStroke.Transparency = 0.4
@@ -5004,7 +4887,7 @@ fb.MouseButton1Click:Connect(function()
     if isOpen then
         mainWrap.Visible = true
         mainWrap.Size = UDim2.new(0, 0, 0, 0)
-        TweenService:Create(mainWrap, TweenInfo.new(0.35, EASE_BOUNCE, EASE_OUT), {Size = UDim2.new(0, 560, 0, 440)}):Play()
+        TweenService:Create(mainWrap, TweenInfo.new(0.35, EASE_BOUNCE, EASE_OUT), {Size = UDim2.new(0, 540, 0, 420)}):Play()
     else
         TweenService:Create(mainWrap, TweenInfo.new(0.22, EASE_SOFT, EASE_IN), {Size = UDim2.new(0, 40, 0, 40)}):Play()
         task.delay(0.25, function() if not isOpen then mainWrap.Visible = false end end)
@@ -5301,6 +5184,7 @@ task.spawn(function()
     end
 end)
 
+-- ============ SILENT LOOP REFRESH ============
 task.spawn(function()
     local wasInRound = false
     local LOOP_KEYS = {"loopFlingAll", "loopFlingMur", "loopFlingSheriff", "loopFlingCustom"}
@@ -5497,6 +5381,7 @@ task.spawn(function()
     end
 end)
 
+-- ============ BLUE AURA LOOP ============
 task.spawn(function()
     while true do
         task.wait(0.5)
@@ -5525,6 +5410,7 @@ task.spawn(function()
     end
 end)
 
+-- ============ WALL HOP LOOP ============
 do
     local rayParams = RaycastParams.new()
     rayParams.FilterType = Enum.RaycastFilterType.Exclude
