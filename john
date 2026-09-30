@@ -34,7 +34,7 @@ UIS = game:GetService("UserInputService")
 SoundService = game:GetService("SoundService")
 LP = Players.LocalPlayer
 PlaceId = game.PlaceId
-PlayerGui = LP:WaitForChild("PlayerGui", 10)
+PlayerGui = LP:WaitForChild("PlayerGui", 10) or LP:FindFirstChildOfClass("PlayerGui")
 
 CF = "ApplewareConfigs"
 CFl = "Appleware.json"
@@ -99,7 +99,6 @@ state = {
     removeBarriers=false,
     lockedButtons={},
     bigButtonLocked=false,
-
     voidPlatform=false,
     loopVoidTP=false,
 }
@@ -464,13 +463,13 @@ _G.__AW_NOTIFY = function(text)
     Instance.new("UICorner", f).CornerRadius = UDim.new(0, 10)
 
     local grad = Instance.new("UIGradient", f)
-    grad.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(22, 22, 28)), ColorSequenceKeypoint.new(1, Color3.fromRGB(12, 12, 16))})
+    grad.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(40, 20, 62)), ColorSequenceKeypoint.new(1, Color3.fromRGB(14, 6, 24))})
     grad.Rotation = 90
 
     local stroke = Instance.new("UIStroke", f)
     stroke.Color = cc3(settingsConfig.accentColor)
     stroke.Thickness = 1
-    stroke.Transparency = 0.55
+    stroke.Transparency = 0.4
 
     local acc = Instance.new("Frame", f)
     acc.Size = UDim2.new(0, 3, 1, -16)
@@ -578,12 +577,6 @@ local function playerMatchesName(p, nameStr)
     if string.lower(p.Name) == n then return true end
     if p.DisplayName and string.lower(p.DisplayName) == n then return true end
     return false
-end
-local function standUp()
-    local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-    local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-    if h then h.PlatformStand=false; h.AutoRotate=true; pcall(function() h:ChangeState(Enum.HumanoidStateType.GettingUp) end) end
-    if r then r.Anchored=false; r.AssemblyLinearVelocity=Vector3.zero; r.AssemblyAngularVelocity=Vector3.zero end
 end
 local function readNum(v)
     if v == nil then return nil end
@@ -775,23 +768,19 @@ local function detectMurdererPerk(plr)
     return nil
 end
 
--- ============ REMOVE BARRIERS (GlitchProof parent + Kill Bricks) ============
+-- ============ REMOVE BARRIERS ============
 local function isBarrierPart(obj)
     if not obj:IsA("BasePart") then return false end
     if obj == LP.Character then return false end
     if LP.Character and obj:IsDescendantOf(LP.Character) then return false end
 
     local name = string.lower(obj.Name)
-
     if string.find(name, "glitchproof", 1, true)
         or string.find(name, "glitch_proof", 1, true)
         or string.find(name, "glitch proof", 1, true) then
         return true
     end
-
-    if string.find(name, "kill", 1, true) then
-        return true
-    end
+    if string.find(name, "kill", 1, true) then return true end
 
     local anc = obj.Parent
     local depth = 0
@@ -808,7 +797,6 @@ local function isBarrierPart(obj)
         anc = anc.Parent
         depth = depth + 1
     end
-
     return false
 end
 
@@ -926,7 +914,7 @@ local function reliableFling(tp, forceManual)
     bg.CFrame = RootPart.CFrame
     bg.Parent = RootPart
     local origDH = Workspace.FallenPartsDestroyHeight
-    Workspace.FallenPartsDestroyHeight = -100000
+    pcall(function() Workspace.FallenPartsDestroyHeight = -100000 end)
     local startTime = tick()
     activeResets[tp.UserId] = startTime
     local conn, cleaned = nil, false
@@ -934,7 +922,7 @@ local function reliableFling(tp, forceManual)
         if cleaned then return end
         cleaned = true
         pcall(function()
-            Workspace.FallenPartsDestroyHeight = origDH
+            pcall(function() Workspace.FallenPartsDestroyHeight = origDH end)
             if bv and bv.Parent then bv:Destroy() end
             if bg and bg.Parent then bg:Destroy() end
             if Humanoid and Humanoid.Parent then
@@ -1910,14 +1898,27 @@ main.ClipsDescendants = true
 Instance.new("UICorner", main).CornerRadius = UDim.new(0,14)
 local mainGrad = Instance.new("UIGradient", main)
 mainGrad.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0.0, Color3.fromRGB(48, 22, 78)),
-    ColorSequenceKeypoint.new(0.55, Color3.fromRGB(22, 11, 38)),
-    ColorSequenceKeypoint.new(1.0, Color3.fromRGB(12, 6, 22)),
+    ColorSequenceKeypoint.new(0.0, Color3.fromRGB(58, 26, 96)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(24, 12, 44)),
+    ColorSequenceKeypoint.new(1.0, Color3.fromRGB(14, 6, 26)),
 })
 mainGrad.Rotation = 135
+
+-- Glowing border pulse
 local ms = Instance.new("UIStroke", main)
-ms.Color = cc3(settingsConfig.borderColor)
-ms.Transparency = 0.3
+ms.Color = cc3(settingsConfig.accentColor)
+ms.Transparency = 0.15
+ms.Thickness = 1.5
+task.spawn(function()
+    while ms and ms.Parent do
+        TweenService:Create(ms, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Transparency = 0.6, Thickness = 2.5}):Play()
+        task.wait(2)
+        if not ms or not ms.Parent then break end
+        TweenService:Create(ms, TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Transparency = 0.15, Thickness = 1.5}):Play()
+        task.wait(2)
+    end
+end)
+
 local dragStrip = Instance.new("TextButton", main)
 dragStrip.Size = UDim2.new(1, -140, 0, 34)
 dragStrip.Position = UDim2.new(0, 140, 0, 0)
@@ -1951,12 +1952,19 @@ local sb = Instance.new("Frame", main)
 sb.Size = UDim2.new(0,138,1,0)
 sb.BackgroundColor3 = cc3(settingsConfig.tabBgColor)
 Instance.new("UICorner", sb).CornerRadius = UDim.new(0,14)
+local sbGrad = Instance.new("UIGradient", sb)
+sbGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(36, 16, 62)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(14, 6, 24)),
+})
+sbGrad.Rotation = 90
+
 local logo = Instance.new("TextButton", sb)
 logo.Size = UDim2.new(1,-12,0,48)
 logo.Position = UDim2.new(0,6,0,4)
 logo.BackgroundTransparency = 1
-logo.Text = "Appleware"
-logo.TextColor3 = cc3(settingsConfig.textColor)
+logo.Text = "✦ Appleware"
+logo.TextColor3 = cc3(settingsConfig.accentColor)
 logo.Font = Enum.Font.GothamBold
 logo.TextSize = 16
 logo.TextXAlignment = Enum.TextXAlignment.Left
@@ -2391,6 +2399,9 @@ local function makeDropdown(page, label, order, options, initial, onSelect)
     end
 end
 
+-- ============================================================
+-- EMOTE + ANIMATION TAB (no images — colored letter tiles)
+-- ============================================================
 do
     local EMOTES = {
         {id=3360689775,name="Salute"},{id=5915779043,name="Applaud"},{id=3360692915,name="Tilt"},
@@ -2486,6 +2497,19 @@ do
     end
     EMOTES = dedup
 
+    -- Deterministic color from emote id — used for the letter tile
+    local function colorForId(id)
+        local h = tonumber(id) % 360
+        return Color3.fromHSV(h / 360, 0.55, 0.9)
+    end
+    local function initialsFor(name)
+        local words = {}
+        for w in string.gmatch(name, "%S+") do table.insert(words, w) end
+        if #words == 0 then return "?" end
+        if #words == 1 then return string.upper(string.sub(words[1], 1, 2)) end
+        return (string.upper(string.sub(words[1], 1, 1)) .. string.upper(string.sub(words[2], 1, 1)))
+    end
+
     local emoteFloatGui = Instance.new("ScreenGui")
     emoteFloatGui.Name = "AW_EmoteFloats"
     emoteFloatGui.ResetOnSpawn = false
@@ -2519,26 +2543,19 @@ do
         end
         local btn = Instance.new("TextButton", outer)
         btn.Size = UDim2.new(1, 0, 1, 0)
-        btn.BackgroundColor3 = Color3.fromRGB(0,0,0)
-        btn.BackgroundTransparency = 0.3
-        btn.Text = ""
+        btn.BackgroundColor3 = colorForId(id)
+        btn.BackgroundTransparency = 0.15
+        btn.Text = initialsFor(emote.name or "?")
+        btn.TextColor3 = Color3.new(0,0,0)
+        btn.Font = Enum.Font.GothamBold
+        btn.TextSize = 20
         btn.AutoButtonColor = false
         Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
         local stroke = Instance.new("UIStroke", btn)
         stroke.Color = cc3(settingsConfig.accentColor)
         stroke.Thickness = 1.5
-        stroke.Transparency = 0.4
-        local img = Instance.new("ImageLabel", btn)
-        img.Size = UDim2.new(0.85, 0, 0.85, 0)
-        img.Position = UDim2.new(0.075, 0, 0.075, 0)
-        img.BackgroundTransparency = 1
-        img.Image = "rbxthumb://type=Asset&id=" .. id .. "&w=150&h=150"
-        img.ScaleType = Enum.ScaleType.Fit
-        btn.MouseButton1Click:Connect(function()
-            local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-            if not hum then return end
-            pcall(function() hum:PlayEmoteAndGetAnimTrackById(tonumber(id)) end)
-        end)
+        stroke.Transparency = 0.2
+        btn.MouseButton1Click:Connect(function() playEmote(tonumber(id)) end)
         local dragState = nil
         btn.InputBegan:Connect(function(input)
             if input.UserInputType ~= Enum.UserInputType.Touch and input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
@@ -2692,12 +2709,31 @@ do
                 stroke.Thickness = 1
                 stroke.Transparency = 0.5
 
-                local img = Instance.new("ImageLabel", card)
-                img.Size = UDim2.new(1, -8, 0, currentSize - 40)
-                img.Position = UDim2.new(0, 4, 0, 4)
-                img.BackgroundTransparency = 1
-                img.Image = "rbxthumb://type=Asset&id=" .. emote.id .. "&w=150&h=150"
-                img.ScaleType = Enum.ScaleType.Fit
+                -- Letter tile instead of image
+                local tile = Instance.new("Frame", card)
+                tile.Size = UDim2.new(1, -8, 0, currentSize - 40)
+                tile.Position = UDim2.new(0, 4, 0, 4)
+                tile.BackgroundColor3 = colorForId(emote.id)
+                tile.BackgroundTransparency = 0.15
+                Instance.new("UICorner", tile).CornerRadius = UDim.new(0, 6)
+                local tileGrad = Instance.new("UIGradient", tile)
+                tileGrad.Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, Color3.new(1,1,1)),
+                    ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0)),
+                })
+                tileGrad.Transparency = NumberSequence.new({
+                    NumberSequenceKeypoint.new(0, 0.5),
+                    NumberSequenceKeypoint.new(1, 0.9),
+                })
+                tileGrad.Rotation = 45
+                local initials = Instance.new("TextLabel", tile)
+                initials.Size = UDim2.new(1, 0, 1, 0)
+                initials.BackgroundTransparency = 1
+                initials.Text = initialsFor(emote.name)
+                initials.TextColor3 = Color3.fromRGB(20, 10, 30)
+                initials.Font = Enum.Font.GothamBlack
+                initials.TextScaled = true
+                initials.TextStrokeTransparency = 1
 
                 local name = Instance.new("TextLabel", card)
                 name.Size = UDim2.new(1, -8, 0, 16)
@@ -2714,10 +2750,10 @@ do
                 playBtn.Size = UDim2.new(1, -32, 0, 20)
                 playBtn.Position = UDim2.new(0, 4, 0, currentSize - 14)
                 playBtn.BackgroundColor3 = cc3(settingsConfig.accentColor)
-                playBtn.Text = "▶"
+                playBtn.Text = "▶ PLAY"
                 playBtn.TextColor3 = Color3.new(0,0,0)
                 playBtn.Font = Enum.Font.GothamBold
-                playBtn.TextSize = 13
+                playBtn.TextSize = 11
                 playBtn.AutoButtonColor = false
                 Instance.new("UICorner", playBtn).CornerRadius = UDim.new(0, 6)
 
@@ -2725,10 +2761,10 @@ do
                 circleBtn.Size = UDim2.new(0, 24, 0, 24)
                 circleBtn.Position = UDim2.new(1, -28, 0, currentSize - 16)
                 circleBtn.BackgroundColor3 = state.emoteFloatButtons[tostring(emote.id)] and cc3(settingsConfig.accentColor) or Color3.fromRGB(40,40,40)
-                circleBtn.Text = "●"
+                circleBtn.Text = "+"
                 circleBtn.TextColor3 = Color3.new(1,1,1)
                 circleBtn.Font = Enum.Font.GothamBold
-                circleBtn.TextSize = 12
+                circleBtn.TextSize = 14
                 circleBtn.AutoButtonColor = false
                 Instance.new("UICorner", circleBtn).CornerRadius = UDim.new(1, 0)
 
@@ -3645,32 +3681,12 @@ do
             btn.ZIndex = 6
             Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
             local bp = Instance.new("UIPadding", btn); bp.PaddingLeft = UDim.new(0, 12)
-            btn.MouseEnter:Connect(function()
-                if state.animationsEnabled == false then return end
-                if tostring(s.id) ~= tostring(selectedSongId) then
-                    TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = cc3(settingsConfig.accentColor), TextColor3 = Color3.new(0,0,0)}):Play()
-                end
-            end)
-            btn.MouseLeave:Connect(function()
-                if state.animationsEnabled == false then return end
-                if tostring(s.id) ~= tostring(selectedSongId) then
-                    TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = cc3(settingsConfig.cardHoverColor), TextColor3 = cc3(settingsConfig.textColor)}):Play()
-                end
-            end)
             btn.MouseButton1Click:Connect(function()
                 selectedSongId = tostring(s.id)
                 state.radioSelectedSongId = selectedSongId
                 saveSettings()
                 refreshSongDisplay()
                 setSongListOpen(false)
-                for _, c in ipairs(songList:GetChildren()) do
-                    if c:IsA("TextButton") then
-                        c.BackgroundColor3 = cc3(settingsConfig.cardHoverColor)
-                        c.TextColor3 = cc3(settingsConfig.textColor)
-                    end
-                end
-                btn.BackgroundColor3 = cc3(settingsConfig.accentColor)
-                btn.TextColor3 = Color3.new(0,0,0)
             end)
         end
     end
@@ -3738,7 +3754,7 @@ do
         if stopAudio() then
             _G.__AW_NOTIFY("Audio stopped")
         else
-            _G.__AW_NOTIFY("Could not stop audio — no stop remote or PlaySong missing")
+            _G.__AW_NOTIFY("Could not stop audio")
         end
     end)
 
@@ -3790,42 +3806,7 @@ do
         end
     end)
 
-    addBtn(pages[SECRET_NAME], "Test Remote", 109, function()
-        PlaySong = findPlaySong()
-        if PlaySong then
-            local stopRemote = findStopRemote()
-            if stopRemote then
-                _G.__AW_NOTIFY("PlaySong: " .. PlaySong:GetFullName() .. " | Stop: " .. stopRemote:GetFullName())
-            else
-                _G.__AW_NOTIFY("PlaySong found at: " .. PlaySong:GetFullName() .. " (no stop remote found — fallback will be used)")
-            end
-        else
-            _G.__AW_NOTIFY("PlaySong remote NOT FOUND anywhere in ReplicatedStorage")
-        end
-    end)
-
     tgg(pages[SECRET_NAME], "Auto Play Audio", 110, "radioAutoPlay")
-    LP.CharacterAdded:Connect(function()
-        if state.radioAutoPlay and state.radioSelectedSongId and state.radioSelectedSongId ~= "" then
-            task.wait(1.5)
-            firePlaySong(state.radioSelectedSongId, true)
-        end
-    end)
-
-    task.spawn(function()
-        local lastAuto = state.radioAutoPlay
-        while true do
-            task.wait(0.5)
-            if state.radioAutoPlay ~= lastAuto then
-                lastAuto = state.radioAutoPlay
-                if not lastAuto then
-                    stopMirror()
-                elseif state.radioSelectedSongId and state.radioSelectedSongId ~= "" then
-                    startMirror(state.radioSelectedSongId)
-                end
-            end
-        end
-    end)
 end
 
 addSect(pages[SECRET_NAME], "FE Headless", 120)
@@ -3862,15 +3843,6 @@ do
     end
     task.spawn(function()
         while true do
-            task.wait(0.1)
-            if state.headless1 and LP.Character then
-                local head = LP.Character:FindFirstChild("Head")
-                if head and head.CanCollide then head.CanCollide = false end
-            end
-        end
-    end)
-    task.spawn(function()
-        while true do
             task.wait(0.2)
             for i, cfg in ipairs(headlessConfigs) do
                 local newOn = state[keys[i]] and true or false
@@ -3879,12 +3851,6 @@ do
                     if newOn then playHeadless(cfg) else stopHeadless(cfg) end
                 end
             end
-        end
-    end)
-    LP.CharacterAdded:Connect(function()
-        task.wait(0.5)
-        for _, cfg in ipairs(headlessConfigs) do
-            if cfg.on then playHeadless(cfg) end
         end
     end)
 end
@@ -3902,25 +3868,7 @@ end)
 
 addSect(pages[SECRET_NAME], "Korblox", 150)
 tgg(pages[SECRET_NAME], "Enable Korblox Peg Leg", 151, "korbloxEnabled")
-tgg(pages[SECRET_NAME], "FE Korblox (deepspeaker peg leg)", 152, "korbloxFE")
-task.spawn(function()
-    while true do
-        task.wait(0.3)
-        if LP.Character and (state.korbloxEnabled or state.korbloxFE) then
-            local leg = LP.Character:FindFirstChild("RightUpperLeg") or LP.Character:FindFirstChild("Right Leg")
-            local lower = LP.Character:FindFirstChild("RightLowerLeg") or LP.Character:FindFirstChild("Right Leg")
-            local foot = LP.Character:FindFirstChild("RightFoot") or LP.Character:FindFirstChild("Right Foot")
-            if state.korbloxFE then
-                if leg and leg:IsA("BasePart") then pcall(function() leg.Color = Color3.fromRGB(0,0,0); leg.Material = Enum.Material.Metal; leg.Size = Vector3.new(0.6, 0.6, 0.6); leg.Transparency = 0 end) end
-                if lower and lower:IsA("BasePart") then pcall(function() lower.Color = Color3.fromRGB(0,0,0); lower.Material = Enum.Material.Metal; lower.Size = Vector3.new(0.35, 1, 0.35); lower.Transparency = 0 end) end
-                if foot and foot:IsA("BasePart") then pcall(function() foot.Color = Color3.fromRGB(0,0,0); foot.Material = Enum.Material.Metal; foot.Size = Vector3.new(0.5, 0.15, 0.8); foot.Transparency = 0 end) end
-            elseif state.korbloxEnabled then
-                if leg and leg:IsA("BasePart") then pcall(function() leg.Color = Color3.fromRGB(0,0,0); leg.Material = Enum.Material.SmoothPlastic; leg.Size = Vector3.new(1, 0.2, 1) end) end
-                if foot and foot:IsA("BasePart") then pcall(function() foot.Transparency = 1 end) end
-            end
-        end
-    end
-end)
+tgg(pages[SECRET_NAME], "FE Korblox", 152, "korbloxFE")
 
 addSect(pages[SECRET_NAME], "Sign Spam", 160)
 tgg(pages[SECRET_NAME], "Enable Sign Spam", 161, "signSpam")
@@ -4047,33 +3995,6 @@ do
     end)
 end
 
-addSect(pages[SECRET_NAME], "Disable Trading", 180)
-tgg(pages[SECRET_NAME], "Disable Trading (rejoin to re-enable)", 181, "disableTrading")
-task.spawn(function()
-    while true do
-        task.wait(0.5)
-        local trade = ReplicatedStorage:FindFirstChild("Trade")
-        if trade then
-            local sendReq = trade:FindFirstChild("SendRequest")
-            local decline = trade:FindFirstChild("DeclineRequest")
-            if state.disableTrading then
-                if sendReq and decline and sendReq:IsA("RemoteFunction") then
-                    pcall(function()
-                        sendReq.OnClientInvoke = function()
-                            pcall(function() decline:FireServer() end)
-                            return nil
-                        end
-                    end)
-                end
-            else
-                if sendReq and sendReq:IsA("RemoteFunction") then
-                    pcall(function() sendReq.OnClientInvoke = nil end)
-                end
-            end
-        end
-    end
-end)
-
 addSect(pages[SECRET_NAME], "Credits", 900)
 do
     local creditCard = Instance.new("Frame", pages[SECRET_NAME])
@@ -4116,7 +4037,7 @@ tgg(pages["Farm"], "Full Bag Gate", 6, "fullBagGate")
 addSect(pages["Combat"], "Silent Aim", 1)
 tgg(pages["Combat"], "Silent Aim", 2, "silentAimEnabled")
 tgg(pages["Combat"], "Silent Aim Wall Check", 3, "silentAimWallCheck")
-makeSlider(pages["Combat"], "Silent Aim Height (0=feet, 2=head)", 4, state.silentAimYHeight or 2, 0, 2, "silentAimYHeight")
+makeSlider(pages["Combat"], "Silent Aim Height", 4, state.silentAimYHeight or 2, 0, 2, "silentAimYHeight")
 tgg(pages["Combat"], "Shoot Through Walls", 10, "shootThroughWall")
 tgg(pages["Combat"], "Auto Shoot Murderer", 11, "autoShootMurderer")
 addBtn(pages["Combat"], "Shoot Murderer Now", 12, fullShootSequence)
@@ -4144,7 +4065,6 @@ tgg(pages["Combat"], "Aimbot: Sheriff", 62, "aimbotSheriff")
 makeSlider(pages["Combat"], "Aimbot FOV", 63, state.aimbotFOV or 250, 30, 800, "aimbotFOV")
 makeSlider(pages["Combat"], "Aimbot Smoothness", 64, state.aimbotSmooth or 1, 1, 20, "aimbotSmooth")
 tgg(pages["Combat"], "Aimbot Prediction", 65, "aimbotPredict")
-tgg(pages["Combat"], "Aimbot Visibility Check", 66, "aimbotVisCheck")
 tgg(pages["Combat"], "Aimbot Instant Snap", 67, "aimbotSnap")
 tgg(pages["Combat"], "Aimbot Sticky Target", 68, "aimbotSticky")
 
@@ -4259,19 +4179,26 @@ local function updateToggleLabel()
 end
 updateToggleLabel()
 
+-- Colored initials avatar (no image)
 local function buildPlayerRow(parent, plr, order)
     local row = Instance.new("Frame", parent)
     row.Size = UDim2.new(1, -12, 0, 52)
     row.LayoutOrder = order
     row.BackgroundColor3 = cc3(settingsConfig.cardHoverColor)
     Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
-    local avatar = Instance.new("ImageLabel", row)
+    local avatar = Instance.new("Frame", row)
     avatar.Size = UDim2.new(0, 40, 0, 40)
     avatar.Position = UDim2.new(0, 5, 0.5, -20)
-    avatar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    avatar.BorderSizePixel = 0
-    avatar.Image = "rbxthumb://type=AvatarHeadShot&id=" .. plr.UserId .. "&w=150&h=150"
+    avatar.BackgroundColor3 = Color3.fromHSV((plr.UserId % 360) / 360, 0.55, 0.85)
     Instance.new("UICorner", avatar).CornerRadius = UDim.new(1, 0)
+    local initial = Instance.new("TextLabel", avatar)
+    initial.Size = UDim2.new(1, 0, 1, 0)
+    initial.BackgroundTransparency = 1
+    initial.Text = string.upper(string.sub(plr.Name, 1, 2))
+    initial.TextColor3 = Color3.new(1,1,1)
+    initial.Font = Enum.Font.GothamBold
+    initial.TextSize = 15
+    initial.TextStrokeTransparency = 0.6
     local disp = Instance.new("TextLabel", row)
     disp.Size = UDim2.new(1, -115, 0, 16)
     disp.Position = UDim2.new(0, 52, 0, 8)
@@ -4372,7 +4299,7 @@ refreshCustomListUI()
 task.defer(refreshPlayerList)
 
 -- ================================================================
--- VOID PLATFORM  (personal, client-side, high in the sky)
+-- VOID PLATFORM
 -- ================================================================
 local VOID_PLATFORM_POS = Vector3.new(100, 5000, 2000)
 local voidPlatformPart = nil
@@ -4387,7 +4314,6 @@ end
 local function createVoidPlatform()
     if voidPlatformPart and voidPlatformPart.Parent then return voidPlatformPart end
     removeVoidPlatform()
-
     local p = Instance.new("Part")
     p.Name = "AW_VoidPlatform"
     p.Size = Vector3.new(60, 2, 60)
@@ -4397,10 +4323,7 @@ local function createVoidPlatform()
     p.Material = Enum.Material.Neon
     p.Color = Color3.fromRGB(160, 70, 255)
     p.Transparency = 0.12
-    p.TopSurface = Enum.SurfaceType.Smooth
-    p.BottomSurface = Enum.SurfaceType.Smooth
     p.Parent = Workspace
-
     local rim = Instance.new("Part")
     rim.Name = "AW_VoidPlatform_Rim"
     rim.Size = Vector3.new(66, 0.5, 66)
@@ -4411,25 +4334,11 @@ local function createVoidPlatform()
     rim.Color = Color3.fromRGB(210, 130, 255)
     rim.Transparency = 0.35
     rim.Parent = Workspace
-
     local light = Instance.new("PointLight")
     light.Color = Color3.fromRGB(180, 90, 255)
     light.Brightness = 3
     light.Range = 45
     light.Parent = p
-
-    local sg = Instance.new("SurfaceGui", p)
-    sg.Face = Enum.NormalId.Top
-    sg.CanvasSize = Vector2.new(600, 600)
-    local lbl = Instance.new("TextLabel", sg)
-    lbl.Size = UDim2.new(1, 0, 1, 0)
-    lbl.BackgroundTransparency = 1
-    lbl.Text = "APPLEWARE VOID PLATFORM\n(you are safe here)"
-    lbl.TextColor3 = Color3.fromRGB(235, 205, 255)
-    lbl.Font = Enum.Font.GothamBold
-    lbl.TextScaled = true
-    lbl.TextStrokeTransparency = 0.4
-
     voidPlatformPart = p
     voidPlatformRim  = rim
     return p
@@ -4489,7 +4398,6 @@ addSect(pages["Teleport"], "Players", 4)
 addBtn(pages["Teleport"], "Teleport to Murderer", 5, teleportToMurderer)
 addBtn(pages["Teleport"], "Teleport to Sheriff", 6, teleportToSheriff)
 addBtn(pages["Teleport"], "Teleport to Custom", 7, teleportToCustom)
-
 addSect(pages["Teleport"], "Void Platform (100, 5000, 2000)", 10)
 tgg(pages["Teleport"], "Show Void Platform", 11, "voidPlatform")
 tgg(pages["Teleport"], "Loop Teleport to Void Platform", 12, "loopVoidTP")
@@ -4499,15 +4407,8 @@ addBtn(pages["Teleport"], "Remove Void Platform", 14, function()
     removeVoidPlatform()
     _G.__AW_NOTIFY("Void platform removed")
 end)
-addBtn(pages["Teleport"], "Void Platform: Nuke & Return", 15, function()
-    state.voidPlatform = false
-    state.loopVoidTP  = false
-    removeVoidPlatform()
-    teleportToLobby()
-    _G.__AW_NOTIFY("Void platform destroyed")
-end)
 addSect(pages["Teleport"], "Combos", 20)
-addBtn(pages["Teleport"], "Grab Gun + Shoot Murderer (Combo)", 21, function()
+addBtn(pages["Teleport"], "Grab Gun + Shoot Murderer", 21, function()
     task.spawn(function()
         grabGunNow()
         task.wait(0.3)
@@ -4517,7 +4418,7 @@ end)
 
 addSect(pages["ESP"], "Player ESP", 1)
 tgg(pages["ESP"], "Player ESP", 2, "espPlayers")
-tgg(pages["ESP"], "Team Colors (Red/Blue/Green)", 3, "espTeamColor")
+tgg(pages["ESP"], "Team Colors", 3, "espTeamColor")
 tgg(pages["ESP"], "Gun Drop ESP", 4, "espGunDrop")
 
 tgg(pages["Webhook"], "Auto Send on Timer", 1, "sendOnFull")
@@ -4528,7 +4429,7 @@ tgg(pages["Misc"], "Anti AFK", 1, "afk")
 tgg(pages["Misc"], "Auto Grab Gun", 2, "gun")
 tgg(pages["Misc"], "Auto Rejoin", 3, "autoRejoin")
 tgg(pages["Misc"], "Auto Serverhop (<= 2)", 4, "autoServerHop")
-tgg(pages["Misc"], "Auto Prestige (Level 100)", 5, "autoPrestige")
+tgg(pages["Misc"], "Auto Prestige", 5, "autoPrestige")
 tgg(pages["Misc"], "True Anti-Void (FallenPartsDisable)", 6, "antiVoid")
 tgg(pages["Misc"], "Notify Map Name", 7, "notifyMapName")
 tgg(pages["Misc"], "Round Timer", 8, "showRoundTimerCountdown")
@@ -4594,75 +4495,20 @@ makeSlider(pages["Button"], "Button Size", 12, state.floatButtonSize or 68, 44, 
 end)
 
 addSect(pages["Button"], "Lock System", 12.5)
-
-addBtn(pages["Button"], "Lock All Buttons (Drag Only — still clickable)", 12.6, function()
+addBtn(pages["Button"], "Lock All Buttons", 12.6, function()
     for _, def in ipairs(FLOAT_BUTTON_DEFS) do
         state.lockedButtons[def.id] = true
     end
     state.bigButtonLocked = true
     saveSettings()
-    _G.__AW_NOTIFY("All buttons locked in place (still clickable)")
+    _G.__AW_NOTIFY("All buttons locked")
 end)
-
 addBtn(pages["Button"], "Unlock All Buttons", 12.7, function()
     state.lockedButtons = {}
     state.bigButtonLocked = false
     saveSettings()
     _G.__AW_NOTIFY("All buttons unlocked")
 end)
-
-do
-    local lockOpts = {}
-    for _, def in ipairs(FLOAT_BUTTON_DEFS) do
-        if state.floatEnabledButtons[def.id] then table.insert(lockOpts, def.label) end
-    end
-    table.insert(lockOpts, "Shoot Murderer Button")
-    if #lockOpts == 1 then table.insert(lockOpts, "(no floating buttons enabled)") end
-
-    makeDropdown(pages["Button"], "Lock Specific Button", 12.8, lockOpts, "Pick to lock...", function(choice)
-        if choice == "Shoot Murderer Button" then
-            state.bigButtonLocked = true
-            saveSettings()
-            _G.__AW_NOTIFY("Locked: Shoot Murderer Button")
-            return
-        end
-        for _, def in ipairs(FLOAT_BUTTON_DEFS) do
-            if def.label == choice and state.floatEnabledButtons[def.id] then
-                state.lockedButtons[def.id] = true
-                saveSettings()
-                _G.__AW_NOTIFY("Locked: " .. def.label)
-                return
-            end
-        end
-    end)
-end
-
-do
-    local unlockOpts = {}
-    for id in pairs(state.lockedButtons) do
-        local def = FLOAT_BUTTON_MAP[id]
-        if def then table.insert(unlockOpts, def.label) end
-    end
-    if state.bigButtonLocked then table.insert(unlockOpts, "Shoot Murderer Button") end
-    if #unlockOpts == 0 then table.insert(unlockOpts, "(nothing locked)") end
-
-    makeDropdown(pages["Button"], "Unlock Specific Button", 12.9, unlockOpts, "Pick to unlock...", function(choice)
-        if choice == "Shoot Murderer Button" then
-            state.bigButtonLocked = false
-            saveSettings()
-            _G.__AW_NOTIFY("Unlocked: Shoot Murderer Button")
-            return
-        end
-        for _, def in ipairs(FLOAT_BUTTON_DEFS) do
-            if def.label == choice then
-                state.lockedButtons[def.id] = nil
-                saveSettings()
-                _G.__AW_NOTIFY("Unlocked: " .. def.label)
-                return
-            end
-        end
-    end)
-end
 
 addSect(pages["Button"], "Button Shape", 13)
 local shapeHolder = Instance.new("Frame", pages["Button"])
@@ -4983,9 +4829,7 @@ fb.MouseButton1Click:Connect(function()
     fb.Text = isOpen and "Close" or "Open"
 end)
 
-local flyBV = nil
-local flyBG = nil
-local flyConnection = nil
+local flyBV, flyBG, flyConnection = nil, nil, nil
 local flyUpHold = false
 local function startFly()
     local char = LP.Character
@@ -5057,7 +4901,6 @@ local function stopFly()
         if hum then
             hum.PlatformStand = false
             hum.AutoRotate = true
-            hum.WalkSpeed = (state.speedEnabled and (state.speedValue or 16)) or 16
         end
         local root = char:FindFirstChild("HumanoidRootPart")
         if root then
@@ -5188,27 +5031,47 @@ UIS.InputBegan:Connect(function(inp, g)
 end)
 
 -- ================================================================
--- TRUE ANTI-VOID  (from aux0on/ATAOsOnTop)
--- Sets Workspace.FallenPartsDestroyHeight to NaN (0/0), which
--- disables Roblox's built-in void-kill check entirely.
--- Reapplied automatically on every respawn.
+-- TRUE ANTI-VOID (aux0on/ATAOsOnTop) — NaN FallenPartsDestroyHeight
 -- ================================================================
-local originalFallenDestroyHeight = Workspace.FallenPartsDestroyHeight
 local trueAntiVoidConnection = nil
+local originalFallenDestroyHeight = nil
+local antiVoidAvailable = false
+pcall(function()
+    originalFallenDestroyHeight = Workspace.FallenPartsDestroyHeight
+    antiVoidAvailable = true
+end)
 
 local function setTrueAntiVoid(on)
     if trueAntiVoidConnection then
         trueAntiVoidConnection:Disconnect()
         trueAntiVoidConnection = nil
     end
+    if not antiVoidAvailable then
+        -- Fallback: Y<-400 teleport
+        if on then
+            trueAntiVoidConnection = RunService.Heartbeat:Connect(function()
+                if not state.antiVoid or not LP.Character then return end
+                local r = LP.Character:FindFirstChild("HumanoidRootPart")
+                local h = LP.Character:FindFirstChildOfClass("Humanoid")
+                if r and h and h.Health > 0 and r.Position.Y < -400 then
+                    r.Anchored = true
+                    r.CFrame = LOBBY_CFRAME
+                    r.AssemblyLinearVelocity = Vector3.zero
+                    task.wait(0.1)
+                    if r.Parent then r.Anchored = false end
+                end
+            end)
+        end
+        return
+    end
     if on then
-        Workspace.FallenPartsDestroyHeight = 0/0
+        pcall(function() Workspace.FallenPartsDestroyHeight = 0/0 end)
         trueAntiVoidConnection = LP.CharacterAdded:Connect(function(char)
             task.wait(0.1)
-            Workspace.FallenPartsDestroyHeight = 0/0
+            pcall(function() Workspace.FallenPartsDestroyHeight = 0/0 end)
         end)
     else
-        Workspace.FallenPartsDestroyHeight = originalFallenDestroyHeight
+        pcall(function() Workspace.FallenPartsDestroyHeight = originalFallenDestroyHeight end)
     end
 end
 
@@ -5286,27 +5149,6 @@ task.spawn(function()
                 if plr ~= LP then removeHitboxFromPlayer(plr) end
             end
         end
-    end
-end)
-
-task.spawn(function()
-    local wasInRound = false
-    local LOOP_KEYS = {"loopFlingAll", "loopFlingMur", "loopFlingSheriff", "loopFlingCustom"}
-    while true do
-        task.wait(0.25)
-        local nowInRound = isInRound()
-        if nowInRound and not wasInRound then
-            local enabled = {}
-            for _, k in ipairs(LOOP_KEYS) do
-                if state[k] then enabled[k] = true end
-            end
-            if next(enabled) then
-                for k in pairs(enabled) do state[k] = false end
-                task.wait(0.4)
-                for k in pairs(enabled) do state[k] = true end
-            end
-        end
-        wasInRound = nowInRound
     end
 end)
 
@@ -5542,8 +5384,7 @@ do
 end
 
 local INVIS_POSITION = Vector3.new(-25.95, 84, 3537.55)
-local invisSeat = nil
-local invisWeld = nil
+local invisSeat, invisWeld = nil, nil
 local dodgeActive = false
 
 local function setCharInvisTransparency(char, transparency)
@@ -5641,7 +5482,6 @@ LP.CharacterAdded:Connect(function()
     end
 end)
 
--- Silent invisible round-transition reset (off -> on across each round)
 task.spawn(function()
     local wasInRound = isInRound()
     while true do
@@ -5714,8 +5554,6 @@ task.spawn(function()
     end
 end)
 
--- ============ AIMBOT (Sharper, Sticky, Always On Target) ============
-local currentAimTarget = nil
 local lockedAimTarget = nil
 local lockedAimPart = nil
 
@@ -5735,13 +5573,11 @@ end)
 
 RunService.RenderStepped:Connect(function(dt)
     if not alive() then
-        currentAimTarget = nil
         lockedAimTarget = nil
         lockedAimPart = nil
         return
     end
     if not (state.aimbotMurderer or state.aimbotSheriff) then
-        currentAimTarget = nil
         lockedAimTarget = nil
         lockedAimPart = nil
         return
@@ -5829,7 +5665,6 @@ RunService.RenderStepped:Connect(function(dt)
     end
 
     if not target or not targetPart then return end
-    currentAimTarget = target
 
     local aimPos = targetPart.Position
     if state.aimbotPredict then
@@ -5898,21 +5733,9 @@ Players.PlayerAdded:Connect(function(p)
     if p ~= LP then p.CharacterRemoving:Connect(function() clearESP(p) end) end
 end)
 
-local espFastUntil = 0
-task.spawn(function()
-    local wasInRound = false
-    while true do
-        task.wait(0.05)
-        local nowInRound = isInRound()
-        if nowInRound and not wasInRound then espFastUntil = tick() + 10 end
-        wasInRound = nowInRound
-    end
-end)
-
 task.spawn(function()
     while true do
-        local pollDelay = (tick() < espFastUntil) and 0.02 or 0.1
-        task.wait(pollDelay)
+        task.wait(0.1)
         if not espF or not espF.Parent or (espF.Parent ~= CoreGui and espF.Parent ~= PlayerGui) then
             espF = getOrCreateEspFolder()
             for k in pairs(espCache) do espCache[k] = nil end
@@ -5951,7 +5774,6 @@ task.spawn(function()
                         end
                         if not e then
                             local hl = Instance.new("Highlight")
-                            hl.Name = "AW_ESP_HL_" .. p.UserId
                             hl.FillColor = col
                             hl.FillTransparency = 0.5
                             hl.OutlineColor = col
@@ -5960,7 +5782,6 @@ task.spawn(function()
                             hl.Parent = espF
                             hl.Adornee = ch
                             local bb = Instance.new("BillboardGui")
-                            bb.Name = "AW_ESP_BB_" .. p.UserId
                             bb.Size = UDim2.new(0, 220, 0, 44)
                             bb.StudsOffset = Vector3.new(0, 4, 0)
                             bb.AlwaysOnTop = true
@@ -5992,9 +5813,6 @@ task.spawn(function()
                         if espCache[p] then clearESP(p) end
                     end
                 end
-            end
-            for p, _ in pairs(espCache) do
-                if not p or not p.Parent then clearESP(p) end
             end
         end
         if state.espGunDrop then
@@ -6109,4 +5927,4 @@ end)
 print("AppleWare fully loaded - made by p04j on discord")
 print("Credits: lzzzx, noir (7yd7)")
 print("Void platform: (100, 5000, 2000)")
-print("Anti-Void: True (FallenPartsDestroyHeight = NaN)")
+print("Anti-Void: True (FallenPartsDestroyHeight = NaN, no image dependencies)")
