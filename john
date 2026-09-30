@@ -2,6 +2,10 @@
 -- Appleware
 -- ================================================================
 
+-- OPTIONAL: enable external antifling (DISABLED by default because it can
+-- throw "attempt to call a nil value" from inside its own callbacks).
+-- Uncomment ONLY if you trust the source AND wrap it in a stronger pcall.
+--[[
 task.spawn(function()
     pcall(function()
         local url = "https://raw.githubusercontent.com/Toolboxhubbot/antifling/refs/heads/main/antifling"
@@ -19,22 +23,23 @@ task.spawn(function()
         if fn then pcall(fn) end
     end)
 end)
+--]]
 
 Players = game:GetService("Players")
 RunService = game:GetService("RunService")
 TweenService = game:GetService("TweenService")
 Workspace = game:GetService("Workspace")
-VirtualInputManager = game:GetService("VirtualInputManager")
+VirtualInputManager = (pcall(function() return game:GetService("VirtualInputManager") end)) and game:GetService("VirtualInputManager") or nil
 ReplicatedStorage = game:GetService("ReplicatedStorage")
 HttpService = game:GetService("HttpService")
 CoreGui = game:GetService("CoreGui")
 TeleportService = game:GetService("TeleportService")
 Lighting = game:GetService("Lighting")
 UIS = game:GetService("UserInputService")
-SoundService = game:GetService("SoundService")
+SoundService = (pcall(function() return game:GetService("SoundService") end)) and game:GetService("SoundService") or Workspace
 LP = Players.LocalPlayer
 PlaceId = game.PlaceId
-PlayerGui = LP:WaitForChild("PlayerGui", 10)
+PlayerGui = LP:WaitForChild("PlayerGui", 10) or LP:WaitForChild("PlayerGui")
 
 CF = "ApplewareConfigs"
 CFl = "Appleware.json"
@@ -140,7 +145,6 @@ settingsConfig = {
     webhookUrl="", discordUserId="",
     tweenSpeed=25, selectedScale=1, roundLength=200,
     flingList={}, whitelist={},
-    -- Violet / purple theme
     bgColor            = {r=10,  g=6,  b=22},
     textColor          = {r=245,g=232,b=255},
     cardColor          = {r=30, g=14, b=56},
@@ -232,7 +236,6 @@ function loadSettings()
 end
 loadSettings()
 
--- Force purple theme on old configs (once)
 if not state.__purpleThemeV1 then
     settingsConfig.bgColor            = {r=10,  g=6,  b=22}
     settingsConfig.textColor          = {r=245,g=232,b=255}
@@ -451,15 +454,20 @@ notifyGui.Name = "AWNotes"
 notifyGui.ResetOnSpawn = false
 notifyGui.DisplayOrder = 999998
 notifyGui.IgnoreGuiInset = true
-notifyGui.Parent = PlayerGui
+pcall(function() notifyGui.Parent = PlayerGui end)
+if not notifyGui.Parent then pcall(function() notifyGui.Parent = CoreGui end) end
 
-local notifyContainer = Instance.new("Frame", notifyGui)
+local notifyContainer = Instance.new("Frame")
+pcall(function()
+    notifyContainer.Parent = notifyGui
+end)
 notifyContainer.AnchorPoint = Vector2.new(0,1)
 notifyContainer.Position = UDim2.new(0,14,1,-14)
 notifyContainer.AutomaticSize = Enum.AutomaticSize.Y
 notifyContainer.Size = UDim2.new(0,300,0,0)
 notifyContainer.BackgroundTransparency = 1
-local notifyLayout = Instance.new("UIListLayout", notifyContainer)
+local notifyLayout = Instance.new("UIListLayout")
+notifyLayout.Parent = notifyContainer
 notifyLayout.Padding = UDim.new(0,10)
 notifyLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
 
@@ -544,6 +552,11 @@ _G.__AW_NOTIFY = function(text)
     end)
 end
 
+-- Fail-safe
+if type(_G.__AW_NOTIFY) ~= "function" then
+    _G.__AW_NOTIFY = function(t) print("[AW]", tostring(t)) end
+end
+
 local function isInRound()
     for _,m in ipairs(Workspace:GetChildren()) do
         if m:FindFirstChild("CoinContainer") or m.Name=="CoinContainer" then return true end
@@ -598,12 +611,6 @@ local function playerMatchesName(p, nameStr)
     if string.lower(p.Name) == n then return true end
     if p.DisplayName and string.lower(p.DisplayName) == n then return true end
     return false
-end
-local function standUp()
-    local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-    local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-    if h then h.PlatformStand=false; h.AutoRotate=true; pcall(function() h:ChangeState(Enum.HumanoidStateType.GettingUp) end) end
-    if r then r.Anchored=false; r.AssemblyLinearVelocity=Vector3.zero; r.AssemblyAngularVelocity=Vector3.zero end
 end
 local function readNum(v)
     if v == nil then return nil end
@@ -881,6 +888,7 @@ task.spawn(function()
 end)
 
 local function triggerMenuReset()
+    if not VirtualInputManager then return end
     pcall(function()
         VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Escape, false, game)
         VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Escape, false, game)
@@ -2017,7 +2025,6 @@ local mainScale = Instance.new("UIScale", mainWrap)
 mainScale.Scale = settingsConfig.selectedScale or 1
 _G.__AW_MAINSCALE = mainScale
 
--- Outer purple glow (fake bloom)
 local outerGlow = Instance.new("Frame", mainWrap)
 outerGlow.Name = "OuterGlow"
 outerGlow.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -2043,20 +2050,12 @@ Instance.new("UICorner", outerGlow2).CornerRadius = UDim.new(0, 30)
 if state.animationsEnabled ~= false then
     task.spawn(function()
         while outerGlow and outerGlow.Parent do
-            TweenService:Create(outerGlow, TweenInfo.new(1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                BackgroundTransparency = 0.6
-            }):Play()
-            TweenService:Create(outerGlow2, TweenInfo.new(1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                BackgroundTransparency = 0.82
-            }):Play()
+            TweenService:Create(outerGlow, TweenInfo.new(1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {BackgroundTransparency = 0.6}):Play()
+            TweenService:Create(outerGlow2, TweenInfo.new(1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {BackgroundTransparency = 0.82}):Play()
             task.wait(1.6)
             if not outerGlow or not outerGlow.Parent then break end
-            TweenService:Create(outerGlow, TweenInfo.new(1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                BackgroundTransparency = 0.82
-            }):Play()
-            TweenService:Create(outerGlow2, TweenInfo.new(1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-                BackgroundTransparency = 0.94
-            }):Play()
+            TweenService:Create(outerGlow, TweenInfo.new(1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {BackgroundTransparency = 0.82}):Play()
+            TweenService:Create(outerGlow2, TweenInfo.new(1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {BackgroundTransparency = 0.94}):Play()
             task.wait(1.6)
         end
     end)
@@ -2546,6 +2545,9 @@ local function makeDropdown(page, label, order, options, initial, onSelect)
     end
 end
 
+-- ============================================================
+-- ANIM/EMOT TAB
+-- ============================================================
 do
     local EMOTES = {
         {id=3360689775,name="Salute"},{id=5915779043,name="Applaud"},{id=3360692915,name="Tilt"},
@@ -3423,6 +3425,9 @@ do
     end)
 end
 
+-- ============================================================
+-- SECRET TAB
+-- ============================================================
 addSect(pages[SECRET_NAME], "Hitbox Expander", 1)
 tgg(pages[SECRET_NAME], "Hitbox Expander", 2, "hitboxExpander")
 makeSlider(pages[SECRET_NAME], "Hitbox Size", 3, state.hitboxExpanderSize or 15, 5, 60, "hitboxExpanderSize")
@@ -4257,6 +4262,9 @@ do
     creditBody.TextYAlignment = Enum.TextYAlignment.Top
 end
 
+-- ============================================================
+-- FARM
+-- ============================================================
 tgg(pages["Farm"], "Farm", 1, "farm")
 tgg(pages["Farm"], "XP Farm", 2, "xpFarm")
 makeSlider(pages["Farm"], "Tween Speed", 3, settingsConfig.tweenSpeed or 25, 1, 100, "tweenSpeed", function(v) settingsConfig.tweenSpeed = v end)
@@ -4264,6 +4272,9 @@ tgg(pages["Farm"], "Disable 3D Rendering", 4, "disable3d")
 tgg(pages["Farm"], "FPS Boost", 5, "fpsBoost")
 tgg(pages["Farm"], "Full Bag Gate", 6, "fullBagGate")
 
+-- ============================================================
+-- COMBAT
+-- ============================================================
 addSect(pages["Combat"], "Silent Aim", 1)
 tgg(pages["Combat"], "Silent Aim", 2, "silentAimEnabled")
 tgg(pages["Combat"], "Silent Aim Wall Check", 3, "silentAimWallCheck")
@@ -4299,6 +4310,9 @@ tgg(pages["Combat"], "Aimbot Visibility Check", 66, "aimbotVisCheck")
 tgg(pages["Combat"], "Aimbot Instant Snap", 67, "aimbotSnap")
 tgg(pages["Combat"], "Aimbot Sticky Target", 68, "aimbotSticky")
 
+-- ============================================================
+-- PLAYERS
+-- ============================================================
 addSect(pages["Players"], "Add Player (Type Name)", 1)
 makeInput(pages["Players"], 2, "Username or display name...", state.playerSearchText or "", function(t)
     state.playerSearchText = t
@@ -4522,6 +4536,9 @@ end)
 refreshCustomListUI()
 task.defer(refreshPlayerList)
 
+-- ============================================================
+-- TELEPORT
+-- ============================================================
 addSect(pages["Teleport"], "Locations", 1)
 addBtn(pages["Teleport"], "Teleport to Lobby", 2, teleportToLobby)
 addBtn(pages["Teleport"], "Teleport to Map", 3, teleportToMap)
@@ -4549,15 +4566,24 @@ addBtn(pages["Teleport"], "Respawn Void Platform", 22, function()
     _G.__AW_NOTIFY("Void platform respawned")
 end)
 
+-- ============================================================
+-- ESP
+-- ============================================================
 addSect(pages["ESP"], "Player ESP", 1)
 tgg(pages["ESP"], "Player ESP", 2, "espPlayers")
 tgg(pages["ESP"], "Team Colors (Red/Blue/Green)", 3, "espTeamColor")
 tgg(pages["ESP"], "Gun Drop ESP", 4, "espGunDrop")
 
+-- ============================================================
+-- WEBHOOK
+-- ============================================================
 tgg(pages["Webhook"], "Auto Send on Timer", 1, "sendOnFull")
 makeInput(pages["Webhook"], 3, "Webhook URL...", settingsConfig.webhookUrl, function(t) settingsConfig.webhookUrl = t saveSettings() end)
 makeInput(pages["Webhook"], 4, "Discord User ID...", settingsConfig.discordUserId, function(t) settingsConfig.discordUserId = t saveSettings() end)
 
+-- ============================================================
+-- MISC
+-- ============================================================
 tgg(pages["Misc"], "Anti AFK", 1, "afk")
 tgg(pages["Misc"], "Auto Grab Gun", 2, "gun")
 tgg(pages["Misc"], "Auto Rejoin", 3, "autoRejoin")
@@ -4569,6 +4595,9 @@ tgg(pages["Misc"], "Round Timer", 8, "showRoundTimerCountdown")
 tgg(pages["Misc"], "Murderer Predictor", 9, "murdererPredictor")
 tgg(pages["Misc"], "Murderer Perk Notify", 10, "murdererPerkNotify")
 
+-- ============================================================
+-- VOTING
+-- ============================================================
 addSect(pages["Voting"], "Live Vote Map Names", 1)
 local voteMapLabels = {}
 for slot = 1, 3 do
@@ -4607,6 +4636,9 @@ task.spawn(function()
     end
 end)
 
+-- ============================================================
+-- BUTTON
+-- ============================================================
 addSect(pages["Button"], "Shoot Murderer Button", 1)
 tgg(pages["Button"], "Enable Shoot Murderer Button", 2, "bigButtonEnabled")
 makeSlider(pages["Button"], "Button Width", 3, state.bigButtonW or 230, 80, 400, "bigButtonW", function(v)
@@ -4801,6 +4833,9 @@ do
     refreshManagerFB("")
 end
 
+-- ============================================================
+-- KEYBINDS
+-- ============================================================
 addSect(pages["Keybinds"], "Instructions", 1)
 do
     local info = Instance.new("TextLabel", pages["Keybinds"])
@@ -4925,6 +4960,9 @@ UIS.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
+-- ============================================================
+-- UI
+-- ============================================================
 addSect(pages["UI"], "UI Scale", 1)
 do
     local sr = Instance.new("Frame", pages["UI"])
@@ -5032,6 +5070,9 @@ fb.MouseButton1Click:Connect(function()
     fb.Text = isOpen and "Close" or "Open"
 end)
 
+-- ============================================================
+-- MOVEMENT SYSTEMS
+-- ============================================================
 local flyBV = nil
 local flyBG = nil
 local flyConnection = nil
@@ -5253,6 +5294,9 @@ LP.CharacterAdded:Connect(function()
     if state.antiVoid then Workspace.FallenPartsDestroyHeight = 0/0 end
 end)
 
+-- ============================================================
+-- PREDICTOR
+-- ============================================================
 task.spawn(function()
     local notifiedMurd = false
     local notifiedSheriff = false
@@ -5296,6 +5340,9 @@ task.spawn(function()
     end
 end)
 
+-- ============================================================
+-- HITBOX LOOP
+-- ============================================================
 task.spawn(function()
     while true do
         task.wait(0.1)
@@ -5317,6 +5364,9 @@ task.spawn(function()
     end
 end)
 
+-- ============================================================
+-- LOOP FLING ROUND-RESTART RE-ENABLE
+-- ============================================================
 task.spawn(function()
     local wasInRound = false
     local LOOP_KEYS = {"loopFlingAll", "loopFlingMur", "loopFlingSheriff", "loopFlingCustom"}
@@ -5338,6 +5388,9 @@ task.spawn(function()
     end
 end)
 
+-- ============================================================
+-- AUTO SHOOT / GUN / MISC LOOPS
+-- ============================================================
 task.spawn(function()
     while true do
         task.wait(0.1)
@@ -5542,6 +5595,9 @@ task.spawn(function()
     end
 end)
 
+-- ============================================================
+-- WALL HOP
+-- ============================================================
 do
     local rayParams = RaycastParams.new()
     rayParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -5569,6 +5625,9 @@ do
     end)
 end
 
+-- ============================================================
+-- INVISIBILITY (silent round transitions)
+-- ============================================================
 local INVIS_POSITION = Vector3.new(-25.95, 84, 3537.55)
 local invisSeat = nil
 local invisWeld = nil
@@ -5702,6 +5761,9 @@ task.spawn(function()
     end
 end)
 
+-- ============================================================
+-- TOUCH FLING
+-- ============================================================
 task.spawn(function()
     if not ReplicatedStorage:FindFirstChild("juisdfj0i32i0eidsuf0iok") then
         local detection = Instance.new("Decal")
@@ -5734,7 +5796,9 @@ task.spawn(function()
     end
 end)
 
--- ============ AIMBOT ============
+-- ============================================================
+-- AIMBOT
+-- ============================================================
 local currentAimTarget = nil
 local lockedAimTarget = nil
 local lockedAimPart = nil
@@ -5875,6 +5939,9 @@ RunService.RenderStepped:Connect(function(dt)
     end
 end)
 
+-- ============================================================
+-- ESP
+-- ============================================================
 local espF = nil
 local espCache, gunDropCache = {}, {}
 local function getOrCreateEspFolder()
@@ -6042,6 +6109,9 @@ task.spawn(function()
     end
 end)
 
+-- ============================================================
+-- FARM LOOP
+-- ============================================================
 local HIDE_POS = CFrame.new(0,-300,0)
 local lastCoinFoundTime = tick()
 local NO_COIN_TIMEOUT = 12
@@ -6194,7 +6264,9 @@ task.spawn(function()
     end
 end)
 
--- Silent round-transition re-enable of invisibility
+-- ============================================================
+-- SILENT INVIS RE-ENABLE ON NEW ROUND
+-- ============================================================
 task.spawn(function()
     local wasInRound = false
     while true do
