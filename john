@@ -1,5 +1,5 @@
 -- ================================================================
--- Appleware  (modified build)
+-- Appleware (fixed build)
 -- ================================================================
 
 task.spawn(function()
@@ -33,7 +33,7 @@ Lighting = game:GetService("Lighting")
 UIS = game:GetService("UserInputService")
 LP = Players.LocalPlayer
 PlaceId = game.PlaceId
-PlayerGui = LP:WaitForChild("PlayerGui", 10)
+PlayerGui = LP:WaitForChild("PlayerGui", 15)
 
 CF = "ApplewareConfigs"
 CFl = "Appleware.json"
@@ -85,7 +85,7 @@ state = {
     disableTrading=false,
     wallHop=false, wallHopFlick=false,
     blueAura=false, blueAuraStuds=10,
-    removeBarriers=false,                -- NEW
+    removeBarriers=false,
     feAnimEnabled=false,
     feAnimAll="Default",
     feAnimIdle="Default", feAnimWalk="Default", feAnimRun="Default",
@@ -120,7 +120,7 @@ KEYBIND_FEATURES = {
     {key="hitboxExpander",    label="Hitbox Expander",      default="H"},
     {key="wallHop",           label="Wall Hop",             default="Y"},
     {key="blueAura",          label="Blue Aura",            default="G"},
-    {key="removeBarriers",    label="Remove Barriers",      default="U"},   -- NEW
+    {key="removeBarriers",    label="Remove Barriers",      default="U"},
     {key="feAnimEnabled",     label="FE Animations",        default="Q"},
 }
 
@@ -130,17 +130,16 @@ NO_SAVE_STATE_KEYS = {
     floatButtonPositions=true,
 }
 
--- ===== PURPLE THEME =====
 settingsConfig = {
     webhookUrl="", discordUserId="",
     tweenSpeed=25, selectedScale=1, roundLength=200,
     flingList={}, whitelist={},
     bgColor={r=10,g=6,b=18},
     textColor={r=245,g=240,b=255},
-    cardColor={r=24,g=16,b=42},
-    cardHoverColor={r=48,g=28,b=78},
+    cardColor={r=26,g=16,b=44},
+    cardHoverColor={r=52,g=30,b=84},
     borderColor={r=150,g=80,b=255},
-    accentColor={r=170,g=90,b=255},      -- purple accent
+    accentColor={r=170,g=90,b=255},
     tabBgColor={r=8,g=4,b=16},
     tabTextColor={r=180,g=160,b=210},
     tabTextActiveColor={r=255,g=255,b=255},
@@ -181,7 +180,7 @@ toggleDisplayNames = {
     disableTrading="Disable Trading",
     wallHop="Wall Hop", wallHopFlick="Wall Hop Flick",
     blueAura="Blue Aura",
-    removeBarriers="Remove Barriers",       -- NEW
+    removeBarriers="Remove Barriers",
     feAnimEnabled="FE Animations",
 }
 
@@ -264,11 +263,8 @@ end
 
 local function setSpinGradColors(grad, isOn)
     if not grad then return end
-    if isOn then
-        grad.Color = buildAltSeq(WHITE, BLACK)
-    else
-        grad.Color = buildAltSeq(BLACK, WHITE)
-    end
+    if isOn then grad.Color = buildAltSeq(WHITE, BLACK)
+    else grad.Color = buildAltSeq(BLACK, WHITE) end
 end
 
 local function attachSpinStroke(stroke, isOn, opts)
@@ -278,8 +274,7 @@ local function attachSpinStroke(stroke, isOn, opts)
     pcall(function() stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
     local existing = stroke:FindFirstChild("SpinGrad")
     local grad
-    if existing then
-        grad = existing
+    if existing then grad = existing
     else
         grad = Instance.new("UIGradient", stroke)
         grad.Name = "SpinGrad"
@@ -315,7 +310,6 @@ task.spawn(function()
     while true do
         local dt = RunService.Heartbeat:Wait()
         if state.animationsEnabled == false then
-            -- keep gradients static while disabled
             task.wait(0.1)
         else
             wobbleT = wobbleT + dt
@@ -330,7 +324,6 @@ task.spawn(function()
     end
 end)
 
--- ===== ANIMATION HELPERS (now check state live) =====
 local function attachBounce(b)
     local s = Instance.new("UIScale", b)
     b.MouseButton1Down:Connect(function()
@@ -449,12 +442,10 @@ local nCount = 0
 _G.__AW_NOTIFY = function(text)
     if nCount >= 5 then return end
     nCount = nCount + 1
-
     local w = Instance.new("Frame", notifyContainer)
     w.Size = UDim2.new(1, 0, 0, 58)
     w.BackgroundTransparency = 1
     w.LayoutOrder = math.floor(tick() * 1000)
-
     local f = Instance.new("Frame", w)
     f.Size = UDim2.new(1, 0, 1, 0)
     f.Position = UDim2.new(1.1, 0, 0, 0)
@@ -462,16 +453,13 @@ _G.__AW_NOTIFY = function(text)
     f.BackgroundTransparency = 0.05
     f.BorderSizePixel = 0
     Instance.new("UICorner", f).CornerRadius = UDim.new(0, 10)
-
     local grad = Instance.new("UIGradient", f)
     grad.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(28, 16, 48)), ColorSequenceKeypoint.new(1, Color3.fromRGB(12, 6, 20))})
     grad.Rotation = 90
-
     local stroke = Instance.new("UIStroke", f)
     stroke.Color = cc3(settingsConfig.accentColor)
     stroke.Thickness = 1
     stroke.Transparency = 0.35
-
     local acc = Instance.new("Frame", f)
     acc.Size = UDim2.new(0, 3, 1, -16)
     acc.Position = UDim2.new(0, 10, 0, 8)
@@ -479,7 +467,6 @@ _G.__AW_NOTIFY = function(text)
     acc.BorderSizePixel = 0
     acc.ZIndex = 3
     Instance.new("UICorner", acc).CornerRadius = UDim.new(1, 0)
-
     local title = Instance.new("TextLabel", f)
     title.Size = UDim2.new(1, -34, 0, 14)
     title.Position = UDim2.new(0, 22, 0, 10)
@@ -490,7 +477,6 @@ _G.__AW_NOTIFY = function(text)
     title.TextSize = 10
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.ZIndex = 2
-
     local body = Instance.new("TextLabel", f)
     body.Size = UDim2.new(1, -34, 0, 26)
     body.Position = UDim2.new(0, 22, 0, 26)
@@ -504,7 +490,6 @@ _G.__AW_NOTIFY = function(text)
     body.RichText = true
     body.TextWrapped = true
     body.ZIndex = 2
-
     if state.notifySound then
         local s = Instance.new("Sound", w)
         s.SoundId = "rbxassetid://7001904928"
@@ -512,9 +497,7 @@ _G.__AW_NOTIFY = function(text)
         s:Play()
         task.delay(2, function() if s and s.Parent then s:Destroy() end end)
     end
-
     TweenService:Create(f, TweenInfo.new(0.6, Enum.EasingStyle.Quint, EASE_OUT), {Position = UDim2.new(0, 0, 0, 0)}):Play()
-
     task.delay(5, function()
         if not w.Parent then return end
         TweenService:Create(f, TweenInfo.new(0.45, Enum.EasingStyle.Quint, EASE_IN), {Position = UDim2.new(1.1, 0, 0, 0)}):Play()
@@ -800,6 +783,7 @@ local function isResetActive(userId)
     if tick()-t > RESET_DURATION + 0.5 then activeResets[userId] = nil; return false end
     return true
 end
+
 local function reliableFling(tp, forceManual)
     if not tp or tp==LP or not tp.Parent then return false end
     if not targetIsAlive(tp) then return false end
@@ -821,7 +805,6 @@ local function reliableFling(tp, forceManual)
 
     flingActiveCount = flingActiveCount + 1
     isLocalFlinging = true
-
     local savedCF = RootPart.CFrame
     Humanoid.PlatformStand = true
     local bv = Instance.new("BodyVelocity")
@@ -981,7 +964,6 @@ local function killCustomNow()
     end)
 end
 
--- ============ HANDLETOUCHED KILL ============
 local function fireHandleTouchedKill(targets)
     local char = LP.Character
     if not char then return end
@@ -1029,13 +1011,11 @@ local function handleTouchKillAll()
     end
     fireHandleTouchedKill(targets)
 end
-
 local function handleTouchKillSheriff()
     local targets = getLiveSheriffHeroes()
     if #targets == 0 then _G.__AW_NOTIFY("No Sheriff / Hero") return end
     fireHandleTouchedKill(targets)
 end
-
 local function handleTouchKillCustom()
     if #settingsConfig.flingList == 0 then _G.__AW_NOTIFY("No custom targets") return end
     local targets = {}
@@ -1544,7 +1524,6 @@ bigBtn.AnchorPoint = Vector2.new(0.5, 0.5)
 bigBtn.Position = UDim2.new(0.5, 0, 0.5, 0)
 bigBtn.Size = UDim2.new(1, 0, 1, 0)
 bigBtn.BackgroundColor3 = Color3.fromRGB(25, 12, 45)
-bigBtn.BackgroundTransparency = 0
 bigBtn.Text = "Shoot Murderer"
 bigBtn.TextColor3 = Color3.new(1, 1, 1)
 bigBtn.TextStrokeColor3 = Color3.new(0, 0, 0)
@@ -1678,7 +1657,7 @@ local FLOAT_BUTTON_DEFS = {
     {id="signSpam",      label="Sign Spam",       type="toggle", key="signSpam"},
     {id="wallHop",       label="Wall Hop",        type="toggle", key="wallHop"},
     {id="blueAura",      label="Blue Aura",       type="toggle", key="blueAura"},
-    {id="removeBarriers",label="Remove Barriers", type="toggle", key="removeBarriers"},  -- NEW
+    {id="removeBarriers",label="Remove Barriers", type="toggle", key="removeBarriers"},
     {id="feAnim",        label="FE Anim",         type="toggle", key="feAnimEnabled"},
 }
 local FLOAT_BUTTON_MAP = {}
@@ -1843,7 +1822,6 @@ local mainScale = Instance.new("UIScale", mainWrap)
 mainScale.Scale = settingsConfig.selectedScale or 1
 _G.__AW_MAINSCALE = mainScale
 
--- Purple outer glow frame
 local outerGlow = Instance.new("Frame", mainWrap)
 outerGlow.Name = "OuterGlow"
 outerGlow.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -1868,7 +1846,6 @@ ms.Transparency = 0.15
 ms.Thickness = 2
 attachSpinStroke(ms, false, {pulse = true, baseThickness = 2})
 
--- subtle inner purple gradient
 local mainGrad = Instance.new("UIGradient", main)
 mainGrad.Color = ColorSequence.new({
     ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 14, 55)),
@@ -2262,7 +2239,7 @@ local function makeDropdown(page, label, order, options, initial, onSelect)
     arrow.Size = UDim2.new(0, 24, 0, 24)
     arrow.Position = UDim2.new(1, -32, 0.5, -12)
     arrow.BackgroundTransparency = 1
-    arrow.Text = "▼"
+    arrow.Text = "v"
     arrow.TextColor3 = cc3(settingsConfig.textColor)
     arrow.Font = Enum.Font.GothamBold
     arrow.TextSize = 13
@@ -2299,7 +2276,7 @@ local function makeDropdown(page, label, order, options, initial, onSelect)
     local function setOpen(want)
         if open == want then return end
         open = want
-        arrow.Text = want and "▲" or "▼"
+        arrow.Text = want and "^" or "v"
         if want then
             local visibleCount = math.min(#options, MAX_VISIBLE)
             local targetH = 10 + visibleCount * OPTION_H + math.max(0, visibleCount - 1) * 3
@@ -2357,7 +2334,6 @@ end
 
 -- ============ ANIM / EMOT TAB ============
 do
-    -- ===== EMOTES (original + new batch) =====
     local EMOTES = {
         {id=3360689775,name="Salute"},{id=5915779043,name="Applaud"},{id=3360692915,name="Tilt"},
         {id=15610015346,name="Yungblud Jump"},{id=14353423348,name="Bouncy Twirl"},{id=14353421343,name="Face Frame"},
@@ -2374,7 +2350,7 @@ do
         {id=4646306583,name="Curtsy"},{id=85936805522788,name="Caramell"},{id=14900153406,name="Feel Special"},
         {id=102492229412911,name="Tenna Dance"},{id=133142324349281,name="Flopping Fish"},{id=10214406616,name="Frosty Flair"},
         {id=120224229260879,name="Cute Crouch"},{id=15679955281,name="Festive Dance"},{id=4849502101,name="Sad"},
-        {id=10214418283,name="V Pose"},{id=92853367837757,name="Garry's Dance"},{id=104485625389237,name="Make You Mine"},
+        {id=10214418283,name="V Pose"},{id=92853367837757,name="Garry Dance"},{id=104485625389237,name="Make You Mine"},
         {id=139830733782518,name="Phut On"},{id=132382355371060,name="Tank Transformation"},{id=103046131635200,name="Love Scenario"},
         {id=15123050663,name="Bone Chillin Bop"},{id=124305244640379,name="Shattered"},{id=134311528115559,name="Hit Every Beat"},
         {id=17748346932,name="Heart Shuffle"},{id=93105950995997,name="Caramelldansen"},{id=7466046574,name="Quiet Waves"},
@@ -2444,55 +2420,36 @@ do
         {id=91927498467600,name="Koto Nai Meme"},{id=117450501566142,name="Hidden Box"},{id=4272484885,name="Baby Dance"},
         {id=88024974500195,name="Oppa Gangnam"},{id=7202896732,name="Boxing Punch"},{id=128792127841374,name="Watching Videos"},
         {id=87756443172440,name="Xavier Based Dance"},{id=116770268279002,name="Teto Birdbrain"},{id=124935873390035,name="Hiding Human Box"},
-        {id=94121796810251,name="Kicking Feet Blush"},
-        -- ===== NEW BATCH =====
-        {id=3333491102,name="Robot Dance"},{id=3333494571,name="Cheer"},{id=3333492333,name="Catwalk"},
-        {id=3607128469,name="Old Town Road"},{id=3900201554,name="Hype Dance"},{id=4335182504,name="Smooth Dance"},
-        {id=4794761111,name="Elegant"},{id=5517341874,name="Orange Justice"},{id=5517388105,name="Electro Shuffle"},
-        {id=5517399807,name="Best Mates"},{id=5906818978,name="Zombie Dance"},{id=6073803083,name="Applause"},
-        {id=6262288506,name="Sneaky Dance"},{id=6262288795,name="Confident Dance"},{id=6368433363,name="Victory Fanfare"},
-        {id=6686381374,name="Beach Dance"},{id=6697541960,name="Spooky Dance"},{id=6901380777,name="Disco Fever"},
-        {id=6998221694,name="Pop Dance"},{id=7172289111,name="TikTok Dance"},{id=7444043551,name="Kawaii Idle"},
-        {id=7550850969,name="Boom Dance"},{id=7577891427,name="Warrior Stance"},{id=7699099042,name="Salsa"},
-        {id=7870534217,name="Fashionista"},{id=8085917147,name="Hero Pose"},{id=8215917147,name="Cool Stance"},
-        {id=8443742914,name="Break Dance"},{id=8757879964,name="Moon Knight Pose"},{id=8997840417,name="Cheer Squad"},
-        {id=9127348801,name="Hip Hop Dance"},{id=9180479573,name="Flex Pose"},{id=9233454261,name="Glam Stance"},
-        {id=9335789417,name="Stage Dance"},{id=9553750557,name="Chill Vibe"},{id=9658439896,name="Sit Cross Legged"},
-        {id=9734632145,name="Look At Hand"},{id=9834586245,name="Lean Pose"},{id=9944275123,name="Power Up"},
-        {id=10020993727,name="Look Smart"},{id=10141969862,name="Bad Guy Walk"},{id=10264423389,name="Crouch Idle"},
-        {id=10337302447,name="Russian Dance"},{id=10472426327,name="Arms Out"},{id=10560550340,name="Belly Flop"},
-        {id=10657216101,name="Fancy Wave"},{id=10781635801,name="Fighter Idle"},{id=10893447261,name="Boom Boom Dance"},
-        {id=10971649103,name="Wait Wave"},{id=11130056272,name="Deep Meditation"},{id=11206624306,name="Ninja Pose"},
-        {id=11270438641,name="Floating Sit"},{id=11333425483,name="Rap Pose"},{id=11429794179,name="Magician Wave"},
-        {id=11512970289,name="Glide Pose"},{id=11616103344,name="Lean Back"},{id=11660333383,name="Rocket Pose"},
-        {id=11715477481,name="Super Saiyan"},{id=11769559176,name="Tornado Spin"},{id=11820715553,name="Kung Fu Pose"},
-        {id=11961438587,name="Stargaze Pose"},{id=12012197151,name="Dab"},{id=12095871798,name="Tilted Head"},
-        {id=12194099658,name="Thinking Pose"},{id=12324873219,name="Pop Star Pose"},{id=12393700557,name="Karate Pose"},
-        {id=12477425749,name="Snowman Pose"},{id=12549246188,name="Roller Skate"},{id=12744820542,name="Skate Pose"},
-        {id=12845600353,name="Surf Pose"},{id=12945143688,name="Yoga Pose"},{id=13033758672,name="Arms Crossed"},
-        {id=13138496699,name="Superman Pose"},{id=13239333468,name="Shadow Box"},{id=13345405769,name="Wolf Pose"},
-        {id=13445481268,name="Penguin Waddle"},{id=13543125743,name="Rainbow Pose"},{id=13654548293,name="Cute Pose"},
-        {id=13734575382,name="Angry Pose"},{id=13834873121,name="Scared Pose"},{id=13934564364,name="Happy Pose"},
-        {id=14035862054,name="Cool Guy"},{id=14134815397,name="Chill Pose"},{id=14235481231,name="Sleeping Pose"},
-        {id=14335441253,name="Sitting on the Floor"},{id=14445873215,name="Leaning Back"},
+        {id=94121796810251,name="Kicking Feet Blush"},{id=3333491102,name="Robot Dance"},{id=3333494571,name="Cheer"},
+        {id=3333492333,name="Catwalk"},{id=3607128469,name="Old Town Road"},{id=3900201554,name="Hype Dance"},
+        {id=4335182504,name="Smooth Dance"},{id=4794761111,name="Elegant"},{id=5517341874,name="Orange Justice"},
+        {id=5517388105,name="Electro Shuffle"},{id=5906818978,name="Zombie Dance"},{id=6073803083,name="Applause"},
+        {id=6262288506,name="Sneaky Dance"},{id=6262288795,name="Confident Dance"},{id=6686381374,name="Beach Dance"},
+        {id=6697541960,name="Spooky Dance"},{id=6901380777,name="Disco Fever"},{id=6998221694,name="Pop Dance"},
+        {id=7444043551,name="Kawaii Idle"},{id=7550850969,name="Boom Dance"},{id=7577891427,name="Warrior Stance"},
+        {id=7699099042,name="Salsa"},{id=7870534217,name="Fashionista"},{id=8085917147,name="Hero Pose"},
+        {id=8215917147,name="Cool Stance"},{id=8443742914,name="Break Dance"},{id=8757879964,name="Moon Knight Pose"},
+        {id=8997840417,name="Cheer Squad"},{id=9127348801,name="Hip Hop Dance"},{id=9180479573,name="Flex Pose"},
+        {id=9233454261,name="Glam Stance"},{id=9335789417,name="Stage Dance"},{id=9553750557,name="Chill Vibe"},
+        {id=9658439896,name="Sit Cross Legged"},{id=9734632145,name="Look At Hand"},{id=9834586245,name="Lean Pose"},
+        {id=9944275123,name="Power Up"},{id=10020993727,name="Look Smart"},{id=10141969862,name="Bad Guy Walk"},
+        {id=10264423389,name="Crouch Idle"},{id=10337302447,name="Russian Dance"},{id=10472426327,name="Arms Out"},
+        {id=10560550340,name="Belly Flop"},{id=10657216101,name="Fancy Wave"},{id=10781635801,name="Fighter Idle"},
+        {id=10893447261,name="Boom Boom Dance"},{id=10971649103,name="Wait Wave"},{id=11130056272,name="Deep Meditation"},
+        {id=11206624306,name="Ninja Pose"},{id=11270438641,name="Floating Sit"},{id=11333425483,name="Rap Pose"},
+        {id=11429794179,name="Magician Wave"},{id=11512970289,name="Glide Pose"},{id=11616103344,name="Lean Back"},
+        {id=11660333383,name="Rocket Pose"},{id=11715477481,name="Super Saiyan"},{id=11769559176,name="Tornado Spin"},
+        {id=11820715553,name="Kung Fu Pose"},{id=11961438587,name="Stargaze Pose"},{id=12012197151,name="Dab"},
+        {id=12095871798,name="Tilted Head"},{id=12194099658,name="Thinking Pose"},{id=12324873219,name="Pop Star Pose"},
+        {id=12393700557,name="Karate Pose"},{id=12477425749,name="Snowman Pose"},{id=12549246188,name="Roller Skate"},
+        {id=12744820542,name="Skate Pose"},{id=12845600353,name="Surf Pose"},{id=12945143688,name="Yoga Pose"},
+        {id=13033758672,name="Arms Crossed"},{id=13138496699,name="Superman Pose"},{id=13239333468,name="Shadow Box"},
+        {id=13345405769,name="Wolf Pose"},{id=13445481268,name="Penguin Waddle"},{id=13543125743,name="Rainbow Pose"},
+        {id=13654548293,name="Cute Pose"},{id=13734575382,name="Angry Pose"},{id=13834873121,name="Scared Pose"},
+        {id=13934564364,name="Happy Pose"},{id=14035862054,name="Cool Guy"},{id=14134815397,name="Chill Pose"},
+        {id=14235481231,name="Sleeping Pose"},{id=14335441253,name="Sitting on Floor"},{id=14445873215,name="Leaning Back"},
         {id=14544785291,name="Warrior Pose"},{id=14645874125,name="Ninja Stance"},{id=14745874253,name="Defeated"},
-        {id=14845874512,name="Flying Kick"},{id=14945874689,name="Jumping Jacks"},{id=15045874841,name="One-Arm Push-up"},
-        {id=15145874967,name="Twist Dance"},{id=15245875074,name="Shuffle Dance"},{id=15345875185,name="Slide Dance"},
-        {id=15445875296,name="Twist and Shout"},{id=15545875412,name="Macarena Real"},
-        {id=15645875543,name="Cha Cha Slide"},{id=15745875652,name="Electric Slide"},{id=15845875764,name="Cupid Shuffle"},
-        {id=15945875883,name="Whip"},{id=16045875991,name="Nae Nae"},{id=16145876104,name="Hit the Quan"},
-        {id=16245876215,name="Running Man"},{id=16345876324,name="Dougie"},{id=16445876435,name="Cat Daddy"},
-        {id=16545876548,name="Reject"},{id=16645876657,name="Shoot"},{id=16745876768,name="Dab on 'em"},
-        {id=16845876879,name="Sturdy"},{id=16945876988,name="Woah"},{id=17045877099,name="Twerk"},
-        {id=17145877211,name="Hit Dem Folks"},{id=17245877324,name="Stanky Leg"},{id=17345877435,name="Soulja Boy"},
-        {id=17445877546,name="Bernie"},{id=17545877658,name="Breakdance"},{id=17645877767,name="Flair"},
-        {id=17745877876,name="Wave"},{id=17845877987,name="Moonwalk2"},{id=17945878098,name="Backslide"},
-        {id=18045878209,name="Headspin"},{id=18145878321,name="Freeze"},{id=18245878432,name="Salsa Real"},
-        {id=18345878543,name="Bachata"},{id=18445878654,name="Merengue"},{id=18545878765,name="Tango"},
-        {id=18645878876,name="Waltz"},{id=18745878987,name="Swing Dance"},{id=18845879098,name="Charleston"},
-        {id=18945879209,name="Flamenco"},{id=19045879321,name="Irish Step"},{id=19145879432,name="Hula"},
-        {id=19245879543,name="Kabuki"},{id=19345879654,name="Bollywood"},{id=19445879765,name="Ballet"},
-        {id=19545879876,name="Jazz Hands"},{id=19645879987,name="Tap Dance"},{id=19745880098,name="Boogie"},
+        {id=14845874512,name="Flying Kick"},{id=14945874689,name="Jumping Jacks"},
     }
     local seen, dedup = {}, {}
     for _, e in ipairs(EMOTES) do
@@ -2651,16 +2608,6 @@ do
     searchStroke.Color = cc3(settingsConfig.accentColor)
     searchStroke.Thickness = 1.5
     searchStroke.Transparency = 0.6
-    searchBox.Focused:Connect(function()
-        if state.animationsEnabled == false then return end
-        TweenService:Create(searchStroke, TweenInfo.new(0.2), {Transparency = 0}):Play()
-        TweenService:Create(searchBox, TweenInfo.new(0.2), {BackgroundColor3 = cc3(settingsConfig.cardHoverColor)}):Play()
-    end)
-    searchBox.FocusLost:Connect(function()
-        if state.animationsEnabled == false then return end
-        TweenService:Create(searchStroke, TweenInfo.new(0.2), {Transparency = 0.6}):Play()
-        TweenService:Create(searchBox, TweenInfo.new(0.2), {BackgroundColor3 = cc3(settingsConfig.cardColor)}):Play()
-    end)
 
     local sizeBtn = Instance.new("TextButton", controlsRow)
     sizeBtn.Size = UDim2.new(0, 100, 1, 0)
@@ -2728,10 +2675,10 @@ do
                 playBtn.Size = UDim2.new(1, -32, 0, 20)
                 playBtn.Position = UDim2.new(0, 4, 0, currentSize - 14)
                 playBtn.BackgroundColor3 = cc3(settingsConfig.accentColor)
-                playBtn.Text = "▶"
+                playBtn.Text = "Play"
                 playBtn.TextColor3 = Color3.new(0,0,0)
                 playBtn.Font = Enum.Font.GothamBold
-                playBtn.TextSize = 13
+                playBtn.TextSize = 11
                 playBtn.AutoButtonColor = false
                 Instance.new("UICorner", playBtn).CornerRadius = UDim.new(0, 6)
 
@@ -2739,7 +2686,7 @@ do
                 circleBtn.Size = UDim2.new(0, 24, 0, 24)
                 circleBtn.Position = UDim2.new(1, -28, 0, currentSize - 16)
                 circleBtn.BackgroundColor3 = state.emoteFloatButtons[tostring(emote.id)] and cc3(settingsConfig.accentColor) or Color3.fromRGB(40,24,60)
-                circleBtn.Text = "●"
+                circleBtn.Text = "+"
                 circleBtn.TextColor3 = Color3.new(1,1,1)
                 circleBtn.Font = Enum.Font.GothamBold
                 circleBtn.TextSize = 12
@@ -2854,7 +2801,6 @@ do
         end
     end)
 
-    -- ============ FE ANIMATIONS ============
     addSect(pages["Anim/Emot"], "FE Animations", 10)
 
     local ANIM_SLOT_PATHS = {
@@ -3085,12 +3031,12 @@ do
         if name == "R6 Animation Pack" then
             local rig = getRigType(LP.Character)
             if rig == "R15" then
-                _G.__AW_NOTIFY("Note: R6 pack only animates R6 avatars — your rig is R15")
+                _G.__AW_NOTIFY("Note: R6 pack only animates R6 avatars - your rig is R15")
             elseif rig == "R6" then
                 _G.__AW_NOTIFY("R6 pack applied")
             end
         else
-            _G.__AW_NOTIFY("All anims → " .. name)
+            _G.__AW_NOTIFY("All anims -> " .. name)
         end
         for key, setter in pairs(animSetters) do
             if setter then pcall(setter, name) end
@@ -3151,14 +3097,6 @@ do
             if animSearchToken == myToken then renderAnimSearch(animSearchBox.Text) end
         end)
     end)
-    animSearchBox.Focused:Connect(function()
-        if state.animationsEnabled == false then return end
-        TweenService:Create(animSearchStroke, TweenInfo.new(0.2), {Transparency = 0}):Play()
-    end)
-    animSearchBox.FocusLost:Connect(function()
-        if state.animationsEnabled == false then return end
-        TweenService:Create(animSearchStroke, TweenInfo.new(0.2), {Transparency = 0.6}):Play()
-    end)
 
     do
         local _, _, sAll = makeDropdown(pages["Anim/Emot"], "All Animations", 14, presetOptions, state.feAnimAll or "Default", function(v)
@@ -3170,7 +3108,7 @@ do
         local _, _, s1 = makeDropdown(pages["Anim/Emot"], "Idle Animation", 15, presetOptions, state.feAnimIdle or "Default", function(v)
             state.feAnimIdle = v; saveSettings()
             applyPresetToSlots(v, {"idle1","idle2"})
-            _G.__AW_NOTIFY("Idle → " .. v)
+            _G.__AW_NOTIFY("Idle -> " .. v)
         end)
         animSetters.idle = s1
     end
@@ -3178,7 +3116,7 @@ do
         local _, _, s2 = makeDropdown(pages["Anim/Emot"], "Walk Animation", 16, presetOptions, state.feAnimWalk or "Default", function(v)
             state.feAnimWalk = v; saveSettings()
             applyPresetToSlots(v, {"walk"})
-            _G.__AW_NOTIFY("Walk → " .. v)
+            _G.__AW_NOTIFY("Walk -> " .. v)
         end)
         animSetters.walk = s2
     end
@@ -3186,7 +3124,7 @@ do
         local _, _, s3 = makeDropdown(pages["Anim/Emot"], "Run Animation", 17, presetOptions, state.feAnimRun or "Default", function(v)
             state.feAnimRun = v; saveSettings()
             applyPresetToSlots(v, {"run"})
-            _G.__AW_NOTIFY("Run → " .. v)
+            _G.__AW_NOTIFY("Run -> " .. v)
         end)
         animSetters.run = s3
     end
@@ -3194,7 +3132,7 @@ do
         local _, _, s4 = makeDropdown(pages["Anim/Emot"], "Jump Animation", 18, presetOptions, state.feAnimJump or "Default", function(v)
             state.feAnimJump = v; saveSettings()
             applyPresetToSlots(v, {"jump"})
-            _G.__AW_NOTIFY("Jump → " .. v)
+            _G.__AW_NOTIFY("Jump -> " .. v)
         end)
         animSetters.jump = s4
     end
@@ -3202,7 +3140,7 @@ do
         local _, _, s5 = makeDropdown(pages["Anim/Emot"], "Climb Animation", 19, presetOptions, state.feAnimClimb or "Default", function(v)
             state.feAnimClimb = v; saveSettings()
             applyPresetToSlots(v, {"climb"})
-            _G.__AW_NOTIFY("Climb → " .. v)
+            _G.__AW_NOTIFY("Climb -> " .. v)
         end)
         animSetters.climb = s5
     end
@@ -3210,7 +3148,7 @@ do
         local _, _, s6 = makeDropdown(pages["Anim/Emot"], "Fall Animation", 20, presetOptions, state.feAnimFall or "Default", function(v)
             state.feAnimFall = v; saveSettings()
             applyPresetToSlots(v, {"fall"})
-            _G.__AW_NOTIFY("Fall → " .. v)
+            _G.__AW_NOTIFY("Fall -> " .. v)
         end)
         animSetters.fall = s6
     end
@@ -3218,15 +3156,9 @@ do
         local _, _, s7 = makeDropdown(pages["Anim/Emot"], "Swim Animation", 21, presetOptions, state.feAnimSwim or "Default", function(v)
             state.feAnimSwim = v; saveSettings()
             applyPresetToSlots(v, {"swim"})
-            _G.__AW_NOTIFY("Swim → " .. v)
+            _G.__AW_NOTIFY("Swim -> " .. v)
         end)
         animSetters.swim = s7
-    end
-
-    _G.__AW_SYNC_ANIM_DROPDOWNS = function(name)
-        for _, setter in pairs(animSetters) do
-            if setter then pcall(setter, name) end
-        end
     end
 
     addBtn(pages["Anim/Emot"], "Reset to Default Animations", 22, function()
@@ -3289,7 +3221,7 @@ addSect(pages[SECRET_NAME], "Wall Hop", 20)
 tgg(pages[SECRET_NAME], "Enable Wall Hop", 21, "wallHop")
 tgg(pages[SECRET_NAME], "Wall Hop Flick", 22, "wallHopFlick")
 
-addSect(pages[SECRET_NAME], "Remove Barriers", 25)        -- NEW SECTION
+addSect(pages[SECRET_NAME], "Remove Barriers", 25)
 tgg(pages[SECRET_NAME], "Remove Barriers (Glitchproof / Glitch / THICC)", 26, "removeBarriers")
 addBtn(pages[SECRET_NAME], "Remove Barriers Now", 27, function()
     local removed = 0
@@ -3367,33 +3299,11 @@ do
         return nil
     end
 
-    local function findStopRemote()
-        local stopNames = {"StopSong", "StopSound", "PauseSong", "PauseSound", "StopMusic", "StopRadio", "Stop"}
-        local parent = PlaySong and PlaySong.Parent or (ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Inventory"))
-        if parent then
-            for _, name in ipairs(stopNames) do
-                local r = parent:FindFirstChild(name)
-                if r and (r:IsA("RemoteEvent") or r:IsA("RemoteFunction")) then
-                    return r
-                end
-            end
-        end
-        for _, name in ipairs(stopNames) do
-            local found = ReplicatedStorage:FindFirstChild(name, true)
-            if found and (found:IsA("RemoteEvent") or found:IsA("RemoteFunction")) then
-                return found
-            end
-        end
-        return nil
-    end
-
     local PlaySong = findPlaySong()
     task.spawn(function()
         while true do
             task.wait(2)
-            if not PlaySong or not PlaySong.Parent then
-                PlaySong = findPlaySong()
-            end
+            if not PlaySong or not PlaySong.Parent then PlaySong = findPlaySong() end
         end
     end)
 
@@ -3408,18 +3318,10 @@ do
     end
 
     local function firePlaySong(rawId, tryAllFormats)
-        if not PlaySong or not PlaySong.Parent then
-            PlaySong = findPlaySong()
-        end
-        if not PlaySong then
-            _G.__AW_NOTIFY("PlaySong remote not found")
-            return false
-        end
+        if not PlaySong or not PlaySong.Parent then PlaySong = findPlaySong() end
+        if not PlaySong then _G.__AW_NOTIFY("PlaySong remote not found") return false end
         local idNum = tonumber(tostring(rawId or ""):match("%d+"))
-        if not idNum then
-            _G.__AW_NOTIFY("Invalid audio ID")
-            return false
-        end
+        if not idNum then _G.__AW_NOTIFY("Invalid audio ID") return false end
         local formats = { idNum }
         if tryAllFormats then
             table.insert(formats, "rbxassetid://" .. idNum)
@@ -3427,228 +3329,16 @@ do
         end
         for i, arg in ipairs(formats) do
             pcall(function()
-                if PlaySong:IsA("RemoteEvent") then
-                    PlaySong:FireServer(arg)
-                elseif PlaySong:IsA("RemoteFunction") then
-                    PlaySong:InvokeServer(arg)
-                end
+                if PlaySong:IsA("RemoteEvent") then PlaySong:FireServer(arg)
+                elseif PlaySong:IsA("RemoteFunction") then PlaySong:InvokeServer(arg) end
             end)
             if i < #formats then task.wait(0.08) end
         end
         return true
     end
 
-    local function stopAudio()
-        if not PlaySong or not PlaySong.Parent then
-            PlaySong = findPlaySong()
-        end
-        local stopRemote = findStopRemote()
-        if stopRemote then
-            pcall(function()
-                if stopRemote:IsA("RemoteEvent") then
-                    stopRemote:FireServer()
-                else
-                    stopRemote:InvokeServer()
-                end
-            end)
-            return true
-        end
-        if PlaySong then
-            pcall(function()
-                if PlaySong:IsA("RemoteEvent") then
-                    PlaySong:FireServer(0)
-                    task.wait(0.05)
-                    PlaySong:FireServer("")
-                    task.wait(0.05)
-                    PlaySong:FireServer(nil)
-                else
-                    PlaySong:InvokeServer(0)
-                end
-            end)
-            return true
-        end
-        return false
-    end
-
-    -- ===== Song selector dropdown =====
-    local songWrapper = Instance.new("Frame", pages[SECRET_NAME])
-    songWrapper.Size = UDim2.new(1, 0, 0, 44)
-    songWrapper.LayoutOrder = 101
-    songWrapper.BackgroundTransparency = 1
-    songWrapper.ClipsDescendants = false
-
-    local songHeader = Instance.new("TextButton", songWrapper)
-    songHeader.Size = UDim2.new(1, 0, 0, 44)
-    songHeader.BackgroundColor3 = cc3(settingsConfig.cardColor)
-    songHeader.Text = ""
-    songHeader.AutoButtonColor = false
-    Instance.new("UICorner", songHeader).CornerRadius = UDim.new(0, 10)
-    local songHeaderStroke = Instance.new("UIStroke", songHeader)
-    songHeaderStroke.Color = cc3(settingsConfig.accentColor)
-    songHeaderStroke.Thickness = 1
-    songHeaderStroke.Transparency = 0.6
-
-    local songLbl = Instance.new("TextLabel", songHeader)
-    songLbl.Size = UDim2.new(1, -44, 0, 14)
-    songLbl.Position = UDim2.new(0, 12, 0, 6)
-    songLbl.BackgroundTransparency = 1
-    songLbl.Text = "Selected Song"
-    songLbl.TextColor3 = cc3(settingsConfig.tabTextColor)
-    songLbl.Font = Enum.Font.Gotham
-    songLbl.TextSize = 11
-    songLbl.TextXAlignment = Enum.TextXAlignment.Left
-
-    local songVal = Instance.new("TextLabel", songHeader)
-    songVal.Size = UDim2.new(1, -44, 0, 18)
-    songVal.Position = UDim2.new(0, 12, 0, 22)
-    songVal.BackgroundTransparency = 1
-    songVal.Text = "(none selected)"
-    songVal.TextColor3 = cc3(settingsConfig.textColor)
-    songVal.Font = Enum.Font.GothamBold
-    songVal.TextSize = 14
-    songVal.TextXAlignment = Enum.TextXAlignment.Left
-    songVal.TextTruncate = Enum.TextTruncate.AtEnd
-
-    local songArrow = Instance.new("TextLabel", songHeader)
-    songArrow.Size = UDim2.new(0, 24, 0, 24)
-    songArrow.Position = UDim2.new(1, -32, 0.5, -12)
-    songArrow.BackgroundTransparency = 1
-    songArrow.Text = "▼"
-    songArrow.TextColor3 = cc3(settingsConfig.textColor)
-    songArrow.Font = Enum.Font.GothamBold
-    songArrow.TextSize = 13
-
-    local songList = Instance.new("ScrollingFrame", songWrapper)
-    songList.Size = UDim2.new(1, 0, 0, 0)
-    songList.Position = UDim2.new(0, 0, 0, 46)
-    songList.BackgroundColor3 = cc3(settingsConfig.cardColor)
-    songList.BorderSizePixel = 0
-    songList.Visible = false
-    songList.ClipsDescendants = true
-    songList.ZIndex = 5
-    songList.ScrollBarThickness = 4
-    songList.ScrollBarImageColor3 = cc3(settingsConfig.accentColor)
-    songList.CanvasSize = UDim2.new(0, 0, 0, 0)
-    songList.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    Instance.new("UICorner", songList).CornerRadius = UDim.new(0, 10)
-    local songListLayout = Instance.new("UIListLayout", songList)
-    songListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    songListLayout.Padding = UDim.new(0, 3)
-    local songListPad = Instance.new("UIPadding", songList)
-    songListPad.PaddingTop = UDim.new(0, 5)
-    songListPad.PaddingBottom = UDim.new(0, 5)
-    songListPad.PaddingLeft = UDim.new(0, 5)
-    songListPad.PaddingRight = UDim.new(0, 5)
-
-    local songListOpen = false
-    local selectedSongId = state.radioSelectedSongId or ""
-
-    local function findSongById(id)
-        for _, s in ipairs(savedSongs) do
-            if tostring(s.id) == tostring(id) then return s end
-        end
-        return nil
-    end
-
-    local function refreshSongDisplay()
-        local s = findSongById(selectedSongId)
-        if s then
-            songVal.Text = (s.name or s.id)
-        else
-            songVal.Text = "(none selected)"
-            selectedSongId = ""
-            state.radioSelectedSongId = ""
-        end
-    end
-
-    local function rebuildSongList()
-        for _, c in ipairs(songList:GetChildren()) do
-            if c:IsA("TextButton") or c:IsA("TextLabel") then c:Destroy() end
-        end
-        if #savedSongs == 0 then
-            local empty = Instance.new("TextLabel", songList)
-            empty.Size = UDim2.new(1, 0, 0, 34)
-            empty.LayoutOrder = 1
-            empty.BackgroundTransparency = 1
-            empty.Text = "(no saved songs — add one below)"
-            empty.TextColor3 = cc3(settingsConfig.tabTextColor)
-            empty.Font = Enum.Font.Gotham
-            empty.TextSize = 12
-            return
-        end
-        for i, s in ipairs(savedSongs) do
-            local btn = Instance.new("TextButton", songList)
-            btn.Size = UDim2.new(1, 0, 0, 38)
-            btn.LayoutOrder = i
-            btn.BackgroundColor3 = (tostring(s.id) == tostring(selectedSongId)) and cc3(settingsConfig.accentColor) or cc3(settingsConfig.cardHoverColor)
-            btn.Text = (s.name or s.id)
-            btn.TextColor3 = (tostring(s.id) == tostring(selectedSongId)) and Color3.new(0,0,0) or cc3(settingsConfig.textColor)
-            btn.Font = Enum.Font.GothamMedium
-            btn.TextSize = 14
-            btn.TextXAlignment = Enum.TextXAlignment.Left
-            btn.AutoButtonColor = false
-            btn.ZIndex = 6
-            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-            local bp = Instance.new("UIPadding", btn); bp.PaddingLeft = UDim.new(0, 12)
-            btn.MouseEnter:Connect(function()
-                if state.animationsEnabled == false then return end
-                if tostring(s.id) ~= tostring(selectedSongId) then
-                    TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = cc3(settingsConfig.accentColor), TextColor3 = Color3.new(0,0,0)}):Play()
-                end
-            end)
-            btn.MouseLeave:Connect(function()
-                if state.animationsEnabled == false then return end
-                if tostring(s.id) ~= tostring(selectedSongId) then
-                    TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = cc3(settingsConfig.cardHoverColor), TextColor3 = cc3(settingsConfig.textColor)}):Play()
-                end
-            end)
-            btn.MouseButton1Click:Connect(function()
-                selectedSongId = tostring(s.id)
-                state.radioSelectedSongId = selectedSongId
-                saveSettings()
-                refreshSongDisplay()
-                setSongListOpen(false)
-                for _, c in ipairs(songList:GetChildren()) do
-                    if c:IsA("TextButton") then
-                        c.BackgroundColor3 = cc3(settingsConfig.cardHoverColor)
-                        c.TextColor3 = cc3(settingsConfig.textColor)
-                    end
-                end
-                btn.BackgroundColor3 = cc3(settingsConfig.accentColor)
-                btn.TextColor3 = Color3.new(0,0,0)
-            end)
-        end
-    end
-
-    function setSongListOpen(want)
-        if songListOpen == want then return end
-        songListOpen = want
-        songArrow.Text = want and "▲" or "▼"
-        if want then
-            rebuildSongList()
-            local visibleCount = math.min(math.max(#savedSongs, 1), 5)
-            local targetH = 10 + visibleCount * 38 + math.max(0, visibleCount - 1) * 3
-            songList.Visible = true
-            songList.Size = UDim2.new(1, 0, 0, 0)
-            TweenService:Create(songList, TweenInfo.new(0.30, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, targetH)}):Play()
-            TweenService:Create(songWrapper, TweenInfo.new(0.30, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, 44 + targetH + 2)}):Play()
-        else
-            TweenService:Create(songList, TweenInfo.new(0.22, EASE_SMOOTH, EASE_IN), {Size = UDim2.new(1, 0, 0, 0)}):Play()
-            TweenService:Create(songWrapper, TweenInfo.new(0.22, EASE_SMOOTH, EASE_IN), {Size = UDim2.new(1, 0, 0, 44)}):Play()
-            task.delay(0.24, function() if not songListOpen then songList.Visible = false end end)
-        end
-    end
-
-    songHeader.MouseButton1Click:Connect(function()
-        setSongListOpen(not songListOpen)
-    end)
-
-    refreshSongDisplay()
-
-    -- ===== Add audio ID =====
-    local songInput = makeInput(pages[SECRET_NAME], 102, "Audio ID to add...", "", function() end)
-
-    addBtn(pages[SECRET_NAME], "Add Audio ID", 103, function()
+    local songInput = makeInput(pages[SECRET_NAME], 101, "Audio ID...", "", function() end)
+    addBtn(pages[SECRET_NAME], "Add Audio ID", 102, function()
         local id = tostring(songInput.Text or ""):match("%d+")
         if not id then _G.__AW_NOTIFY("Invalid audio ID") return end
         local name = id
@@ -3661,101 +3351,12 @@ do
         end
         table.insert(savedSongs, {name = name, id = id})
         saveSongs()
-        selectedSongId = id
-        state.radioSelectedSongId = id
-        saveSettings()
-        refreshSongDisplay()
-        if songListOpen then rebuildSongList() end
         _G.__AW_NOTIFY("Added: " .. name)
     end)
-
-    addBtn(pages[SECRET_NAME], "Play Audio", 104, function()
-        if not selectedSongId or selectedSongId == "" then
-            _G.__AW_NOTIFY("No song selected")
-            return
-        end
-        local s = findSongById(selectedSongId)
-        if firePlaySong(selectedSongId, true) then
-            _G.__AW_NOTIFY("Playing: " .. ((s and s.name) or selectedSongId))
-        end
-    end)
-
-    addBtn(pages[SECRET_NAME], "Pause / Stop Audio", 105, function()
-        if stopAudio() then
-            _G.__AW_NOTIFY("Audio stopped")
-        else
-            _G.__AW_NOTIFY("Could not stop audio — no stop remote or PlaySong missing")
-        end
-    end)
-
-    addBtn(pages[SECRET_NAME], "Restart Audio", 106, function()
-        if not selectedSongId or selectedSongId == "" then
-            _G.__AW_NOTIFY("No song selected")
-            return
-        end
-        task.spawn(function()
-            stopAudio()
-            task.wait(0.25)
-            local s = findSongById(selectedSongId)
-            if firePlaySong(selectedSongId, true) then
-                _G.__AW_NOTIFY("Restarted: " .. ((s and s.name) or selectedSongId))
-            end
-        end)
-    end)
-
-    addBtn(pages[SECRET_NAME], "Spam Selected (x5)", 107, function()
-        if not selectedSongId or selectedSongId == "" then
-            _G.__AW_NOTIFY("No song selected")
-            return
-        end
-        task.spawn(function()
-            for _ = 1, 5 do
-                firePlaySong(selectedSongId, false)
-                task.wait(0.15)
-            end
-        end)
-    end)
-
-    addBtn(pages[SECRET_NAME], "Delete Selected", 108, function()
-        if not selectedSongId or selectedSongId == "" then
-            _G.__AW_NOTIFY("No song selected")
-            return
-        end
-        for i, s in ipairs(savedSongs) do
-            if tostring(s.id) == tostring(selectedSongId) then
-                table.remove(savedSongs, i)
-                saveSongs()
-                selectedSongId = ""
-                state.radioSelectedSongId = ""
-                saveSettings()
-                refreshSongDisplay()
-                if songListOpen then rebuildSongList() end
-                _G.__AW_NOTIFY("Removed")
-                return
-            end
-        end
-    end)
-
-    addBtn(pages[SECRET_NAME], "Test Remote", 109, function()
-        PlaySong = findPlaySong()
-        if PlaySong then
-            local stopRemote = findStopRemote()
-            if stopRemote then
-                _G.__AW_NOTIFY("PlaySong: " .. PlaySong:GetFullName() .. " | Stop: " .. stopRemote:GetFullName())
-            else
-                _G.__AW_NOTIFY("PlaySong found at: " .. PlaySong:GetFullName() .. " (no stop remote found — fallback will be used)")
-            end
-        else
-            _G.__AW_NOTIFY("PlaySong remote NOT FOUND anywhere in ReplicatedStorage")
-        end
-    end)
-
-    tgg(pages[SECRET_NAME], "Auto Play Audio", 110, "radioAutoPlay")
-    LP.CharacterAdded:Connect(function()
-        if state.radioAutoPlay and state.radioSelectedSongId and state.radioSelectedSongId ~= "" then
-            task.wait(1.5)
-            firePlaySong(state.radioSelectedSongId, true)
-        end
+    addBtn(pages[SECRET_NAME], "Play Last Added Audio", 103, function()
+        if #savedSongs == 0 then _G.__AW_NOTIFY("No songs added") return end
+        local s = savedSongs[#savedSongs]
+        firePlaySong(s.id, true)
     end)
 end
 
@@ -3810,12 +3411,6 @@ do
                     if newOn then playHeadless(cfg) else stopHeadless(cfg) end
                 end
             end
-        end
-    end)
-    LP.CharacterAdded:Connect(function()
-        task.wait(0.5)
-        for _, cfg in ipairs(headlessConfigs) do
-            if cfg.on then playHeadless(cfg) end
         end
     end)
 end
@@ -3978,33 +3573,6 @@ do
     end)
 end
 
-addSect(pages[SECRET_NAME], "Disable Trading", 180)
-tgg(pages[SECRET_NAME], "Disable Trading (rejoin to re-enable)", 181, "disableTrading")
-task.spawn(function()
-    while true do
-        task.wait(0.5)
-        local trade = ReplicatedStorage:FindFirstChild("Trade")
-        if trade then
-            local sendReq = trade:FindFirstChild("SendRequest")
-            local decline = trade:FindFirstChild("DeclineRequest")
-            if state.disableTrading then
-                if sendReq and decline and sendReq:IsA("RemoteFunction") then
-                    pcall(function()
-                        sendReq.OnClientInvoke = function()
-                            pcall(function() decline:FireServer() end)
-                            return nil
-                        end
-                    end)
-                end
-            else
-                if sendReq and sendReq:IsA("RemoteFunction") then
-                    pcall(function() sendReq.OnClientInvoke = nil end)
-                end
-            end
-        end
-    end
-end)
-
 addSect(pages[SECRET_NAME], "Credits", 900)
 do
     local creditCard = Instance.new("Frame", pages[SECRET_NAME])
@@ -4029,7 +3597,7 @@ do
     creditBody.Size = UDim2.new(1, -20, 1, -40)
     creditBody.Position = UDim2.new(0, 10, 0, 32)
     creditBody.BackgroundTransparency = 1
-    creditBody.Text = "• lzzzx\n• noir (7yd7)"
+    creditBody.Text = "lzzzx | noir (7yd7)"
     creditBody.TextColor3 = cc3(settingsConfig.textColor)
     creditBody.Font = Enum.Font.Gotham
     creditBody.TextSize = 12
@@ -4049,7 +3617,7 @@ tgg(pages["Farm"], "Full Bag Gate", 6, "fullBagGate")
 addSect(pages["Combat"], "Silent Aim", 1)
 tgg(pages["Combat"], "Silent Aim", 2, "silentAimEnabled")
 tgg(pages["Combat"], "Silent Aim Wall Check", 3, "silentAimWallCheck")
-makeSlider(pages["Combat"], "Silent Aim Height (0=feet, 2=head)", 4, state.silentAimYHeight or 2, 0, 2, "silentAimYHeight")
+makeSlider(pages["Combat"], "Silent Aim Height", 4, state.silentAimYHeight or 2, 0, 2, "silentAimYHeight")
 tgg(pages["Combat"], "Shoot Through Walls", 10, "shootThroughWall")
 tgg(pages["Combat"], "Auto Shoot Murderer", 11, "autoShootMurderer")
 addBtn(pages["Combat"], "Shoot Murderer Now", 12, fullShootSequence)
@@ -4099,7 +3667,6 @@ addBtn(pages["Players"], "Add Current Text to Custom List", 3, function()
     table.insert(settingsConfig.flingList, t)
     saveSettings()
     _G.__AW_NOTIFY('Added: ' .. t)
-    if _G.__AW_REFRESH_PLAYER_LIST then pcall(_G.__AW_REFRESH_PLAYER_LIST) end
     if _G.__AW_REFRESH_CUSTOM_LIST then pcall(_G.__AW_REFRESH_CUSTOM_LIST) end
 end)
 
@@ -4165,7 +3732,11 @@ _G.__AW_REFRESH_CUSTOM_LIST = refreshCustomListUI
 
 addSect(pages["Players"], "All Players In Server", 20)
 local playerListToggleBtn = addBtn(pages["Players"], "Close Player List", 21, function() end)
-local refreshBtn = addBtn(pages["Players"], "Refresh Player List", 22, function() end)
+addBtn(pages["Players"], "Refresh Player List", 22, function()
+    if _G.__AW_REFRESH_PLAYER_LIST then pcall(_G.__AW_REFRESH_PLAYER_LIST) end
+    refreshCustomListUI()
+    _G.__AW_NOTIFY("Player list refreshed")
+end)
 
 local playerListScroll = Instance.new("ScrollingFrame", pages["Players"])
 playerListScroll.Size = UDim2.new(1, 0, 0, 380)
@@ -4291,11 +3862,6 @@ playerListToggleBtn.MouseButton1Click:Connect(function()
         refreshPlayerList()
         refreshCustomListUI()
     end
-end)
-refreshBtn.MouseButton1Click:Connect(function()
-    refreshPlayerList()
-    refreshCustomListUI()
-    _G.__AW_NOTIFY("Player list refreshed")
 end)
 
 Players.PlayerAdded:Connect(function()
@@ -4429,77 +3995,6 @@ for i, sp in ipairs(SHAPES) do
         saveSettings()
         rebuildFloatButtons()
     end)
-end
-addSect(pages["Button"], "Manage Floating Buttons", 20)
-do
-    local mSearch = Instance.new("TextBox", pages["Button"])
-    mSearch.Size = UDim2.new(1, 0, 0, 34)
-    mSearch.LayoutOrder = 21
-    mSearch.BackgroundColor3 = cc3(settingsConfig.cardColor)
-    mSearch.PlaceholderText = "Search..."
-    mSearch.PlaceholderColor3 = cc3(settingsConfig.tabTextColor)
-    mSearch.Text = ""
-    mSearch.TextColor3 = cc3(settingsConfig.textColor)
-    mSearch.Font = Enum.Font.Gotham
-    mSearch.TextSize = 12
-    mSearch.ClearTextOnFocus = false
-    Instance.new("UICorner", mSearch).CornerRadius = UDim.new(0, 10)
-    local mList = Instance.new("ScrollingFrame", pages["Button"])
-    mList.Size = UDim2.new(1, 0, 0, 300)
-    mList.LayoutOrder = 22
-    mList.BackgroundTransparency = 1
-    mList.ScrollBarThickness = 3
-    mList.CanvasSize = UDim2.new(0, 0, 0, 0)
-    mList.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    local mLayout = Instance.new("UIListLayout", mList)
-    mLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    mLayout.Padding = UDim.new(0, 5)
-    local refreshManagerFB
-    refreshManagerFB = function(filter)
-        for _, c in ipairs(mList:GetChildren()) do
-            if c:IsA("GuiObject") and c ~= mLayout then c:Destroy() end
-        end
-        filter = string.lower(filter or "")
-        local i = 0
-        for _, def in ipairs(FLOAT_BUTTON_DEFS) do
-            if filter == "" or string.find(string.lower(def.label), filter, 1, true) then
-                i = i + 1
-                local isOn = state.floatEnabledButtons[def.id]
-                local row = Instance.new("Frame", mList)
-                row.Size = UDim2.new(1, 0, 0, 32)
-                row.LayoutOrder = i
-                row.BackgroundColor3 = cc3(settingsConfig.cardColor)
-                Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
-                local nl = Instance.new("TextLabel", row)
-                nl.Size = UDim2.new(0.6, 0, 1, 0)
-                nl.Position = UDim2.new(0, 10, 0, 0)
-                nl.BackgroundTransparency = 1
-                nl.Text = def.label
-                nl.TextColor3 = cc3(settingsConfig.textColor)
-                nl.Font = Enum.Font.GothamMedium
-                nl.TextSize = 11.5
-                nl.TextXAlignment = Enum.TextXAlignment.Left
-                local ab = Instance.new("TextButton", row)
-                ab.Size = UDim2.new(0, 62, 0, 24)
-                ab.Position = UDim2.new(1, -70, 0.5, -12)
-                ab.BackgroundColor3 = isOn and Color3.fromRGB(160, 40, 40) or Color3.fromRGB(80, 40, 160)
-                ab.Text = isOn and "Remove" or "Add"
-                ab.TextColor3 = Color3.new(1, 1, 1)
-                ab.Font = Enum.Font.GothamBold
-                ab.TextSize = 10.5
-                Instance.new("UICorner", ab).CornerRadius = UDim.new(0, 6)
-                ab.MouseButton1Click:Connect(function()
-                    state.floatEnabledButtons[def.id] = not state.floatEnabledButtons[def.id]
-                    if state.floatEnabledButtons[def.id] then state.floatButtonPositions[def.id] = nil end
-                    rebuildFloatButtons()
-                    refreshManagerFB(mSearch.Text)
-                    saveSettings()
-                end)
-            end
-        end
-    end
-    mSearch:GetPropertyChangedSignal("Text"):Connect(function() refreshManagerFB(mSearch.Text) end)
-    refreshManagerFB("")
 end
 
 -- ============ KEYBINDS TAB ============
@@ -5010,7 +4505,7 @@ task.spawn(function()
     end
 end)
 
--- ============ REMOVE BARRIERS LOOP (NEW) ============
+-- ============ REMOVE BARRIERS LOOP ============
 task.spawn(function()
     while true do
         task.wait(0.5)
@@ -5081,40 +4576,9 @@ pcall(function()
         if state.afk then vu:CaptureController() vu:ClickButton2(Vector2.new()) end
     end)
 end)
-local qot = syn and syn.queue_on_teleport or queue_on_teleport or queueonteleport
-task.spawn(function()
-    while true do
-        if state.autoRejoin and qot then
-            pcall(function()
-                qot([[task.wait(2)
-local ts = game:GetService("TeleportService")
-local p = game:GetService("Players").LocalPlayer
-ts:Teleport(game.PlaceId, p)]])
-            end)
-        end
-        task.wait(10)
-    end
-end)
-task.spawn(function()
-    while true do
-        task.wait(3)
-        if state.autoServerHop and #Players:GetPlayers() <= 2 and isLobby() then
-            pcall(function() TeleportService:Teleport(PlaceId, LP) end)
-            task.wait(10)
-        end
-    end
-end)
 task.spawn(function()
     while true do
         task.wait(1)
-        if state.autoPrestige then
-            pcall(function() ReplicatedStorage.Remotes.Inventory.Prestige:FireServer() end)
-        end
-    end
-end)
-task.spawn(function()
-    while true do
-        task.wait(2)
         if alive() and isInRound() and isBagFull() then
             local myRole = getPlayerRole(LP)
             local shouldReset = false
@@ -5280,127 +4744,6 @@ do
         end
     end)
 end
-
--- ============ INVISIBILITY SYSTEM ============
-local INVIS_POSITION = Vector3.new(-25.95, 84, 3537.55)
-local invisSeat = nil
-local invisWeld = nil
-local dodgeActive = false
-
-local function setCharInvisTransparency(char, transparency)
-    if not char then return end
-    for _, d in ipairs(char:GetDescendants()) do
-        if d:IsA("BasePart") or d:IsA("Decal") then
-            pcall(function() d.Transparency = transparency end)
-        end
-    end
-end
-
-local function cleanupInvisSeat()
-    if invisWeld and invisWeld.Parent then pcall(function() invisWeld:Destroy() end) end
-    if invisSeat and invisSeat.Parent then pcall(function() invisSeat:Destroy() end) end
-    invisWeld = nil
-    invisSeat = nil
-    local existing = Workspace:FindFirstChild("invischair")
-    if existing then pcall(function() existing:Destroy() end) end
-end
-
-local function enableInvisibility()
-    local char = LP.Character
-    if not char then return end
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if not hrp or not hum or hum.Health <= 0 then return end
-    local savedCF = hrp.CFrame
-    hrp.CFrame = CFrame.new(INVIS_POSITION)
-    task.wait(0.15)
-    cleanupInvisSeat()
-    local seat = Instance.new("Seat")
-    seat.Name = "invischair"
-    seat.Anchored = false
-    seat.CanCollide = false
-    seat.Transparency = 1
-    seat.Size = Vector3.new(2, 1, 1)
-    seat.CFrame = CFrame.new(INVIS_POSITION)
-    seat.Parent = Workspace
-    local weld = Instance.new("Weld")
-    weld.Part0 = seat
-    weld.Part1 = hrp
-    weld.Parent = seat
-    invisSeat = seat
-    invisWeld = weld
-    task.wait(0.1)
-    seat.CFrame = savedCF
-    task.wait(0.1)
-    setCharInvisTransparency(char, 0.5)
-end
-
-local function disableInvisibility()
-    cleanupInvisSeat()
-    if LP.Character then setCharInvisTransparency(LP.Character, 0) end
-end
-
-local invisApplied = false
-task.spawn(function()
-    while true do
-        task.wait(0.1)
-        local wantInvis = false
-        if alive() then
-            if (state.invisibleEnabled or dodgeActive) and not isLocalFlinging then
-                wantInvis = true
-            end
-        end
-        if wantInvis and not invisApplied then
-            invisApplied = true
-            pcall(enableInvisibility)
-        elseif not wantInvis and invisApplied then
-            invisApplied = false
-            pcall(disableInvisibility)
-        end
-        if invisApplied and LP.Character then
-            local ch = LP.Character
-            local h = ch:FindFirstChildOfClass("Humanoid")
-            if h and h.Health > 0 then
-                for _, d in ipairs(ch:GetDescendants()) do
-                    if d:IsA("BasePart") or d:IsA("Decal") then
-                        if math.abs((d.Transparency or 0) - 0.5) > 0.01 then
-                            pcall(function() d.Transparency = 0.5 end)
-                        end
-                    end
-                end
-            end
-        end
-    end
-end)
-
-LP.CharacterAdded:Connect(function()
-    task.wait(1.2)
-    local shouldBeInvis = alive() and (state.invisibleEnabled or dodgeActive) and not isLocalFlinging
-    if shouldBeInvis then
-        invisApplied = true
-        pcall(enableInvisibility)
-    end
-end)
-
-task.spawn(function()
-    while true do
-        task.wait(0.15)
-        if state.autoDodge and alive() and not isLocalFlinging then
-            local m = getMurd()
-            local myRoot = LP.Character:FindFirstChild("HumanoidRootPart")
-            if m and m.Character and myRoot then
-                local mRoot = m.Character:FindFirstChild("HumanoidRootPart")
-                if mRoot then
-                    local dist = (myRoot.Position - mRoot.Position).Magnitude
-                    if not dodgeActive and dist < 20 then dodgeActive = true
-                    elseif dodgeActive and dist > 30 then dodgeActive = false end
-                end
-            end
-        elseif dodgeActive then
-            dodgeActive = false
-        end
-    end
-end)
 
 -- ============ TOUCH FLING ============
 task.spawn(function()
