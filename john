@@ -37,7 +37,20 @@ PlayerGui = LP:WaitForChild("PlayerGui", 10)
 
 CF = "ApplewareConfigs"
 CFl = "Appleware.json"
-pcall(function() if makefolder and isfolder and not isfolder(CF) then makefolder(CF) end end)
+
+-- Create Config Folders
+local bgPath = CF .. "/background"
+local bgColorPath = bgPath .. "/background color"
+local bgImagePath = bgPath .. "/background image"
+pcall(function()
+    if makefolder and isfolder then
+        if not isfolder(CF) then makefolder(CF) end
+        if not isfolder(bgPath) then makefolder(bgPath) end
+        if not isfolder(bgColorPath) then makefolder(bgColorPath) end
+        if not isfolder(bgImagePath) then makefolder(bgImagePath) end
+    end
+end)
+
 function cfgPath() if isfolder and isfolder(CF) then return CF.."/"..CFl end return CFl end
 
 state = {
@@ -79,7 +92,6 @@ state = {
     radioSelectedSongId="",
     headless1=false, headless2=false, headless3=false,
     cameraStretch=false, cameraStretchStrength=80,
-    korbloxEnabled=false, korbloxFE=false,
     signSpam=false, autoGetGG=false,
     fpsPingMonitor=false, fpsPingColor=false,
     disableTrading=false,
@@ -96,6 +108,11 @@ state = {
     emoteFloatButtons={},
     emoteFloatPositions={},
     removeBarriers=false,
+    -- Loop Teleport
+    loopTpMap=false, loopTpLobby=false, loopTpVoid=false,
+    -- UI Customization
+    uiAccentColor={r=170,g=0,b=255},
+    uiTextColor={r=255,g=255,b=255},
 }
 
 KEYBIND_FEATURES = {
@@ -169,7 +186,6 @@ toggleDisplayNames = {
     radioAutoPlay="Auto Play Audio",
     headless1="Headless V1 (with head noclip)", headless2="Headless V2", headless3="Headless V3",
     cameraStretch="Camera Stretch",
-    korbloxEnabled="Korblox Peg Leg", korbloxFE="FE Korblox",
     signSpam="Sign Spam", autoGetGG="Auto GG Sign",
     fpsPingMonitor="FPS Ping Monitor", fpsPingColor="FPS Ping Color",
     disableTrading="Disable Trading",
@@ -177,6 +193,7 @@ toggleDisplayNames = {
     blueAura="Blue Aura",
     feAnimEnabled="FE Animations",
     removeBarriers="Remove Barriers",
+    loopTpMap="Loop Teleport to Map", loopTpLobby="Loop Teleport to Lobby", loopTpVoid="Loop Teleport to Void",
 }
 
 function saveSettings()
@@ -262,9 +279,9 @@ end
 local function setSpinGradColors(grad, isOn)
     if not grad then return end
     if isOn then
-        grad.Color = buildAltSeq(WHITE, cc3(settingsConfig.accentColor))
+        grad.Color = buildAltSeq(WHITE, cc3(state.uiAccentColor or settingsConfig.accentColor))
     else
-        grad.Color = buildAltSeq(cc3(settingsConfig.accentColor), BLACK)
+        grad.Color = buildAltSeq(cc3(state.uiAccentColor or settingsConfig.accentColor), BLACK)
     end
 end
 
@@ -446,14 +463,14 @@ _G.__AW_NOTIFY = function(text)
     grad.Rotation = 90
 
     local stroke = Instance.new("UIStroke", f)
-    stroke.Color = cc3(settingsConfig.accentColor)
+    stroke.Color = cc3(state.uiAccentColor or settingsConfig.accentColor)
     stroke.Thickness = 1
     stroke.Transparency = 0.55
 
     local acc = Instance.new("Frame", f)
     acc.Size = UDim2.new(0, 3, 1, -16)
     acc.Position = UDim2.new(0, 10, 0, 8)
-    acc.BackgroundColor3 = cc3(settingsConfig.accentColor)
+    acc.BackgroundColor3 = cc3(state.uiAccentColor or settingsConfig.accentColor)
     acc.BorderSizePixel = 0
     acc.ZIndex = 3
     Instance.new("UICorner", acc).CornerRadius = UDim.new(1, 0)
@@ -463,7 +480,7 @@ _G.__AW_NOTIFY = function(text)
     title.Position = UDim2.new(0, 22, 0, 10)
     title.BackgroundTransparency = 1
     title.Text = "APPLEWARE"
-    title.TextColor3 = cc3(settingsConfig.accentColor)
+    title.TextColor3 = cc3(state.uiAccentColor or settingsConfig.accentColor)
     title.Font = Enum.Font.GothamBold
     title.TextSize = 10
     title.TextXAlignment = Enum.TextXAlignment.Left
@@ -913,52 +930,6 @@ local function executeHitboxKill(tp)
     killLocked[tp.UserId] = nil
 end
 
-local function killAllNow()
-    task.spawn(function()
-        standUp(); task.wait(0.1)
-        if findTool("Knife") or equipTool("Knife") then
-            for _,tp in ipairs(Players:GetPlayers()) do
-                if tp~=LP and targetIsAlive(tp) then
-                    task.spawn(function() executeHitboxKill(tp) end)
-                    task.wait(0.05)
-                end
-            end
-        else _G.__AW_NOTIFY('No Knife - must be Murderer') end
-    end)
-end
-local function killSheriffNow()
-    task.spawn(function()
-        if not alive() then return end
-        standUp(); task.wait(0.15)
-        if not (findTool("Knife") or equipTool("Knife")) then
-            for _=1,10 do task.wait(0.1); if equipTool("Knife") then break end end
-        end
-        if not findTool("Knife") then _G.__AW_NOTIFY('No Knife') return end
-        local live = getLiveSheriffHeroes()
-        for _, target in ipairs(live) do
-            if target and target ~= LP and targetIsAlive(target) then
-                task.spawn(function() executeHitboxKill(target) end)
-                task.wait(0.1)
-            end
-        end
-    end)
-end
-local function killCustomNow()
-    task.spawn(function()
-        if #settingsConfig.flingList==0 then _G.__AW_NOTIFY('No custom targets') return end
-        standUp(); task.wait(0.15)
-        if not (findTool("Knife") or equipTool("Knife")) then _G.__AW_NOTIFY('No Knife') return end
-        for _,n in ipairs(settingsConfig.flingList) do
-            for _,p in ipairs(Players:GetPlayers()) do
-                if playerMatchesName(p, n) and targetIsAlive(p) then
-                    task.spawn(function() executeHitboxKill(p) end)
-                    task.wait(0.1)
-                end
-            end
-        end
-    end)
-end
-
 -- ============ HANDLETOUCHED KILL ============
 local function fireHandleTouchedKill(targets)
     local char = LP.Character
@@ -1028,6 +999,29 @@ local function handleTouchKillCustom()
     fireHandleTouchedKill(targets)
 end
 
+-- REPLACED Kill All with HandleTouched
+local function killAllNow()
+    task.spawn(function()
+        standUp(); task.wait(0.1)
+        handleTouchKillAll()
+    end)
+end
+
+local function killSheriffNow()
+    task.spawn(function()
+        standUp(); task.wait(0.15)
+        handleTouchKillSheriff()
+    end)
+end
+
+local function killCustomNow()
+    task.spawn(function()
+        if #settingsConfig.flingList==0 then _G.__AW_NOTIFY('No custom targets') return end
+        standUp(); task.wait(0.15)
+        handleTouchKillCustom()
+    end)
+end
+
 local function flingAllNow()
     task.spawn(function()
         for _,p in ipairs(Players:GetPlayers()) do
@@ -1089,9 +1083,14 @@ local function grabGunNow()
     end)
 end
 local LOBBY_CFRAME = CFrame.new(14.47, 516.73, -25.34)
+local VOID_CFRAME = CFrame.new(0, -500, 0)
 local function teleportToLobby()
     local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if r then r.CFrame = LOBBY_CFRAME end
+end
+local function teleportToVoid()
+    local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    if r then r.CFrame = VOID_CFRAME end
 end
 
 local lobbyBounds = nil
@@ -1686,7 +1685,7 @@ local function refreshFloatVisual(def)
         if g then setSpinGradColors(g, isOn) end
     end
     data.btn.TextColor3 = Color3.new(1,1,1)
-    data.btn.TextStrokeColor3 = isOn and cc3(settingsConfig.accentColor) or Color3.new(0,0,0)
+    data.btn.TextStrokeColor3 = isOn and cc3(state.uiAccentColor or settingsConfig.accentColor) or Color3.new(0,0,0)
 end
 local function applyShape(btn, shape)
     for _, c in ipairs(btn:GetChildren()) do
@@ -1825,11 +1824,11 @@ Instance.new("UICorner", main).CornerRadius = UDim.new(0,14)
 
 -- UI GLOW EFFECT (PURPLE OUTRING)
 local ms = Instance.new("UIStroke", main)
-ms.Color = cc3(settingsConfig.accentColor)
+ms.Color = cc3(state.uiAccentColor or settingsConfig.accentColor)
 ms.Thickness = 2.5
 ms.Transparency = 0
 local glowStroke = Instance.new("UIStroke", main)
-glowStroke.Color = cc3(settingsConfig.accentColor)
+glowStroke.Color = cc3(state.uiAccentColor or settingsConfig.accentColor)
 glowStroke.Thickness = 6
 glowStroke.Transparency = 0.6
 
@@ -1871,7 +1870,7 @@ logo.Size = UDim2.new(1,-12,0,48)
 logo.Position = UDim2.new(0,6,0,4)
 logo.BackgroundTransparency = 1
 logo.Text = "Appleware"
-logo.TextColor3 = cc3(settingsConfig.textColor)
+logo.TextColor3 = cc3(state.uiTextColor or settingsConfig.textColor)
 logo.Font = Enum.Font.GothamBold
 logo.TextSize = 16
 logo.TextXAlignment = Enum.TextXAlignment.Left
@@ -1933,7 +1932,7 @@ local function switchTab(n)
         local ia = (nm == n)
         local txtCol
         if nm == SECRET_NAME then txtCol = Color3.fromRGB(0,0,0)
-        else txtCol = ia and cc3(settingsConfig.tabTextActiveColor) or cc3(settingsConfig.tabTextColor) end
+        else txtCol = ia and cc3(state.uiTextColor or settingsConfig.tabTextActiveColor) or cc3(settingsConfig.tabTextColor) end
         TweenService:Create(b, TweenInfo.new(0.32, EASE_SMOOTH), {BackgroundTransparency = ia and 0 or 1, BackgroundColor3 = ia and cc3(settingsConfig.cardHoverColor) or cc3(settingsConfig.tabBgColor), TextColor3 = txtCol}):Play()
     end
     if pageGs[o] then
@@ -1956,7 +1955,7 @@ local function createTabButton(name, isFirst)
     b.BackgroundColor3 = isFirst and cc3(settingsConfig.cardHoverColor) or cc3(settingsConfig.tabBgColor)
     b.BackgroundTransparency = isFirst and 0 or 1
     if name == SECRET_NAME then b.TextColor3 = Color3.fromRGB(0,0,0)
-    else b.TextColor3 = isFirst and cc3(settingsConfig.tabTextActiveColor) or cc3(settingsConfig.tabTextColor) end
+    else b.TextColor3 = isFirst and cc3(state.uiTextColor or settingsConfig.tabTextActiveColor) or cc3(settingsConfig.tabTextColor) end
     b.Text = "  " .. name
     b.Font = Enum.Font.GothamBold
     b.TextSize = 12.5
@@ -1964,7 +1963,7 @@ local function createTabButton(name, isFirst)
     b.AutoButtonColor = false
     Instance.new("UICorner", b).CornerRadius = UDim.new(0,8)
     btns[name] = b
-    if state.animationsEnabled then attachRipple(b, cc3(settingsConfig.accentColor)) end
+    if state.animationsEnabled then attachRipple(b, cc3(state.uiAccentColor or settingsConfig.accentColor)) end
     if not pages[name] then makePage(name) end
     if isFirst then pageGs[name].Visible = true end
     b.MouseButton1Click:Connect(function() switchTab(name) end)
@@ -1989,19 +1988,19 @@ local function tgg(page, name, order, key)
     lbl.Position = UDim2.new(0,14,0,0)
     lbl.BackgroundTransparency = 1
     lbl.Text = name
-    lbl.TextColor3 = cc3(settingsConfig.textColor)
+    lbl.TextColor3 = cc3(state.uiTextColor or settingsConfig.textColor)
     lbl.Font = Enum.Font.GothamMedium
     lbl.TextSize = 12.5
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     local pill = Instance.new("Frame", row)
     pill.Size = UDim2.new(0,44,0,24)
     pill.Position = UDim2.new(1,-54,0.5,-12)
-    pill.BackgroundColor3 = state[key] and cc3(settingsConfig.accentColor) or Color3.fromRGB(32,32,32)
+    pill.BackgroundColor3 = state[key] and cc3(state.uiAccentColor or settingsConfig.accentColor) or Color3.fromRGB(32,32,32)
     Instance.new("UICorner", pill).CornerRadius = UDim.new(1,0)
     local pI = Instance.new("Frame", pill)
     pI.Size = UDim2.new(1,-4,1,-4)
     pI.Position = UDim2.new(0,2,0,2)
-    pI.BackgroundColor3 = state[key] and cc3(settingsConfig.accentColor) or Color3.fromRGB(22,22,22)
+    pI.BackgroundColor3 = state[key] and cc3(state.uiAccentColor or settingsConfig.accentColor) or Color3.fromRGB(22,22,22)
     Instance.new("UICorner", pI).CornerRadius = UDim.new(1,0)
     local dot = Instance.new("Frame", pill)
     dot.Size = UDim2.new(0,16,0,16)
@@ -2017,7 +2016,7 @@ local function tgg(page, name, order, key)
     hit.MouseButton1Click:Connect(function()
         local ns = not state[key]
         state[key] = ns
-        local ac = cc3(settingsConfig.accentColor)
+        local ac = cc3(state.uiAccentColor or settingsConfig.accentColor)
         TweenService:Create(pill, TweenInfo.new(0.28, EASE_BOUNCE, EASE_OUT), {BackgroundColor3 = ns and ac or Color3.fromRGB(32,32,32)}):Play()
         TweenService:Create(pI, TweenInfo.new(0.28, EASE_BOUNCE, EASE_OUT), {BackgroundColor3 = ns and ac or Color3.fromRGB(22,22,22)}):Play()
         TweenService:Create(dot, TweenInfo.new(0.4, Enum.EasingStyle.Elastic, EASE_OUT), {Position = ns and UDim2.new(1,-20,0.5,-8) or UDim2.new(0,4,0.5,-8), BackgroundColor3 = ns and Color3.new(0,0,0) or Color3.fromRGB(200,200,200)}):Play()
@@ -2050,7 +2049,7 @@ local function addBtn(page, name, order, cb)
     l.Position = UDim2.new(0,12,0,0)
     l.BackgroundTransparency = 1
     l.Text = name
-    l.TextColor3 = cc3(settingsConfig.textColor)
+    l.TextColor3 = cc3(state.uiTextColor or settingsConfig.textColor)
     l.Font = Enum.Font.GothamMedium
     l.TextSize = 12.5
     l.TextXAlignment = Enum.TextXAlignment.Left
@@ -2066,7 +2065,7 @@ local function addSect(page, text, order)
     local bar = Instance.new("Frame", w)
     bar.Size = UDim2.new(0,3,0,12)
     bar.Position = UDim2.new(0,6,0.5,-6)
-    bar.BackgroundColor3 = cc3(settingsConfig.accentColor)
+    bar.BackgroundColor3 = cc3(state.uiAccentColor or settingsConfig.accentColor)
     Instance.new("UICorner", bar).CornerRadius = UDim.new(1,0)
     local l = Instance.new("TextLabel", w)
     l.Size = UDim2.new(1,-18,1,0)
@@ -2089,7 +2088,7 @@ local function makeSlider(page, label, order, iv, minV, maxV, sK, onChange)
     lbl.Position = UDim2.new(0,14,0,4)
     lbl.BackgroundTransparency = 1
     lbl.Text = label
-    lbl.TextColor3 = cc3(settingsConfig.textColor)
+    lbl.TextColor3 = cc3(state.uiTextColor or settingsConfig.textColor)
     lbl.Font = Enum.Font.GothamMedium
     lbl.TextSize = 11
     lbl.TextXAlignment = Enum.TextXAlignment.Left
@@ -2098,7 +2097,7 @@ local function makeSlider(page, label, order, iv, minV, maxV, sK, onChange)
     ib.Position = UDim2.new(1,-64,0,4)
     ib.BackgroundColor3 = Color3.fromRGB(20,20,20)
     ib.Text = tostring(iv)
-    ib.TextColor3 = cc3(settingsConfig.accentColor)
+    ib.TextColor3 = cc3(state.uiAccentColor or settingsConfig.accentColor)
     ib.Font = Enum.Font.Gotham
     ib.TextSize = 11
     ib.ClearTextOnFocus = false
@@ -2110,12 +2109,12 @@ local function makeSlider(page, label, order, iv, minV, maxV, sK, onChange)
     Instance.new("UICorner", tr).CornerRadius = UDim.new(1,0)
     local fl = Instance.new("Frame", tr)
     fl.Size = UDim2.new((iv-minV)/(maxV-minV),0,1,0)
-    fl.BackgroundColor3 = cc3(settingsConfig.accentColor)
+    fl.BackgroundColor3 = cc3(state.uiAccentColor or settingsConfig.accentColor)
     Instance.new("UICorner", fl).CornerRadius = UDim.new(1,0)
     local kn = Instance.new("Frame", tr)
     kn.Size = UDim2.new(0,16,0,16)
     kn.Position = UDim2.new((iv-minV)/(maxV-minV),0,0.5,-8)
-    kn.BackgroundColor3 = cc3(settingsConfig.textColor)
+    kn.BackgroundColor3 = cc3(state.uiTextColor or settingsConfig.textColor)
     Instance.new("UICorner", kn).CornerRadius = UDim.new(1,0)
     local drag = false
     local function update(inp)
@@ -2161,7 +2160,7 @@ local function makeInput(page, order, ph, val, onC)
     box.PlaceholderText = ph
     box.PlaceholderColor3 = cc3(settingsConfig.tabTextColor)
     box.Text = val or ""
-    box.TextColor3 = cc3(settingsConfig.textColor)
+    box.TextColor3 = cc3(state.uiTextColor or settingsConfig.textColor)
     box.Font = Enum.Font.Gotham
     box.TextSize = 12
     box.ClearTextOnFocus = false
@@ -2185,7 +2184,7 @@ local function makeDropdown(page, label, order, options, initial, onSelect)
     header.AutoButtonColor = false
     Instance.new("UICorner", header).CornerRadius = UDim.new(0, 10)
     local headerStroke = Instance.new("UIStroke", header)
-    headerStroke.Color = cc3(settingsConfig.accentColor)
+    headerStroke.Color = cc3(state.uiAccentColor or settingsConfig.accentColor)
     headerStroke.Thickness = 1
     headerStroke.Transparency = 0.6
 
@@ -2204,7 +2203,7 @@ local function makeDropdown(page, label, order, options, initial, onSelect)
     val.Position = UDim2.new(0, 12, 0, 22)
     val.BackgroundTransparency = 1
     val.Text = tostring(initial)
-    val.TextColor3 = cc3(settingsConfig.textColor)
+    val.TextColor3 = cc3(state.uiTextColor or settingsConfig.textColor)
     val.Font = Enum.Font.GothamBold
     val.TextSize = 14
     val.TextXAlignment = Enum.TextXAlignment.Left
@@ -2215,7 +2214,7 @@ local function makeDropdown(page, label, order, options, initial, onSelect)
     arrow.Position = UDim2.new(1, -32, 0.5, -12)
     arrow.BackgroundTransparency = 1
     arrow.Text = "▼"
-    arrow.TextColor3 = cc3(settingsConfig.textColor)
+    arrow.TextColor3 = cc3(state.uiTextColor or settingsConfig.textColor)
     arrow.Font = Enum.Font.GothamBold
     arrow.TextSize = 13
 
@@ -2228,7 +2227,7 @@ local function makeDropdown(page, label, order, options, initial, onSelect)
     list.ClipsDescendants = true
     list.ZIndex = 5
     list.ScrollBarThickness = 4
-    list.ScrollBarImageColor3 = cc3(settingsConfig.accentColor)
+    list.ScrollBarImageColor3 = cc3(state.uiAccentColor or settingsConfig.accentColor)
     list.CanvasSize = UDim2.new(0, 0, 0, 0)
     list.AutomaticCanvasSize = Enum.AutomaticSize.Y
     Instance.new("UICorner", list).CornerRadius = UDim.new(0, 10)
@@ -2272,7 +2271,7 @@ local function makeDropdown(page, label, order, options, initial, onSelect)
         optBtn.LayoutOrder = i
         optBtn.BackgroundColor3 = cc3(settingsConfig.cardHoverColor)
         optBtn.Text = tostring(opt)
-        optBtn.TextColor3 = cc3(settingsConfig.textColor)
+        optBtn.TextColor3 = cc3(state.uiTextColor or settingsConfig.textColor)
         optBtn.Font = Enum.Font.GothamMedium
         optBtn.TextSize = 14
         optBtn.TextXAlignment = Enum.TextXAlignment.Left
@@ -2283,11 +2282,11 @@ local function makeDropdown(page, label, order, options, initial, onSelect)
         Instance.new("UICorner", optBtn).CornerRadius = UDim.new(0, 6)
         optBtn.MouseEnter:Connect(function()
             if state.animationsEnabled == false then return end
-            TweenService:Create(optBtn, TweenInfo.new(0.15), {BackgroundColor3 = cc3(settingsConfig.accentColor), TextColor3 = Color3.new(0,0,0)}):Play()
+            TweenService:Create(optBtn, TweenInfo.new(0.15), {BackgroundColor3 = cc3(state.uiAccentColor or settingsConfig.accentColor), TextColor3 = Color3.new(0,0,0)}):Play()
         end)
         optBtn.MouseLeave:Connect(function()
             if state.animationsEnabled == false then return end
-            TweenService:Create(optBtn, TweenInfo.new(0.15), {BackgroundColor3 = cc3(settingsConfig.cardHoverColor), TextColor3 = cc3(settingsConfig.textColor)}):Play()
+            TweenService:Create(optBtn, TweenInfo.new(0.15), {BackgroundColor3 = cc3(settingsConfig.cardHoverColor), TextColor3 = cc3(state.uiTextColor or settingsConfig.textColor)}):Play()
         end)
         optBtn.MouseButton1Click:Connect(function()
             current = opt
@@ -2635,7 +2634,7 @@ do
         btn.AutoButtonColor = false
         Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
         local stroke = Instance.new("UIStroke", btn)
-        stroke.Color = cc3(settingsConfig.accentColor)
+        stroke.Color = cc3(state.uiAccentColor or settingsConfig.accentColor)
         stroke.Thickness = 1.5
         stroke.Transparency = 0.4
         local img = Instance.new("ImageLabel", btn)
@@ -2701,7 +2700,7 @@ do
     toggleBtn.AutoButtonColor = false
     Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 10)
     local tbStroke = Instance.new("UIStroke", toggleBtn)
-    tbStroke.Color = cc3(settingsConfig.accentColor)
+    tbStroke.Color = cc3(state.uiAccentColor or settingsConfig.accentColor)
     tbStroke.Thickness = 1.5
     tbStroke.Transparency = 0.4
     local toggleLbl = Instance.new("TextLabel", toggleBtn)
@@ -2709,7 +2708,7 @@ do
     toggleLbl.Position = UDim2.new(0, 12, 0, 0)
     toggleLbl.BackgroundTransparency = 1
     toggleLbl.Text = state.emoteMenuOpen and "Close Emote Menu" or "Open Emote Menu"
-    toggleLbl.TextColor3 = cc3(settingsConfig.accentColor)
+    toggleLbl.TextColor3 = cc3(state.uiAccentColor or settingsConfig.accentColor)
     toggleLbl.Font = Enum.Font.GothamBold
     toggleLbl.TextSize = 13
     toggleLbl.TextXAlignment = Enum.TextXAlignment.Left
@@ -2735,7 +2734,7 @@ do
     searchBox.PlaceholderText = "Search emotes..."
     searchBox.PlaceholderColor3 = cc3(settingsConfig.tabTextColor)
     searchBox.Text = state.emoteSearch or ""
-    searchBox.TextColor3 = cc3(settingsConfig.textColor)
+    searchBox.TextColor3 = cc3(state.uiTextColor or settingsConfig.textColor)
     searchBox.Font = Enum.Font.Gotham
     searchBox.TextSize = 13
     searchBox.ClearTextOnFocus = false
@@ -2744,7 +2743,7 @@ do
     local sbPad = Instance.new("UIPadding", searchBox)
     sbPad.PaddingLeft = UDim.new(0, 10)
     local searchStroke = Instance.new("UIStroke", searchBox)
-    searchStroke.Color = cc3(settingsConfig.accentColor)
+    searchStroke.Color = cc3(state.uiAccentColor or settingsConfig.accentColor)
     searchStroke.Thickness = 1.5
     searchStroke.Transparency = 0.6
     searchBox.Focused:Connect(function()
@@ -2763,7 +2762,7 @@ do
     sizeBtn.Position = UDim2.new(1, -100, 0, 0)
     sizeBtn.BackgroundColor3 = cc3(settingsConfig.cardColor)
     sizeBtn.Text = "Size: " .. (state.emoteButtonSize or 120)
-    sizeBtn.TextColor3 = cc3(settingsConfig.textColor)
+    sizeBtn.TextColor3 = cc3(state.uiTextColor or settingsConfig.textColor)
     sizeBtn.Font = Enum.Font.GothamBold
     sizeBtn.TextSize = 11
     sizeBtn.AutoButtonColor = false
@@ -2795,12 +2794,14 @@ do
             if q == "" or string.find(string.lower(emote.name), q, 1, true) or string.find(tostring(emote.id), q, 1, true) then
                 local card = Instance.new("Frame", gridScroll)
                 card.LayoutOrder = i
-                card.BackgroundColor3 = cc3(settingsConfig.cardColor)
+                card.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- Black background
                 Instance.new("UICorner", card).CornerRadius = UDim.new(0, 8)
-                local stroke = Instance.new("UIStroke", card)
-                stroke.Color = cc3(settingsConfig.accentColor)
-                stroke.Thickness = 1
-                stroke.Transparency = 0.5
+                
+                -- White outline (small)
+                local cardStroke = Instance.new("UIStroke", card)
+                cardStroke.Color = Color3.fromRGB(255, 255, 255)
+                cardStroke.Thickness = 1.5
+                cardStroke.Transparency = 0.2
 
                 local img = Instance.new("ImageLabel", card)
                 img.Size = UDim2.new(1, -8, 0, currentSize - 40)
@@ -2814,7 +2815,7 @@ do
                 name.Position = UDim2.new(0, 4, 0, currentSize - 34)
                 name.BackgroundTransparency = 1
                 name.Text = emote.name
-                name.TextColor3 = cc3(settingsConfig.textColor)
+                name.TextColor3 = Color3.fromRGB(255, 255, 255)
                 name.Font = Enum.Font.GothamMedium
                 name.TextSize = 10
                 name.TextTruncate = Enum.TextTruncate.AtEnd
@@ -2823,7 +2824,7 @@ do
                 local playBtn = Instance.new("TextButton", card)
                 playBtn.Size = UDim2.new(1, -32, 0, 20)
                 playBtn.Position = UDim2.new(0, 4, 0, currentSize - 14)
-                playBtn.BackgroundColor3 = cc3(settingsConfig.accentColor)
+                playBtn.BackgroundColor3 = cc3(state.uiAccentColor or settingsConfig.accentColor)
                 playBtn.Text = "▶"
                 playBtn.TextColor3 = Color3.new(0,0,0)
                 playBtn.Font = Enum.Font.GothamBold
@@ -2834,7 +2835,7 @@ do
                 local circleBtn = Instance.new("TextButton", card)
                 circleBtn.Size = UDim2.new(0, 24, 0, 24)
                 circleBtn.Position = UDim2.new(1, -28, 0, currentSize - 16)
-                circleBtn.BackgroundColor3 = state.emoteFloatButtons[tostring(emote.id)] and cc3(settingsConfig.accentColor) or Color3.fromRGB(40,40,40)
+                circleBtn.BackgroundColor3 = state.emoteFloatButtons[tostring(emote.id)] and cc3(state.uiAccentColor or settingsConfig.accentColor) or Color3.fromRGB(40,40,40)
                 circleBtn.Text = "●"
                 circleBtn.TextColor3 = Color3.new(1,1,1)
                 circleBtn.Font = Enum.Font.GothamBold
@@ -2852,9 +2853,21 @@ do
                     else
                         state.emoteFloatButtons[tostring(emote.id)] = true
                         buildEmoteFloat(emote.id, emote)
-                        circleBtn.BackgroundColor3 = cc3(settingsConfig.accentColor)
+                        circleBtn.BackgroundColor3 = cc3(state.uiAccentColor or settingsConfig.accentColor)
                     end
                     saveSettings()
+                end)
+
+                -- Hover Animations
+                card.MouseEnter:Connect(function()
+                    if state.animationsEnabled == false then return end
+                    TweenService:Create(card, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(30, 30, 30)}):Play()
+                    TweenService:Create(cardStroke, TweenInfo.new(0.2), {Color = cc3(state.uiAccentColor or settingsConfig.accentColor), Thickness = 2}):Play()
+                end)
+                card.MouseLeave:Connect(function()
+                    if state.animationsEnabled == false then return end
+                    TweenService:Create(card, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(0, 0, 0)}):Play()
+                    TweenService:Create(cardStroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(255, 255, 255), Thickness = 1.5}):Play()
                 end)
 
                 table.insert(renderedCards, card)
@@ -3177,7 +3190,7 @@ do
     animSearchBox.PlaceholderText = "Search animations..."
     animSearchBox.PlaceholderColor3 = cc3(settingsConfig.tabTextColor)
     animSearchBox.Text = ""
-    animSearchBox.TextColor3 = cc3(settingsConfig.textColor)
+    animSearchBox.TextColor3 = cc3(state.uiTextColor or settingsConfig.textColor)
     animSearchBox.Font = Enum.Font.GothamMedium
     animSearchBox.TextSize = 13
     animSearchBox.ClearTextOnFocus = false
@@ -3186,7 +3199,7 @@ do
     local asp = Instance.new("UIPadding", animSearchBox)
     asp.PaddingLeft = UDim.new(0, 12)
     local animSearchStroke = Instance.new("UIStroke", animSearchBox)
-    animSearchStroke.Color = cc3(settingsConfig.accentColor)
+    animSearchStroke.Color = cc3(state.uiAccentColor or settingsConfig.accentColor)
     animSearchStroke.Thickness = 1.5
     animSearchStroke.Transparency = 0.6
 
@@ -3197,7 +3210,7 @@ do
     animResultsScroll.BackgroundTransparency = 0.4
     animResultsScroll.BorderSizePixel = 0
     animResultsScroll.ScrollBarThickness = 4
-    animResultsScroll.ScrollBarImageColor3 = cc3(settingsConfig.accentColor)
+    animResultsScroll.ScrollBarImageColor3 = cc3(state.uiAccentColor or settingsConfig.accentColor)
     animResultsScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
     animResultsScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
     animResultsScroll.Visible = false
@@ -3267,7 +3280,7 @@ do
             btn.LayoutOrder = i
             btn.BackgroundColor3 = cc3(settingsConfig.cardHoverColor)
             btn.Text = name
-            btn.TextColor3 = cc3(settingsConfig.textColor)
+            btn.TextColor3 = cc3(state.uiTextColor or settingsConfig.textColor)
             btn.Font = Enum.Font.GothamMedium
             btn.TextSize = 14
             btn.TextXAlignment = Enum.TextXAlignment.Left
@@ -3402,7 +3415,7 @@ do
     hbLbl.Position = UDim2.new(0, 12, 0, 0)
     hbLbl.BackgroundTransparency = 1
     hbLbl.Text = "Target: " .. (modeNames[state.hitboxExpanderTarget or "murderer"])
-    hbLbl.TextColor3 = cc3(settingsConfig.textColor)
+    hbLbl.TextColor3 = cc3(state.uiTextColor or settingsConfig.textColor)
     hbLbl.Font = Enum.Font.GothamMedium
     hbLbl.TextSize = 12.5
     hbLbl.TextXAlignment = Enum.TextXAlignment.Left
@@ -3604,7 +3617,7 @@ do
     songHeader.AutoButtonColor = false
     Instance.new("UICorner", songHeader).CornerRadius = UDim.new(0, 10)
     local songHeaderStroke = Instance.new("UIStroke", songHeader)
-    songHeaderStroke.Color = cc3(settingsConfig.accentColor)
+    songHeaderStroke.Color = cc3(state.uiAccentColor or settingsConfig.accentColor)
     songHeaderStroke.Thickness = 1
     songHeaderStroke.Transparency = 0.6
 
@@ -3623,7 +3636,7 @@ do
     songVal.Position = UDim2.new(0, 12, 0, 22)
     songVal.BackgroundTransparency = 1
     songVal.Text = "(none selected)"
-    songVal.TextColor3 = cc3(settingsConfig.textColor)
+    songVal.TextColor3 = cc3(state.uiTextColor or settingsConfig.textColor)
     songVal.Font = Enum.Font.GothamBold
     songVal.TextSize = 14
     songVal.TextXAlignment = Enum.TextXAlignment.Left
@@ -3634,7 +3647,7 @@ do
     songArrow.Position = UDim2.new(1, -32, 0.5, -12)
     songArrow.BackgroundTransparency = 1
     songArrow.Text = "▼"
-    songArrow.TextColor3 = cc3(settingsConfig.textColor)
+    songArrow.TextColor3 = cc3(state.uiTextColor or settingsConfig.textColor)
     songArrow.Font = Enum.Font.GothamBold
     songArrow.TextSize = 13
 
@@ -3647,7 +3660,7 @@ do
     songList.ClipsDescendants = true
     songList.ZIndex = 5
     songList.ScrollBarThickness = 4
-    songList.ScrollBarImageColor3 = cc3(settingsConfig.accentColor)
+    songList.ScrollBarImageColor3 = cc3(state.uiAccentColor or settingsConfig.accentColor)
     songList.CanvasSize = UDim2.new(0, 0, 0, 0)
     songList.AutomaticCanvasSize = Enum.AutomaticSize.Y
     Instance.new("UICorner", songList).CornerRadius = UDim.new(0, 10)
@@ -3700,9 +3713,9 @@ do
             local btn = Instance.new("TextButton", songList)
             btn.Size = UDim2.new(1, 0, 0, 38)
             btn.LayoutOrder = i
-            btn.BackgroundColor3 = (tostring(s.id) == tostring(selectedSongId)) and cc3(settingsConfig.accentColor) or cc3(settingsConfig.cardHoverColor)
+            btn.BackgroundColor3 = (tostring(s.id) == tostring(selectedSongId)) and cc3(state.uiAccentColor or settingsConfig.accentColor) or cc3(settingsConfig.cardHoverColor)
             btn.Text = (s.name or s.id)
-            btn.TextColor3 = (tostring(s.id) == tostring(selectedSongId)) and Color3.new(0,0,0) or cc3(settingsConfig.textColor)
+            btn.TextColor3 = (tostring(s.id) == tostring(selectedSongId)) and Color3.new(0,0,0) or cc3(state.uiTextColor or settingsConfig.textColor)
             btn.Font = Enum.Font.GothamMedium
             btn.TextSize = 14
             btn.TextXAlignment = Enum.TextXAlignment.Left
@@ -3713,13 +3726,13 @@ do
             btn.MouseEnter:Connect(function()
                 if state.animationsEnabled == false then return end
                 if tostring(s.id) ~= tostring(selectedSongId) then
-                    TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = cc3(settingsConfig.accentColor), TextColor3 = Color3.new(0,0,0)}):Play()
+                    TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = cc3(state.uiAccentColor or settingsConfig.accentColor), TextColor3 = Color3.new(0,0,0)}):Play()
                 end
             end)
             btn.MouseLeave:Connect(function()
                 if state.animationsEnabled == false then return end
                 if tostring(s.id) ~= tostring(selectedSongId) then
-                    TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = cc3(settingsConfig.cardHoverColor), TextColor3 = cc3(settingsConfig.textColor)}):Play()
+                    TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = cc3(settingsConfig.cardHoverColor), TextColor3 = cc3(state.uiTextColor or settingsConfig.textColor)}):Play()
                 end
             end)
             btn.MouseButton1Click:Connect(function()
@@ -3731,10 +3744,10 @@ do
                 for _, c in ipairs(songList:GetChildren()) do
                     if c:IsA("TextButton") then
                         c.BackgroundColor3 = cc3(settingsConfig.cardHoverColor)
-                        c.TextColor3 = cc3(settingsConfig.textColor)
+                        c.TextColor3 = cc3(state.uiTextColor or settingsConfig.textColor)
                     end
                 end
-                btn.BackgroundColor3 = cc3(settingsConfig.accentColor)
+                btn.BackgroundColor3 = cc3(state.uiAccentColor or settingsConfig.accentColor)
                 btn.TextColor3 = Color3.new(0,0,0)
             end)
         end
@@ -3952,27 +3965,7 @@ RunService.RenderStepped:Connect(function()
     cam.CFrame = cam.CFrame * CFrame.new(0, 0, 0, 1, 0, 0, 0, s, 0, 0, 0, 1)
 end)
 
-addSect(pages[SECRET_NAME], "Korblox", 150)
-tgg(pages[SECRET_NAME], "Enable Korblox Peg Leg", 151, "korbloxEnabled")
-tgg(pages[SECRET_NAME], "FE Korblox (deepspeaker peg leg)", 152, "korbloxFE")
-task.spawn(function()
-    while true do
-        task.wait(0.3)
-        if LP.Character and (state.korbloxEnabled or state.korbloxFE) then
-            local leg = LP.Character:FindFirstChild("RightUpperLeg") or LP.Character:FindFirstChild("Right Leg")
-            local lower = LP.Character:FindFirstChild("RightLowerLeg") or LP.Character:FindFirstChild("Right Leg")
-            local foot = LP.Character:FindFirstChild("RightFoot") or LP.Character:FindFirstChild("Right Foot")
-            if state.korbloxFE then
-                if leg and leg:IsA("BasePart") then pcall(function() leg.Color = Color3.fromRGB(0,0,0); leg.Material = Enum.Material.Metal; leg.Size = Vector3.new(0.6, 0.6, 0.6); leg.Transparency = 0 end) end
-                if lower and lower:IsA("BasePart") then pcall(function() lower.Color = Color3.fromRGB(0,0,0); lower.Material = Enum.Material.Metal; lower.Size = Vector3.new(0.35, 1, 0.35); lower.Transparency = 0 end) end
-                if foot and foot:IsA("BasePart") then pcall(function() foot.Color = Color3.fromRGB(0,0,0); foot.Material = Enum.Material.Metal; foot.Size = Vector3.new(0.5, 0.15, 0.8); foot.Transparency = 0 end) end
-            elseif state.korbloxEnabled then
-                if leg and leg:IsA("BasePart") then pcall(function() leg.Color = Color3.fromRGB(0,0,0); leg.Material = Enum.Material.SmoothPlastic; leg.Size = Vector3.new(1, 0.2, 1) end) end
-                if foot and foot:IsA("BasePart") then pcall(function() foot.Transparency = 1 end) end
-            end
-        end
-    end
-end)
+-- KORBLOX SECTION REMOVED
 
 addSect(pages[SECRET_NAME], "Sign Spam", 160)
 tgg(pages[SECRET_NAME], "Enable Sign Spam", 161, "signSpam")
@@ -4126,41 +4119,6 @@ task.spawn(function()
     end
 end)
 
-addSect(pages[SECRET_NAME], "Remove Barriers", 190)
-tgg(pages[SECRET_NAME], "Enable Remove Barriers", 191, "removeBarriers")
-task.spawn(function()
-    while true do
-        task.wait(1)
-        if state.removeBarriers then
-            -- Handle specific path: workspace.[MapName].Base.GlitchProof
-            for _, obj in ipairs(Workspace:GetChildren()) do
-                if obj.Name ~= "lobby" and obj.Name ~= "Camera" and obj:IsA("Model") then
-                    local base = obj:FindFirstChild("Base")
-                    if base then
-                        local glitch = base:FindFirstChild("GlitchProof")
-                        if glitch then pcall(function() glitch:Destroy() end) end
-                    end
-                end
-            end
-            -- Handle specific path: workspace.lobby.Base.GlitchProof
-            local lobby = Workspace:FindFirstChild("lobby")
-            if lobby then
-                local base = lobby:FindFirstChild("Base")
-                if base then
-                    local glitch = base:FindFirstChild("GlitchProof")
-                    if glitch then pcall(function() glitch:Destroy() end) end
-                end
-            end
-            -- Fallback global check for any other barriers
-            for _, v in ipairs(Workspace:GetDescendants()) do
-                if v.Name == "GlitchProof" or v.Name == "Glitchproof" or v.Name == "Glitch" or v.Name == "THICC" then
-                    pcall(function() v:Destroy() end)
-                end
-            end
-        end
-    end
-end)
-
 addSect(pages[SECRET_NAME], "Credits", 900)
 do
     local creditCard = Instance.new("Frame", pages[SECRET_NAME])
@@ -4169,7 +4127,7 @@ do
     creditCard.BackgroundColor3 = cc3(settingsConfig.cardColor)
     Instance.new("UICorner", creditCard).CornerRadius = UDim.new(0, 10)
     local creditStroke = Instance.new("UIStroke", creditCard)
-    creditStroke.Color = cc3(settingsConfig.accentColor)
+    creditStroke.Color = cc3(state.uiAccentColor or settingsConfig.accentColor)
     creditStroke.Thickness = 1.5
     creditStroke.Transparency = 0.3
     local creditTitle = Instance.new("TextLabel", creditCard)
@@ -4177,7 +4135,7 @@ do
     creditTitle.Position = UDim2.new(0, 10, 0, 8)
     creditTitle.BackgroundTransparency = 1
     creditTitle.Text = "Credits"
-    creditTitle.TextColor3 = cc3(settingsConfig.accentColor)
+    creditTitle.TextColor3 = cc3(state.uiAccentColor or settingsConfig.accentColor)
     creditTitle.Font = Enum.Font.GothamBold
     creditTitle.TextSize = 13
     creditTitle.TextXAlignment = Enum.TextXAlignment.Left
@@ -4186,7 +4144,7 @@ do
     creditBody.Position = UDim2.new(0, 10, 0, 32)
     creditBody.BackgroundTransparency = 1
     creditBody.Text = "• lzzzx\n• noir (7yd7)"
-    creditBody.TextColor3 = cc3(settingsConfig.textColor)
+    creditBody.TextColor3 = cc3(state.uiTextColor or settingsConfig.textColor)
     creditBody.Font = Enum.Font.Gotham
     creditBody.TextSize = 12
     creditBody.TextXAlignment = Enum.TextXAlignment.Left
@@ -4208,8 +4166,8 @@ tgg(pages["Combat"], "Silent Aim Wall Check", 3, "silentAimWallCheck")
 makeSlider(pages["Combat"], "Silent Aim Height (0=feet, 2=head)", 4, state.silentAimYHeight or 2, 0, 2, "silentAimYHeight")
 tgg(pages["Combat"], "Shoot Through Walls", 10, "shootThroughWall")
 tgg(pages["Combat"], "Auto Shoot Murderer", 11, "autoShootMurderer")
-addBtn(pages["Combat"], "Shoot Murderer Now", 12, fullShootSequence)
-addBtn(pages["Combat"], "Shoot Through Wall (Magic Bullet)", 13, fireThroughWall)
+addBtn(pages["Combat"], "Shoot Murderer", 12, fullShootSequence)
+addBtn(pages["Combat"], "Shoot Through Wall", 13, fireThroughWall)
 addSect(pages["Combat"], "Auto Actions", 20)
 tgg(pages["Combat"], "Auto Kill All", 21, "autoKillAll")
 tgg(pages["Combat"], "Loop Fling All", 22, "loopFlingAll")
@@ -4219,13 +4177,13 @@ tgg(pages["Combat"], "Loop Fling Custom", 25, "loopFlingCustom")
 tgg(pages["Combat"], "Auto Reset: Murderer", 26, "autoResetMurderer")
 tgg(pages["Combat"], "Auto Reset: Sheriff", 27, "autoResetSheriff")
 tgg(pages["Combat"], "Auto Reset: Innocent", 28, "autoResetInnocent")
-addSect(pages["Combat"], "Manual Actions (Hitbox)", 30)
-addBtn(pages["Combat"], "Fling Murderer Now", 31, flingMurdererNow)
-addBtn(pages["Combat"], "Fling Sheriff Now", 32, flingSheriffNow)
-addBtn(pages["Combat"], "Fling All Now", 33, flingAllNow)
-addBtn(pages["Combat"], "Kill Sheriff Now", 34, killSheriffNow)
-addBtn(pages["Combat"], "Kill All Now", 35, killAllNow)
-addBtn(pages["Combat"], "Grab Gun Now", 36, grabGunNow)
+addSect(pages["Combat"], "Manual Actions", 30)
+addBtn(pages["Combat"], "Fling Murderer", 31, flingMurdererNow)
+addBtn(pages["Combat"], "Fling Sheriff", 32, flingSheriffNow)
+addBtn(pages["Combat"], "Fling All", 33, flingAllNow)
+addBtn(pages["Combat"], "Kill Sheriff", 34, killSheriffNow)
+addBtn(pages["Combat"], "Kill All", 35, killAllNow)
+addBtn(pages["Combat"], "Grab Gun", 36, grabGunNow)
 addSect(pages["Combat"], "Kill (HandleTouched)", 50)
 addBtn(pages["Combat"], "Kill All (HandleTouched)", 51, handleTouchKillAll)
 addBtn(pages["Combat"], "Kill Sheriff (HandleTouched)", 52, handleTouchKillSheriff)
@@ -4296,7 +4254,7 @@ local function refreshCustomListUI()
         nl.Position = UDim2.new(0, 10, 0, 0)
         nl.BackgroundTransparency = 1
         nl.Text = n
-        nl.TextColor3 = cc3(settingsConfig.textColor)
+        nl.TextColor3 = cc3(state.uiTextColor or settingsConfig.textColor)
         nl.Font = Enum.Font.GothamMedium
         nl.TextSize = 11.5
         nl.TextXAlignment = Enum.TextXAlignment.Left
@@ -4370,7 +4328,7 @@ local function buildPlayerRow(parent, plr, order)
     disp.Position = UDim2.new(0, 52, 0, 8)
     disp.BackgroundTransparency = 1
     disp.Text = plr.DisplayName
-    disp.TextColor3 = cc3(settingsConfig.textColor)
+    disp.TextColor3 = cc3(state.uiTextColor or settingsConfig.textColor)
     disp.Font = Enum.Font.GothamBold
     disp.TextSize = 12
     disp.TextXAlignment = Enum.TextXAlignment.Left
@@ -4468,10 +4426,14 @@ task.defer(refreshPlayerList)
 addSect(pages["Teleport"], "Locations", 1)
 addBtn(pages["Teleport"], "Teleport to Lobby", 2, teleportToLobby)
 addBtn(pages["Teleport"], "Teleport to Map", 3, teleportToMap)
-addSect(pages["Teleport"], "Players", 4)
-addBtn(pages["Teleport"], "Teleport to Murderer", 5, teleportToMurderer)
-addBtn(pages["Teleport"], "Teleport to Sheriff", 6, teleportToSheriff)
-addBtn(pages["Teleport"], "Teleport to Custom", 7, teleportToCustom)
+addSect(pages["Teleport"], "Loop Teleport", 4)
+tgg(pages["Teleport"], "Loop Teleport to Map", 5, "loopTpMap")
+tgg(pages["Teleport"], "Loop Teleport to Lobby", 6, "loopTpLobby")
+tgg(pages["Teleport"], "Loop Teleport to Void", 7, "loopTpVoid")
+addSect(pages["Teleport"], "Players", 8)
+addBtn(pages["Teleport"], "Teleport to Murderer", 9, teleportToMurderer)
+addBtn(pages["Teleport"], "Teleport to Sheriff", 10, teleportToSheriff)
+addBtn(pages["Teleport"], "Teleport to Custom", 11, teleportToCustom)
 
 -- ============ ESP TAB ============
 addSect(pages["ESP"], "Player ESP", 1)
@@ -4495,6 +4457,17 @@ tgg(pages["Misc"], "Notify Map Name", 7, "notifyMapName")
 tgg(pages["Misc"], "Round Timer", 8, "showRoundTimerCountdown")
 tgg(pages["Misc"], "Murderer Predictor", 9, "murdererPredictor")
 tgg(pages["Misc"], "Murderer Perk Notify", 10, "murdererPerkNotify")
+addSect(pages["Misc"], "Barriers", 11)
+tgg(pages["Misc"], "Remove Barriers", 12, "removeBarriers")
+addBtn(pages["Misc"], "Remove Barriers Now", 13, function()
+    local count = 0
+    for _, v in ipairs(Workspace:GetDescendants()) do
+        if v.Name == "GlitchProof" or v.Name == "Glitchproof" or v.Name == "Glitch" or v.Name == "THICC" then
+            pcall(function() v:Destroy(); count = count + 1 end)
+        end
+    end
+    _G.__AW_NOTIFY("Removed " .. count .. " barriers")
+end)
 
 -- ============ VOTING TAB ============
 addSect(pages["Voting"], "Live Vote Map Names", 1)
@@ -4505,7 +4478,7 @@ for slot = 1, 3 do
     nameLbl.LayoutOrder = 10 + slot
     nameLbl.BackgroundColor3 = cc3(settingsConfig.cardColor)
     nameLbl.Text = "Slot " .. slot .. ": Loading..."
-    nameLbl.TextColor3 = cc3(settingsConfig.accentColor)
+    nameLbl.TextColor3 = cc3(state.uiAccentColor or settingsConfig.accentColor)
     nameLbl.Font = Enum.Font.GothamBold
     nameLbl.TextSize = 12
     nameLbl.TextXAlignment = Enum.TextXAlignment.Left
@@ -4574,8 +4547,8 @@ for i, sp in ipairs(SHAPES) do
     sb2.Size = UDim2.new(0, 90, 0, 34)
     sb2.LayoutOrder = i
     sb2.Text = sp.label
-    sb2.TextColor3 = (state.floatButtonShape == sp.id) and Color3.new(0,0,0) or cc3(settingsConfig.textColor)
-    sb2.BackgroundColor3 = (state.floatButtonShape == sp.id) and cc3(settingsConfig.accentColor) or cc3(settingsConfig.cardColor)
+    sb2.TextColor3 = (state.floatButtonShape == sp.id) and Color3.new(0,0,0) or cc3(state.uiTextColor or settingsConfig.textColor)
+    sb2.BackgroundColor3 = (state.floatButtonShape == sp.id) and cc3(state.uiAccentColor or settingsConfig.accentColor) or cc3(settingsConfig.cardColor)
     sb2.Font = Enum.Font.GothamBold
     sb2.TextSize = 11
     sb2.AutoButtonColor = false
@@ -4595,7 +4568,7 @@ do
     mSearch.PlaceholderText = "Search..."
     mSearch.PlaceholderColor3 = cc3(settingsConfig.tabTextColor)
     mSearch.Text = ""
-    mSearch.TextColor3 = cc3(settingsConfig.textColor)
+    mSearch.TextColor3 = cc3(state.uiTextColor or settingsConfig.textColor)
     mSearch.Font = Enum.Font.Gotham
     mSearch.TextSize = 12
     mSearch.ClearTextOnFocus = false
@@ -4631,7 +4604,7 @@ do
                 nl.Position = UDim2.new(0, 10, 0, 0)
                 nl.BackgroundTransparency = 1
                 nl.Text = def.label
-                nl.TextColor3 = cc3(settingsConfig.textColor)
+                nl.TextColor3 = cc3(state.uiTextColor or settingsConfig.textColor)
                 nl.Font = Enum.Font.GothamMedium
                 nl.TextSize = 11.5
                 nl.TextXAlignment = Enum.TextXAlignment.Left
@@ -4682,7 +4655,7 @@ local function resetAllSetButtons()
     for _, b in pairs(kbSetButtons) do
         if b and b.Parent then
             b.Text = "Set"
-            b.BackgroundColor3 = cc3(settingsConfig.accentColor)
+            b.BackgroundColor3 = cc3(state.uiAccentColor or settingsConfig.accentColor)
         end
     end
 end
@@ -4697,7 +4670,7 @@ for i, kb in ipairs(KEYBIND_FEATURES) do
     nameLbl.Position = UDim2.new(0, 12, 0, 0)
     nameLbl.BackgroundTransparency = 1
     nameLbl.Text = kb.label
-    nameLbl.TextColor3 = cc3(settingsConfig.textColor)
+    nameLbl.TextColor3 = cc3(state.uiTextColor or settingsConfig.textColor)
     nameLbl.Font = Enum.Font.GothamMedium
     nameLbl.TextSize = 12
     nameLbl.TextXAlignment = Enum.TextXAlignment.Left
@@ -4706,7 +4679,7 @@ for i, kb in ipairs(KEYBIND_FEATURES) do
     keyLbl.Position = UDim2.new(1, -178, 0.5, -13)
     keyLbl.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     keyLbl.Text = (state.keybinds[kb.key] and state.keybinds[kb.key] ~= "") and string.upper(state.keybinds[kb.key]) or "-"
-    keyLbl.TextColor3 = cc3(settingsConfig.accentColor)
+    keyLbl.TextColor3 = cc3(state.uiAccentColor or settingsConfig.accentColor)
     keyLbl.Font = Enum.Font.GothamBold
     keyLbl.TextSize = 12
     Instance.new("UICorner", keyLbl).CornerRadius = UDim.new(0, 6)
@@ -4714,7 +4687,7 @@ for i, kb in ipairs(KEYBIND_FEATURES) do
     local setBtn = Instance.new("TextButton", row)
     setBtn.Size = UDim2.new(0, 52, 0, 26)
     setBtn.Position = UDim2.new(1, -116, 0.5, -13)
-    setBtn.BackgroundColor3 = cc3(settingsConfig.accentColor)
+    setBtn.BackgroundColor3 = cc3(state.uiAccentColor or settingsConfig.accentColor)
     setBtn.Text = "Set"
     setBtn.TextColor3 = Color3.new(0, 0, 0)
     setBtn.Font = Enum.Font.GothamBold
@@ -4727,7 +4700,7 @@ for i, kb in ipairs(KEYBIND_FEATURES) do
     clearBtn.Position = UDim2.new(1, -58, 0.5, -13)
     clearBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
     clearBtn.Text = "Clear"
-    clearBtn.TextColor3 = cc3(settingsConfig.textColor)
+    clearBtn.TextColor3 = cc3(state.uiTextColor or settingsConfig.textColor)
     clearBtn.Font = Enum.Font.GothamBold
     clearBtn.TextSize = 11
     clearBtn.AutoButtonColor = false
@@ -4796,7 +4769,7 @@ do
     srl.Position = UDim2.new(0,14,0,0)
     srl.BackgroundTransparency = 1
     srl.Text = "UI Size"
-    srl.TextColor3 = cc3(settingsConfig.textColor)
+    srl.TextColor3 = cc3(state.uiTextColor or settingsConfig.textColor)
     srl.Font = Enum.Font.GothamMedium
     srl.TextSize = 12.5
     srl.TextXAlignment = Enum.TextXAlignment.Left
@@ -4805,7 +4778,7 @@ do
     minus.Position = UDim2.new(1,-140,0.5,-15)
     minus.BackgroundColor3 = Color3.fromRGB(28,28,28)
     minus.Text = "-"
-    minus.TextColor3 = cc3(settingsConfig.textColor)
+    minus.TextColor3 = cc3(state.uiTextColor or settingsConfig.textColor)
     minus.Font = Enum.Font.GothamBold
     minus.TextSize = 16
     minus.AutoButtonColor = false
@@ -4815,7 +4788,7 @@ do
     val.Position = UDim2.new(1,-104,0.5,-15)
     val.BackgroundTransparency = 1
     val.Text = string.format("%.1fx", settingsConfig.selectedScale or 1)
-    val.TextColor3 = cc3(settingsConfig.accentColor)
+    val.TextColor3 = cc3(state.uiAccentColor or settingsConfig.accentColor)
     val.Font = Enum.Font.GothamBold
     val.TextSize = 12
     local plus = Instance.new("TextButton", sr)
@@ -4823,7 +4796,7 @@ do
     plus.Position = UDim2.new(1,-40,0.5,-15)
     plus.BackgroundColor3 = Color3.fromRGB(28,28,28)
     plus.Text = "+"
-    plus.TextColor3 = cc3(settingsConfig.textColor)
+    plus.TextColor3 = cc3(state.uiTextColor or settingsConfig.textColor)
     plus.Font = Enum.Font.GothamBold
     plus.TextSize = 16
     plus.AutoButtonColor = false
@@ -4841,9 +4814,78 @@ do
         if s < 2.0 then settingsConfig.selectedScale = math.floor((s + 0.1)*10 + 0.5) / 10; refresh(); saveSettings() end
     end)
 end
-addSect(pages["UI"], "Toggles", 4)
-tgg(pages["UI"], "Notification Sound", 6, "notifySound")
-tgg(pages["UI"], "Enable Animations", 7, "animationsEnabled")
+
+addSect(pages["UI"], "UI Colors", 3)
+local function makeColorPicker(page, name, order, currentColor, callback)
+    local row = Instance.new("Frame", page)
+    row.Size = UDim2.new(1, 0, 0, 40)
+    row.LayoutOrder = order
+    row.BackgroundColor3 = cc3(settingsConfig.cardColor)
+    Instance.new("UICorner", row).CornerRadius = UDim.new(0, 10)
+    
+    local lbl = Instance.new("TextLabel", row)
+    lbl.Size = UDim2.new(0.6, 0, 1, 0)
+    lbl.Position = UDim2.new(0, 14, 0, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = name
+    lbl.TextColor3 = cc3(state.uiTextColor or settingsConfig.textColor)
+    lbl.Font = Enum.Font.GothamMedium
+    lbl.TextSize = 12.5
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local btn = Instance.new("TextButton", row)
+    btn.Size = UDim2.new(0, 60, 0, 26)
+    btn.Position = UDim2.new(1, -74, 0.5, -13)
+    btn.BackgroundColor3 = cc3(currentColor)
+    btn.Text = ""
+    btn.AutoButtonColor = false
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    local stroke = Instance.new("UIStroke", btn)
+    stroke.Color = Color3.new(1,1,1)
+    stroke.Thickness = 1
+    
+    local function updateColor()
+        local r = math.random(0, 255)
+        local g = math.random(0, 255)
+        local b = math.random(0, 255)
+        currentColor.r = r; currentColor.g = g; currentColor.b = b
+        btn.BackgroundColor3 = Color3.fromRGB(r, g, b)
+        callback(r, g, b)
+    end
+    
+    btn.MouseButton1Click:Connect(updateColor)
+end
+
+makeColorPicker(pages["UI"], "Accent Color", 4, state.uiAccentColor, function(r,g,b)
+    state.uiAccentColor = {r=r, g=g, b=b}
+    settingsConfig.accentColor = {r=r, g=g, b=b}
+    -- Update existing elements
+    for _, b in pairs(btns) do
+        if b.Parent then
+            -- Exclude Secret tab
+            local isSecret = false
+            for name, btn in pairs(btns) do
+                if btn == b and name == "Secret" then isSecret = true; break end
+            end
+            if not isSecret then
+                -- Not easily updatable dynamically, but new elements will use the new color
+            end
+        end
+    end
+    _G.__AW_NOTIFY("Accent color updated (re-open UI to fully apply)")
+    saveSettings()
+end)
+
+makeColorPicker(pages["UI"], "Text Color", 5, state.uiTextColor, function(r,g,b)
+    state.uiTextColor = {r=r, g=g, b=b}
+    settingsConfig.textColor = {r=r, g=g, b=b}
+    _G.__AW_NOTIFY("Text color updated (re-open UI to fully apply)")
+    saveSettings()
+end)
+
+addSect(pages["UI"], "Toggles", 6)
+tgg(pages["UI"], "Notification Sound", 7, "notifySound")
+tgg(pages["UI"], "Enable Animations", 8, "animationsEnabled")
 
 -- ============ OPEN/CLOSE BUTTON ============
 local fb = Instance.new("TextButton", sg)
@@ -5185,6 +5227,57 @@ task.spawn(function()
             end
         end
         wasInRound = nowInRound
+    end
+end)
+
+-- ============ LOOP TELEPORT ============
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        if alive() then
+            local r = LP.Character:FindFirstChild("HumanoidRootPart")
+            if r then
+                if state.loopTpLobby then
+                    if (r.Position - LOBBY_CFRAME.Position).Magnitude > 10 then
+                        r.CFrame = LOBBY_CFRAME
+                    end
+                elseif state.loopTpVoid then
+                    if (r.Position - VOID_CFRAME.Position).Magnitude > 10 then
+                        r.CFrame = VOID_CFRAME
+                    end
+                elseif state.loopTpMap then
+                    -- Map loop logic: find map center and stay within 10 studs
+                    local mapFolder = nil
+                    for _, m in ipairs(Workspace:GetChildren()) do
+                        if m:FindFirstChild("CoinContainer") or m.Name == "CoinContainer" then mapFolder = m break end
+                    end
+                    if mapFolder then
+                        local center = mapFolder:GetBoundingBox().Position
+                        if (r.Position - center).Magnitude > 10 then
+                            r.CFrame = CFrame.new(center + Vector3.new(0, 5, 0))
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- ============ REMOVE BARRIERS LOOP ============
+task.spawn(function()
+    while true do
+        task.wait(1)
+        if state.removeBarriers then
+            local count = 0
+            for _, v in ipairs(Workspace:GetDescendants()) do
+                if v.Name == "GlitchProof" or v.Name == "Glitchproof" or v.Name == "Glitch" or v.Name == "THICC" then
+                    pcall(function() v:Destroy(); count = count + 1 end)
+                end
+            end
+            if count > 0 then
+                _G.__AW_NOTIFY("Removed " .. count .. " barriers")
+            end
+        end
     end
 end)
 
