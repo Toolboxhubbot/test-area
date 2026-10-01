@@ -83,7 +83,7 @@ state = {
     signSpam=false, autoGetGG=false,
     fpsPingMonitor=false, fpsPingColor=false,
     disableTrading=false,
-    removeBarriers=false, removeBarriersInstant=false,
+    removeBarriers=false, removeBarriersInstant=false, removeBarriersEveryRound=false,
     wallHop=false, wallHopFlick=false,
     blueAura=false, blueAuraStuds=10,
     feAnimEnabled=false,
@@ -173,6 +173,7 @@ toggleDisplayNames = {
     fpsPingMonitor="FPS Ping Monitor", fpsPingColor="FPS Ping Color",
     disableTrading="Disable Trading",
     removeBarriers="Remove Barriers", removeBarriersInstant="Instant Barrier Destroy",
+    removeBarriersEveryRound="Auto-Remove Barriers Each Round",
     wallHop="Wall Hop", wallHopFlick="Wall Hop Flick",
     blueAura="Blue Aura",
     feAnimEnabled="FE Animations",
@@ -1839,13 +1840,10 @@ local mainScale = Instance.new("UIScale", mainWrap)
 mainScale.Scale = settingsConfig.selectedScale or 1
 _G.__AW_MAINSCALE = mainScale
 
--- ============================================
---        UPGRADED APPLEWARE MAIN UI
--- ============================================
+-- ============ PURPLE OUTER RING + GRADIENT PANEL ============
 local OUTER_PURPLE = Color3.fromRGB(150, 90, 255)
 local OUTER_PURPLE_DEEP = Color3.fromRGB(90, 40, 200)
 
--- Outer glow ring (behind the main panel)
 local outerRing = Instance.new("Frame", mainWrap)
 outerRing.Name = "OuterRing"
 outerRing.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -1853,15 +1851,12 @@ outerRing.Position = UDim2.new(0.5, 0, 0.5, 0)
 outerRing.Size = UDim2.new(1, 20, 1, 20)
 outerRing.BackgroundTransparency = 1
 outerRing.ZIndex = 0
-
-local ringCorner = Instance.new("UICorner", outerRing)
-ringCorner.CornerRadius = UDim.new(0, 20)
-
+Instance.new("UICorner", outerRing).CornerRadius = UDim.new(0, 20)
 local ringStroke = Instance.new("UIStroke", outerRing)
 ringStroke.Color = OUTER_PURPLE
 ringStroke.Thickness = 2
 ringStroke.Transparency = 0.15
-ringStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+pcall(function() ringStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
 
 task.spawn(function()
     local t = 0
@@ -1911,11 +1906,11 @@ mainGrad.Color = ColorSequence.new({
 })
 mainGrad.Rotation = 135
 
-local ms = Instance.new("UIStroke", main)
-ms.Color = OUTER_PURPLE
-ms.Transparency = 0.55
-ms.Thickness = 1.2
-ms.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+local mainStroke = Instance.new("UIStroke", main)
+mainStroke.Color = OUTER_PURPLE
+mainStroke.Transparency = 0.55
+mainStroke.Thickness = 1.2
+pcall(function() mainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
 
 local shimmer = Instance.new("Frame", main)
 shimmer.Name = "Shimmer"
@@ -1951,7 +1946,6 @@ topAccentGrad.Color = ColorSequence.new({
     ColorSequenceKeypoint.new(0.5, Color3.fromRGB(220, 180, 255)),
     ColorSequenceKeypoint.new(1, OUTER_PURPLE_DEEP),
 })
-topAccentGrad.Rotation = 0
 
 local dragStrip = Instance.new("TextButton", main)
 dragStrip.Size = UDim2.new(1, -140, 0, 34)
@@ -1988,7 +1982,6 @@ sb.Size = UDim2.new(0,138,1,0)
 sb.BackgroundColor3 = cc3(settingsConfig.tabBgColor)
 Instance.new("UICorner", sb).CornerRadius = UDim.new(0,14)
 
--- Sidebar upgrades
 local sbGrad = Instance.new("UIGradient", sb)
 sbGrad.Color = ColorSequence.new({
     ColorSequenceKeypoint.new(0, Color3.fromRGB(24, 14, 40)),
@@ -1999,7 +1992,7 @@ local sbStroke = Instance.new("UIStroke", sb)
 sbStroke.Color = OUTER_PURPLE
 sbStroke.Thickness = 1
 sbStroke.Transparency = 0.65
-sbStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+pcall(function() sbStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
 
 local sbAccentLine = Instance.new("Frame", sb)
 sbAccentLine.AnchorPoint = Vector2.new(1, 0)
@@ -2081,9 +2074,7 @@ local function switchTab(n)
         TweenService:Create(b, TweenInfo.new(0.32, EASE_SMOOTH), {BackgroundTransparency = ia and 0 or 1, BackgroundColor3 = ia and cc3(settingsConfig.cardHoverColor) or cc3(settingsConfig.tabBgColor), TextColor3 = txtCol}):Play()
         local ts = b:FindFirstChildOfClass("UIStroke")
         if ts then
-            TweenService:Create(ts, TweenInfo.new(0.28, EASE_SMOOTH), {
-                Transparency = ia and 0.1 or 1
-            }):Play()
+            TweenService:Create(ts, TweenInfo.new(0.28, EASE_SMOOTH), {Transparency = ia and 0.1 or 1}):Play()
         end
     end
     if pageGs[o] then
@@ -2117,7 +2108,7 @@ local function createTabButton(name, isFirst)
     tabStroke.Color = OUTER_PURPLE
     tabStroke.Thickness = 1.4
     tabStroke.Transparency = isFirst and 0.1 or 1
-    tabStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    pcall(function() tabStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
     if state.animationsEnabled and isFirst then
         attachSpinStroke(tabStroke, true, {pulse = false})
     end
@@ -2389,7 +2380,7 @@ local function makeDropdown(page, label, order, options, initial, onSelect)
     arrow.Size = UDim2.new(0, 24, 0, 24)
     arrow.Position = UDim2.new(1, -32, 0.5, -12)
     arrow.BackgroundTransparency = 1
-    arrow.Text = "▼"
+    arrow.Text = "v"
     arrow.TextColor3 = cc3(settingsConfig.textColor)
     arrow.Font = Enum.Font.GothamBold
     arrow.TextSize = 13
@@ -2426,7 +2417,7 @@ local function makeDropdown(page, label, order, options, initial, onSelect)
     local function setOpen(want)
         if open == want then return end
         open = want
-        arrow.Text = want and "▲" or "▼"
+        arrow.Text = want and "^" or "v"
         if want then
             local visibleCount = math.min(#options, MAX_VISIBLE)
             local targetH = 10 + visibleCount * OPTION_H + math.max(0, visibleCount - 1) * 3
@@ -2571,38 +2562,52 @@ do
         {id=88024974500195,name="Oppa Gangnam"},{id=7202896732,name="Boxing Punch"},{id=128792127841374,name="Watching Videos"},
         {id=87756443172440,name="Xavier Based Dance"},{id=116770268279002,name="Teto Birdbrain"},{id=124935873390035,name="Hiding Human Box"},
         {id=94121796810251,name="Kicking Feet Blush"},
-        -- === EXTRA EMOTES (added) ===
-        {id=110343857136497,name="Sigma Walk"},{id=120370328371751,name="Baller"},{id=15906460622,name="Fancy Feet"},
+        {id=110343857136497,name="Sigma Walk"},{id=120370328371751,name="Baller"},
         {id=92767376132433,name="Chill Stretch"},{id=114741940466513,name="Tokyo Drift"},
-        {id=94584988225570,name="Backflip Kick"},{id=141084489963819,name="Boom Shaka Laka"},{id=140149957153831,name="AI Slop Spin"},
-        {id=115250595303638,name="Wall Lean"},{id=73203621088735,name="Smooth Criminal"},{id=130610595259263,name="Whatever"},
-        {id=139566264485467,name="TikTok Boy"},{id=110218930905612,name="Popping Lock"},{id=124659288874585,name="Running Man"},
-        {id=99998976028500,name="Bunny Bounce"},{id=108994317660395,name="Wiggle Walk"},{id=112674745096134,name="Deep Sigh"},
-        {id=132937357076748,name="Sad Sit"},{id=138855600288104,name="Zen Sit"},{id=123561284997407,name="Thinking Sit"},
-        {id=100667288262773,name="Drink Sip"},{id=125344997203344,name="Cat Stretch"},{id=130638202638576,name="Sleepy Sit"},
-        {id=134833645478702,name="Meditate"},{id=122003259571273,name="Yoga Pose"},{id=118994498411236,name="Head Bang"},
-        {id=113026850067031,name="Air Guitar 2"},{id=131179607222537,name="DJ Scratch"},{id=132866435223680,name="Mic Drop"},
-        {id=121342768948199,name="Pop Lock"},{id=129355857264816,name="Shuffle Hop"},{id=112855848145029,name="Breakdance"},
-        {id=118946464268715,name="Freeze Pose"},{id=111915433711001,name="C Walk"},{id=116411996125522,name="Hip Hop"},
-        {id=129679463689145,name="Fancy Spin"},{id=104660194638453,name="Run In Place"},{id=134728871904699,name="Moonwalk 2"},
-        {id=113476219574738,name="Happy Jump"},{id=120154720020337,name="Cry"},{id=118378532632945,name="Laugh"},
-        {id=122874453395727,name="Angry Stomp 2"},{id=131203210426990,name="Scared Crouch"},{id=112853322012317,name="Taunt"},
-        {id=124348835114790,name="Facepalm"},{id=110249036165053,name="Shrug 2"},{id=127017653250655,name="Clap Hands"},
-        {id=138761297766177,name="Slow Clap"},{id=132473672576550,name="Cheer"},{id=118665382347352,name="Wave Hi"},
-        {id=130886032808935,name="Peace Sign"},{id=111626045614987,name="Finger Guns"},{id=138680325556620,name="Thumbs Up"},
-        {id=127362949224826,name="Fist Bump"},{id=129969913966410,name="High Five"},{id=134302745101923,name="Bow"},
-        {id=139969618577356,name="Curtsy Flip"},{id=111719767586221,name="Salute 2"},{id=132166136943058,name="Gang Sign"},
-        {id=122210511095088,name="Squat"},{id=126625096704344,name="Push Up"},{id=129552243158972,name="Sit Up"},
-        {id=131948319408291,name="Flex"},{id=113998076748977,name="Muscle Pose"},{id=138341967773049,name="Bodybuilder 2"},
-        {id=116744093530031,name="Sumo Stomp"},{id=120772237656868,name="Karate Chop"},{id=127480703984607,name="Roundhouse Kick"},
-        {id=120944020247832,name="Punch Combo"},{id=134238313372558,name="Sword Swing"},{id=137914692028635,name="Shoot Bow"},
-        {id=117250367537095,name="Throw Spear"},{id=138247489761150,name="Wand Cast"},{id=110328719978618,name="Magic Pose"},
-        {id=130445287801411,name="Superhero Landing 2"},{id=120662809990956,name="Power Up"},{id=129993860838303,name="Explode"},
-        {id=140974281011106,name="Backflip 2"},{id=120484080882553,name="Frontflip"},{id=130474792187279,name="Side Flip"},
-        {id=136690795526739,name="Cartwheel"},{id=114833191042231,name="Round Off"},{id=120743343729422,name="Handstand"},
-        {id=126781038100316,name="Headstand"},{id=127871370815347,name="Split"},{id=134410949199699,name="Bridge Pose"},
-        {id=120086574721688,name="Kick Up"},{id=137604371800409,name="Suplex"},{id=112852116217853,name="Body Slam"},
-        {id=128351575761149,name="Elbow Drop"},{id=121979705873611,name="Neck Snap"},{id=133953630039486,name="Headbutt"},
+        {id=94584988225570,name="Backflip Kick"},{id=141084489963819,name="Boom Shaka Laka"},
+        {id=140149957153831,name="AI Slop Spin"},{id=115250595303638,name="Wall Lean"},
+        {id=73203621088735,name="Smooth Criminal"},{id=130610595259263,name="Whatever"},
+        {id=139566264485467,name="TikTok Boy"},{id=110218930905612,name="Popping Lock"},
+        {id=124659288874585,name="Running Man"},{id=99998976028500,name="Bunny Bounce"},
+        {id=108994317660395,name="Wiggle Walk"},{id=112674745096134,name="Deep Sigh"},
+        {id=132937357076748,name="Sad Sit"},{id=138855600288104,name="Zen Sit"},
+        {id=123561284997407,name="Thinking Sit"},{id=100667288262773,name="Drink Sip"},
+        {id=125344997203344,name="Cat Stretch"},{id=130638202638576,name="Sleepy Sit"},
+        {id=134833645478702,name="Meditate"},{id=122003259571273,name="Yoga Pose"},
+        {id=118994498411236,name="Head Bang"},{id=113026850067031,name="Air Guitar 2"},
+        {id=131179607222537,name="DJ Scratch"},{id=132866435223680,name="Mic Drop"},
+        {id=121342768948199,name="Pop Lock"},{id=129355857264816,name="Shuffle Hop"},
+        {id=112855848145029,name="Breakdance"},{id=118946464268715,name="Freeze Pose"},
+        {id=111915433711001,name="C Walk"},{id=116411996125522,name="Hip Hop"},
+        {id=129679463689145,name="Fancy Spin"},{id=104660194638453,name="Run In Place"},
+        {id=134728871904699,name="Moonwalk 2"},{id=113476219574738,name="Happy Jump"},
+        {id=120154720020337,name="Cry"},{id=118378532632945,name="Laugh"},
+        {id=122874453395727,name="Angry Stomp 2"},{id=131203210426990,name="Scared Crouch"},
+        {id=112853322012317,name="Taunt"},{id=124348835114790,name="Facepalm"},
+        {id=110249036165053,name="Shrug 2"},{id=127017653250655,name="Clap Hands"},
+        {id=138761297766177,name="Slow Clap"},{id=132473672576550,name="Cheer"},
+        {id=118665382347352,name="Wave Hi"},{id=130886032808935,name="Peace Sign"},
+        {id=111626045614987,name="Finger Guns"},{id=138680325556620,name="Thumbs Up"},
+        {id=127362949224826,name="Fist Bump"},{id=129969913966410,name="High Five"},
+        {id=134302745101923,name="Bow"},{id=139969618577356,name="Curtsy Flip"},
+        {id=111719767586221,name="Salute 2"},{id=132166136943058,name="Gang Sign"},
+        {id=122210511095088,name="Squat"},{id=126625096704344,name="Push Up"},
+        {id=129552243158972,name="Sit Up"},{id=131948319408291,name="Flex"},
+        {id=113998076748977,name="Muscle Pose"},{id=138341967773049,name="Bodybuilder 2"},
+        {id=116744093530031,name="Sumo Stomp"},{id=120772237656868,name="Karate Chop"},
+        {id=127480703984607,name="Roundhouse Kick"},{id=120944020247832,name="Punch Combo"},
+        {id=134238313372558,name="Sword Swing"},{id=137914692028635,name="Shoot Bow"},
+        {id=117250367537095,name="Throw Spear"},{id=138247489761150,name="Wand Cast"},
+        {id=110328719978618,name="Magic Pose"},{id=130445287801411,name="Superhero Landing 2"},
+        {id=120662809990956,name="Power Up"},{id=129993860838303,name="Explode"},
+        {id=140974281011106,name="Backflip 2"},{id=120484080882553,name="Frontflip"},
+        {id=130474792187279,name="Side Flip"},{id=136690795526739,name="Cartwheel"},
+        {id=114833191042231,name="Round Off"},{id=120743343729422,name="Handstand"},
+        {id=126781038100316,name="Headstand"},{id=127871370815347,name="Split"},
+        {id=134410949199699,name="Bridge Pose"},{id=120086574721688,name="Kick Up"},
+        {id=137604371800409,name="Suplex"},{id=112852116217853,name="Body Slam"},
+        {id=128351575761149,name="Elbow Drop"},{id=121979705873611,name="Neck Snap"},
+        {id=133953630039486,name="Headbutt"},
     }
     local seen, dedup = {}, {}
     for _, e in ipairs(EMOTES) do
@@ -2659,9 +2664,7 @@ do
         img.Image = "rbxthumb://type=Asset&id=" .. id .. "&w=150&h=150"
         img.ScaleType = Enum.ScaleType.Fit
         btn.MouseButton1Click:Connect(function()
-            local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-            if not hum then return end
-            pcall(function() hum:PlayEmoteAndGetAnimTrackById(tonumber(id)) end)
+            playEmote(id)
         end)
         local dragState = nil
         btn.InputBegan:Connect(function(input)
@@ -2838,7 +2841,7 @@ do
                 playBtn.Size = UDim2.new(1, -32, 0, 20)
                 playBtn.Position = UDim2.new(0, 4, 0, currentSize - 14)
                 playBtn.BackgroundColor3 = cc3(settingsConfig.accentColor)
-                playBtn.Text = "▶"
+                playBtn.Text = ">"
                 playBtn.TextColor3 = Color3.new(0,0,0)
                 playBtn.Font = Enum.Font.GothamBold
                 playBtn.TextSize = 13
@@ -2849,7 +2852,7 @@ do
                 circleBtn.Size = UDim2.new(0, 24, 0, 24)
                 circleBtn.Position = UDim2.new(1, -28, 0, currentSize - 16)
                 circleBtn.BackgroundColor3 = state.emoteFloatButtons[tostring(emote.id)] and cc3(settingsConfig.accentColor) or Color3.fromRGB(40,40,40)
-                circleBtn.Text = "●"
+                circleBtn.Text = "o"
                 circleBtn.TextColor3 = Color3.new(1,1,1)
                 circleBtn.Font = Enum.Font.GothamBold
                 circleBtn.TextSize = 12
@@ -3063,7 +3066,6 @@ do
         ["Kawaii"] = {idle1="rbxassetid://782841498",idle2="rbxassetid://782845736",walk="rbxassetid://782843345",run="rbxassetid://782842708",jump="rbxassetid://782847020",climb="rbxassetid://782843869",fall="rbxassetid://782846423",swim="rbxassetid://782844417"},
         ["Cowboy"] = {idle1="rbxassetid://750781874",idle2="rbxassetid://750782770",walk="rbxassetid://750785693",run="rbxassetid://750783738",jump="rbxassetid://750782230",climb="rbxassetid://750779899",fall="rbxassetid://750780242",swim="rbxassetid://750783107"},
         ["Ghost"] = {idle1="rbxassetid://616006778",idle2="rbxassetid://616008087",walk="rbxassetid://616010382",run="rbxassetid://616013216",jump="rbxassetid://616008936",climb="rbxassetid://616003713",fall="rbxassetid://616005863",swim="rbxassetid://616007791"},
-        -- === EXTRA ANIMATION PACKS (added) ===
         ["Slender"] = {idle1="rbxassetid://1046189766",idle2="rbxassetid://1046190221",walk="rbxassetid://1046192109",run="rbxassetid://1046189889",jump="rbxassetid://1046191577",climb="rbxassetid://1046184345",fall="rbxassetid://1046190840",swim="rbxassetid://1046192742"},
         ["Superhero 2"] = {idle1="rbxassetid://1092134286",idle2="rbxassetid://1092135824",walk="rbxassetid://1092137495",run="rbxassetid://1092139387",jump="rbxassetid://1092135127",climb="rbxassetid://1092132761",fall="rbxassetid://1092133434",swim="rbxassetid://1092138203"},
         ["Werewolf 2"] = {idle1="rbxassetid://1092142723",idle2="rbxassetid://1092144262",walk="rbxassetid://1092146253",run="rbxassetid://1092147988",jump="rbxassetid://1092144567",climb="rbxassetid://1092141923",fall="rbxassetid://1092143068",swim="rbxassetid://1092146554"},
@@ -3083,15 +3085,6 @@ do
     local presetOptions = {}
     for k in pairs(FE_PRESETS) do table.insert(presetOptions, k) end
     table.sort(presetOptions)
-    for i, name in ipairs(presetOptions) do
-        if name == "Default" then table.remove(presetOptions, i); table.insert(presetOptions, 1, "Default"); break end
-    end
-    for i, name in ipairs(presetOptions) do
-        if name == "R6 Animation Pack" then table.remove(presetOptions, i); table.insert(presetOptions, 2, "R6 Animation Pack"); break end
-    end
-    for i, name in ipairs(presetOptions) do
-        if name == "R15 Default" then table.remove(presetOptions, i); table.insert(presetOptions, 3, "R15 Default"); break end
-    end
 
     local DEFAULT_ANIMS = nil
 
@@ -3210,12 +3203,12 @@ do
         if name == "R6 Animation Pack" then
             local rig = getRigType(LP.Character)
             if rig == "R15" then
-                _G.__AW_NOTIFY("Note: R6 pack only animates R6 avatars — your rig is R15")
+                _G.__AW_NOTIFY("Note: R6 pack only animates R6 avatars - your rig is R15")
             elseif rig == "R6" then
                 _G.__AW_NOTIFY("R6 pack applied")
             end
         else
-            _G.__AW_NOTIFY("All anims → " .. name)
+            _G.__AW_NOTIFY("All anims -> " .. name)
         end
         for key, setter in pairs(animSetters) do
             if setter then pcall(setter, name) end
@@ -3276,14 +3269,6 @@ do
             if animSearchToken == myToken then renderAnimSearch(animSearchBox.Text) end
         end)
     end)
-    animSearchBox.Focused:Connect(function()
-        if state.animationsEnabled == false then return end
-        TweenService:Create(animSearchStroke, TweenInfo.new(0.2), {Transparency = 0}):Play()
-    end)
-    animSearchBox.FocusLost:Connect(function()
-        if state.animationsEnabled == false then return end
-        TweenService:Create(animSearchStroke, TweenInfo.new(0.2), {Transparency = 0.6}):Play()
-    end)
 
     do
         local _, _, sAll = makeDropdown(pages["Anim/Emot"], "All Animations", 14, presetOptions, state.feAnimAll or "Default", function(v)
@@ -3295,7 +3280,7 @@ do
         local _, _, s1 = makeDropdown(pages["Anim/Emot"], "Idle Animation", 15, presetOptions, state.feAnimIdle or "Default", function(v)
             state.feAnimIdle = v; saveSettings()
             applyPresetToSlots(v, {"idle1","idle2"})
-            _G.__AW_NOTIFY("Idle → " .. v)
+            _G.__AW_NOTIFY("Idle -> " .. v)
         end)
         animSetters.idle = s1
     end
@@ -3303,7 +3288,7 @@ do
         local _, _, s2 = makeDropdown(pages["Anim/Emot"], "Walk Animation", 16, presetOptions, state.feAnimWalk or "Default", function(v)
             state.feAnimWalk = v; saveSettings()
             applyPresetToSlots(v, {"walk"})
-            _G.__AW_NOTIFY("Walk → " .. v)
+            _G.__AW_NOTIFY("Walk -> " .. v)
         end)
         animSetters.walk = s2
     end
@@ -3311,7 +3296,7 @@ do
         local _, _, s3 = makeDropdown(pages["Anim/Emot"], "Run Animation", 17, presetOptions, state.feAnimRun or "Default", function(v)
             state.feAnimRun = v; saveSettings()
             applyPresetToSlots(v, {"run"})
-            _G.__AW_NOTIFY("Run → " .. v)
+            _G.__AW_NOTIFY("Run -> " .. v)
         end)
         animSetters.run = s3
     end
@@ -3319,7 +3304,7 @@ do
         local _, _, s4 = makeDropdown(pages["Anim/Emot"], "Jump Animation", 18, presetOptions, state.feAnimJump or "Default", function(v)
             state.feAnimJump = v; saveSettings()
             applyPresetToSlots(v, {"jump"})
-            _G.__AW_NOTIFY("Jump → " .. v)
+            _G.__AW_NOTIFY("Jump -> " .. v)
         end)
         animSetters.jump = s4
     end
@@ -3327,7 +3312,7 @@ do
         local _, _, s5 = makeDropdown(pages["Anim/Emot"], "Climb Animation", 19, presetOptions, state.feAnimClimb or "Default", function(v)
             state.feAnimClimb = v; saveSettings()
             applyPresetToSlots(v, {"climb"})
-            _G.__AW_NOTIFY("Climb → " .. v)
+            _G.__AW_NOTIFY("Climb -> " .. v)
         end)
         animSetters.climb = s5
     end
@@ -3335,7 +3320,7 @@ do
         local _, _, s6 = makeDropdown(pages["Anim/Emot"], "Fall Animation", 20, presetOptions, state.feAnimFall or "Default", function(v)
             state.feAnimFall = v; saveSettings()
             applyPresetToSlots(v, {"fall"})
-            _G.__AW_NOTIFY("Fall → " .. v)
+            _G.__AW_NOTIFY("Fall -> " .. v)
         end)
         animSetters.fall = s6
     end
@@ -3343,15 +3328,9 @@ do
         local _, _, s7 = makeDropdown(pages["Anim/Emot"], "Swim Animation", 21, presetOptions, state.feAnimSwim or "Default", function(v)
             state.feAnimSwim = v; saveSettings()
             applyPresetToSlots(v, {"swim"})
-            _G.__AW_NOTIFY("Swim → " .. v)
+            _G.__AW_NOTIFY("Swim -> " .. v)
         end)
         animSetters.swim = s7
-    end
-
-    _G.__AW_SYNC_ANIM_DROPDOWNS = function(name)
-        for _, setter in pairs(animSetters) do
-            if setter then pcall(setter, name) end
-        end
     end
 
     addBtn(pages["Anim/Emot"], "Reset to Default Animations", 22, function()
@@ -3446,672 +3425,6 @@ addBtn(pages[SECRET_NAME], "Fling Custom Now", 72, flingCustomNow)
 addSect(pages[SECRET_NAME], "Touch Fling", 80)
 tgg(pages[SECRET_NAME], "Touch Fling (Walk into players)", 81, "touchFling")
 
-addSect(pages[SECRET_NAME], "Radio Abuse", 100)
-do
-    local function findPlaySong()
-        local paths = {
-            {"Remotes", "Inventory", "PlaySong"},
-            {"Remotes", "PlaySong"},
-            {"Remotes", "Gameplay", "PlaySong"},
-            {"Remotes", "Radio", "PlaySong"},
-            {"Remotes", "Inventory", "PlaySound"},
-            {"Remotes", "PlaySound"},
-            {"PlaySong"},
-        }
-        for _, path in ipairs(paths) do
-            local cur = ReplicatedStorage
-            local ok = true
-            for _, name in ipairs(path) do
-                cur = cur and cur:FindFirstChild(name)
-                if not cur then ok = false; break end
-            end
-            if ok and cur and (cur:IsA("RemoteEvent") or cur:IsA("RemoteFunction")) then
-                return cur
-            end
-        end
-        local found = ReplicatedStorage:FindFirstChild("PlaySong", true)
-        if found and (found:IsA("RemoteEvent") or found:IsA("RemoteFunction")) then
-            return found
-        end
-        return nil
-    end
-
-    local function findStopRemote()
-        local stopNames = {"StopSong", "StopSound", "PauseSong", "PauseSound", "StopMusic", "StopRadio", "Stop"}
-        local parent = PlaySong and PlaySong.Parent or (ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Inventory"))
-        if parent then
-            for _, name in ipairs(stopNames) do
-                local r = parent:FindFirstChild(name)
-                if r and (r:IsA("RemoteEvent") or r:IsA("RemoteFunction")) then
-                    return r
-                end
-            end
-        end
-        for _, name in ipairs(stopNames) do
-            local found = ReplicatedStorage:FindFirstChild(name, true)
-            if found and (found:IsA("RemoteEvent") or found:IsA("RemoteFunction")) then
-                return found
-            end
-        end
-        return nil
-    end
-
-    local PlaySong = findPlaySong()
-    task.spawn(function()
-        while true do
-            task.wait(2)
-            if not PlaySong or not PlaySong.Parent then
-                PlaySong = findPlaySong()
-            end
-        end
-    end)
-
-    local songFile = "AW_RadioSongs.json"
-    local savedSongs = {}
-    if isfile and isfile(songFile) and readfile then
-        local ok, data = pcall(function() return HttpService:JSONDecode(readfile(songFile)) end)
-        if ok and type(data) == "table" then savedSongs = data end
-    end
-    local function saveSongs()
-        if writefile then pcall(function() writefile(songFile, HttpService:JSONEncode(savedSongs)) end) end
-    end
-
-    local function firePlaySong(rawId, tryAllFormats)
-        if not PlaySong or not PlaySong.Parent then
-            PlaySong = findPlaySong()
-        end
-        if not PlaySong then
-            _G.__AW_NOTIFY("PlaySong remote not found")
-            return false
-        end
-        local idNum = tonumber(tostring(rawId or ""):match("%d+"))
-        if not idNum then
-            _G.__AW_NOTIFY("Invalid audio ID")
-            return false
-        end
-        local formats = { idNum }
-        if tryAllFormats then
-            table.insert(formats, "rbxassetid://" .. idNum)
-            table.insert(formats, "https://www.roblox.com/asset/?id=" .. idNum)
-        end
-        for i, arg in ipairs(formats) do
-            pcall(function()
-                if PlaySong:IsA("RemoteEvent") then
-                    PlaySong:FireServer(arg)
-                elseif PlaySong:IsA("RemoteFunction") then
-                    PlaySong:InvokeServer(arg)
-                end
-            end)
-            if i < #formats then task.wait(0.08) end
-        end
-        return true
-    end
-
-    local function stopAudio()
-        if not PlaySong or not PlaySong.Parent then
-            PlaySong = findPlaySong()
-        end
-        local stopRemote = findStopRemote()
-        if stopRemote then
-            pcall(function()
-                if stopRemote:IsA("RemoteEvent") then
-                    stopRemote:FireServer()
-                else
-                    stopRemote:InvokeServer()
-                end
-            end)
-            return true
-        end
-        if PlaySong then
-            pcall(function()
-                if PlaySong:IsA("RemoteEvent") then
-                    PlaySong:FireServer(0)
-                    task.wait(0.05)
-                    PlaySong:FireServer("")
-                    task.wait(0.05)
-                    PlaySong:FireServer(nil)
-                else
-                    PlaySong:InvokeServer(0)
-                end
-            end)
-            return true
-        end
-        return false
-    end
-
-    local songWrapper = Instance.new("Frame", pages[SECRET_NAME])
-    songWrapper.Size = UDim2.new(1, 0, 0, 44)
-    songWrapper.LayoutOrder = 101
-    songWrapper.BackgroundTransparency = 1
-    songWrapper.ClipsDescendants = false
-
-    local songHeader = Instance.new("TextButton", songWrapper)
-    songHeader.Size = UDim2.new(1, 0, 0, 44)
-    songHeader.BackgroundColor3 = cc3(settingsConfig.cardColor)
-    songHeader.Text = ""
-    songHeader.AutoButtonColor = false
-    Instance.new("UICorner", songHeader).CornerRadius = UDim.new(0, 10)
-    local songHeaderStroke = Instance.new("UIStroke", songHeader)
-    songHeaderStroke.Color = cc3(settingsConfig.accentColor)
-    songHeaderStroke.Thickness = 1
-    songHeaderStroke.Transparency = 0.6
-
-    local songLbl = Instance.new("TextLabel", songHeader)
-    songLbl.Size = UDim2.new(1, -44, 0, 14)
-    songLbl.Position = UDim2.new(0, 12, 0, 6)
-    songLbl.BackgroundTransparency = 1
-    songLbl.Text = "Selected Song"
-    songLbl.TextColor3 = cc3(settingsConfig.tabTextColor)
-    songLbl.Font = Enum.Font.Gotham
-    songLbl.TextSize = 11
-    songLbl.TextXAlignment = Enum.TextXAlignment.Left
-
-    local songVal = Instance.new("TextLabel", songHeader)
-    songVal.Size = UDim2.new(1, -44, 0, 18)
-    songVal.Position = UDim2.new(0, 12, 0, 22)
-    songVal.BackgroundTransparency = 1
-    songVal.Text = "(none selected)"
-    songVal.TextColor3 = cc3(settingsConfig.textColor)
-    songVal.Font = Enum.Font.GothamBold
-    songVal.TextSize = 14
-    songVal.TextXAlignment = Enum.TextXAlignment.Left
-    songVal.TextTruncate = Enum.TextTruncate.AtEnd
-
-    local songArrow = Instance.new("TextLabel", songHeader)
-    songArrow.Size = UDim2.new(0, 24, 0, 24)
-    songArrow.Position = UDim2.new(1, -32, 0.5, -12)
-    songArrow.BackgroundTransparency = 1
-    songArrow.Text = "▼"
-    songArrow.TextColor3 = cc3(settingsConfig.textColor)
-    songArrow.Font = Enum.Font.GothamBold
-    songArrow.TextSize = 13
-
-    local songList = Instance.new("ScrollingFrame", songWrapper)
-    songList.Size = UDim2.new(1, 0, 0, 0)
-    songList.Position = UDim2.new(0, 0, 0, 46)
-    songList.BackgroundColor3 = cc3(settingsConfig.cardColor)
-    songList.BorderSizePixel = 0
-    songList.Visible = false
-    songList.ClipsDescendants = true
-    songList.ZIndex = 5
-    songList.ScrollBarThickness = 4
-    songList.ScrollBarImageColor3 = cc3(settingsConfig.accentColor)
-    songList.CanvasSize = UDim2.new(0, 0, 0, 0)
-    songList.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    Instance.new("UICorner", songList).CornerRadius = UDim.new(0, 10)
-    local songListLayout = Instance.new("UIListLayout", songList)
-    songListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    songListLayout.Padding = UDim.new(0, 3)
-    local songListPad = Instance.new("UIPadding", songList)
-    songListPad.PaddingTop = UDim.new(0, 5)
-    songListPad.PaddingBottom = UDim.new(0, 5)
-    songListPad.PaddingLeft = UDim.new(0, 5)
-    songListPad.PaddingRight = UDim.new(0, 5)
-
-    local songListOpen = false
-    local selectedSongId = state.radioSelectedSongId or ""
-
-    local function findSongById(id)
-        for _, s in ipairs(savedSongs) do
-            if tostring(s.id) == tostring(id) then return s end
-        end
-        return nil
-    end
-
-    local function refreshSongDisplay()
-        local s = findSongById(selectedSongId)
-        if s then
-            songVal.Text = (s.name or s.id)
-        else
-            songVal.Text = "(none selected)"
-            selectedSongId = ""
-            state.radioSelectedSongId = ""
-        end
-    end
-
-    local function rebuildSongList()
-        for _, c in ipairs(songList:GetChildren()) do
-            if c:IsA("TextButton") or c:IsA("TextLabel") then c:Destroy() end
-        end
-        if #savedSongs == 0 then
-            local empty = Instance.new("TextLabel", songList)
-            empty.Size = UDim2.new(1, 0, 0, 34)
-            empty.LayoutOrder = 1
-            empty.BackgroundTransparency = 1
-            empty.Text = "(no saved songs — add one below)"
-            empty.TextColor3 = cc3(settingsConfig.tabTextColor)
-            empty.Font = Enum.Font.Gotham
-            empty.TextSize = 12
-            return
-        end
-        for i, s in ipairs(savedSongs) do
-            local btn = Instance.new("TextButton", songList)
-            btn.Size = UDim2.new(1, 0, 0, 38)
-            btn.LayoutOrder = i
-            btn.BackgroundColor3 = (tostring(s.id) == tostring(selectedSongId)) and cc3(settingsConfig.accentColor) or cc3(settingsConfig.cardHoverColor)
-            btn.Text = (s.name or s.id)
-            btn.TextColor3 = (tostring(s.id) == tostring(selectedSongId)) and Color3.new(0,0,0) or cc3(settingsConfig.textColor)
-            btn.Font = Enum.Font.GothamMedium
-            btn.TextSize = 14
-            btn.TextXAlignment = Enum.TextXAlignment.Left
-            btn.AutoButtonColor = false
-            btn.ZIndex = 6
-            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
-            local bp = Instance.new("UIPadding", btn); bp.PaddingLeft = UDim.new(0, 12)
-            btn.MouseEnter:Connect(function()
-                if state.animationsEnabled == false then return end
-                if tostring(s.id) ~= tostring(selectedSongId) then
-                    TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = cc3(settingsConfig.accentColor), TextColor3 = Color3.new(0,0,0)}):Play()
-                end
-            end)
-            btn.MouseLeave:Connect(function()
-                if state.animationsEnabled == false then return end
-                if tostring(s.id) ~= tostring(selectedSongId) then
-                    TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = cc3(settingsConfig.cardHoverColor), TextColor3 = cc3(settingsConfig.textColor)}):Play()
-                end
-            end)
-            btn.MouseButton1Click:Connect(function()
-                selectedSongId = tostring(s.id)
-                state.radioSelectedSongId = selectedSongId
-                saveSettings()
-                refreshSongDisplay()
-                setSongListOpen(false)
-                for _, c in ipairs(songList:GetChildren()) do
-                    if c:IsA("TextButton") then
-                        c.BackgroundColor3 = cc3(settingsConfig.cardHoverColor)
-                        c.TextColor3 = cc3(settingsConfig.textColor)
-                    end
-                end
-                btn.BackgroundColor3 = cc3(settingsConfig.accentColor)
-                btn.TextColor3 = Color3.new(0,0,0)
-            end)
-        end
-    end
-
-    function setSongListOpen(want)
-        if songListOpen == want then return end
-        songListOpen = want
-        songArrow.Text = want and "▲" or "▼"
-        if want then
-            rebuildSongList()
-            local visibleCount = math.min(math.max(#savedSongs, 1), 5)
-            local targetH = 10 + visibleCount * 38 + math.max(0, visibleCount - 1) * 3
-            songList.Visible = true
-            songList.Size = UDim2.new(1, 0, 0, 0)
-            TweenService:Create(songList, TweenInfo.new(0.30, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, targetH)}):Play()
-            TweenService:Create(songWrapper, TweenInfo.new(0.30, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, 44 + targetH + 2)}):Play()
-        else
-            TweenService:Create(songList, TweenInfo.new(0.22, EASE_SMOOTH, EASE_IN), {Size = UDim2.new(1, 0, 0, 0)}):Play()
-            TweenService:Create(songWrapper, TweenInfo.new(0.22, EASE_SMOOTH, EASE_IN), {Size = UDim2.new(1, 0, 0, 44)}):Play()
-            task.delay(0.24, function() if not songListOpen then songList.Visible = false end end)
-        end
-    end
-
-    songHeader.MouseButton1Click:Connect(function()
-        setSongListOpen(not songListOpen)
-    end)
-
-    refreshSongDisplay()
-
-    local songInput = makeInput(pages[SECRET_NAME], 102, "Audio ID to add...", "", function() end)
-
-    addBtn(pages[SECRET_NAME], "Add Audio ID", 103, function()
-        local id = tostring(songInput.Text or ""):match("%d+")
-        if not id then _G.__AW_NOTIFY("Invalid audio ID") return end
-        local name = id
-        pcall(function()
-            local info = game:GetService("MarketplaceService"):GetProductInfo(tonumber(id))
-            if info and info.Name then name = info.Name end
-        end)
-        for _, s in ipairs(savedSongs) do
-            if tostring(s.id) == id then _G.__AW_NOTIFY("Already added") return end
-        end
-        table.insert(savedSongs, {name = name, id = id})
-        saveSongs()
-        selectedSongId = id
-        state.radioSelectedSongId = id
-        saveSettings()
-        refreshSongDisplay()
-        if songListOpen then rebuildSongList() end
-        _G.__AW_NOTIFY("Added: " .. name)
-    end)
-
-    addBtn(pages[SECRET_NAME], "Play Audio", 104, function()
-        if not selectedSongId or selectedSongId == "" then
-            _G.__AW_NOTIFY("No song selected")
-            return
-        end
-        local s = findSongById(selectedSongId)
-        if firePlaySong(selectedSongId, true) then
-            _G.__AW_NOTIFY("Playing: " .. ((s and s.name) or selectedSongId))
-        end
-    end)
-
-    addBtn(pages[SECRET_NAME], "Pause / Stop Audio", 105, function()
-        if stopAudio() then
-            _G.__AW_NOTIFY("Audio stopped")
-        else
-            _G.__AW_NOTIFY("Could not stop audio — no stop remote or PlaySong missing")
-        end
-    end)
-
-    addBtn(pages[SECRET_NAME], "Restart Audio", 106, function()
-        if not selectedSongId or selectedSongId == "" then
-            _G.__AW_NOTIFY("No song selected")
-            return
-        end
-        task.spawn(function()
-            stopAudio()
-            task.wait(0.25)
-            local s = findSongById(selectedSongId)
-            if firePlaySong(selectedSongId, true) then
-                _G.__AW_NOTIFY("Restarted: " .. ((s and s.name) or selectedSongId))
-            end
-        end)
-    end)
-
-    addBtn(pages[SECRET_NAME], "Spam Selected (x5)", 107, function()
-        if not selectedSongId or selectedSongId == "" then
-            _G.__AW_NOTIFY("No song selected")
-            return
-        end
-        task.spawn(function()
-            for _ = 1, 5 do
-                firePlaySong(selectedSongId, false)
-                task.wait(0.15)
-            end
-        end)
-    end)
-
-    addBtn(pages[SECRET_NAME], "Delete Selected", 108, function()
-        if not selectedSongId or selectedSongId == "" then
-            _G.__AW_NOTIFY("No song selected")
-            return
-        end
-        for i, s in ipairs(savedSongs) do
-            if tostring(s.id) == tostring(selectedSongId) then
-                table.remove(savedSongs, i)
-                saveSongs()
-                selectedSongId = ""
-                state.radioSelectedSongId = ""
-                saveSettings()
-                refreshSongDisplay()
-                if songListOpen then rebuildSongList() end
-                _G.__AW_NOTIFY("Removed")
-                return
-            end
-        end
-    end)
-
-    addBtn(pages[SECRET_NAME], "Test Remote", 109, function()
-        PlaySong = findPlaySong()
-        if PlaySong then
-            local stopRemote = findStopRemote()
-            if stopRemote then
-                _G.__AW_NOTIFY("PlaySong: " .. PlaySong:GetFullName() .. " | Stop: " .. stopRemote:GetFullName())
-            else
-                _G.__AW_NOTIFY("PlaySong found at: " .. PlaySong:GetFullName() .. " (no stop remote found — fallback will be used)")
-            end
-        else
-            _G.__AW_NOTIFY("PlaySong remote NOT FOUND anywhere in ReplicatedStorage")
-        end
-    end)
-
-    tgg(pages[SECRET_NAME], "Auto Play Audio", 110, "radioAutoPlay")
-    LP.CharacterAdded:Connect(function()
-        if state.radioAutoPlay and state.radioSelectedSongId and state.radioSelectedSongId ~= "" then
-            task.wait(1.5)
-            firePlaySong(state.radioSelectedSongId, true)
-        end
-    end)
-end
-
-addSect(pages[SECRET_NAME], "FE Headless", 120)
-do
-    local headlessConfigs = {
-        {id = "78837807518622", on = false, track = nil, stopped = nil},
-        {id = "117080641351340", on = false, track = nil, stopped = nil},
-        {id = "136055001302601", on = false, track = nil, stopped = nil}
-    }
-    local function stopHeadless(cfg)
-        if cfg.stopped then pcall(function() cfg.stopped:Disconnect() end) cfg.stopped = nil end
-        if cfg.track then pcall(function() cfg.track:Stop() cfg.track:Destroy() end) cfg.track = nil end
-    end
-    local function playHeadless(cfg)
-        local c = LP.Character
-        if not c then return end
-        local hum = c:FindFirstChildOfClass("Humanoid")
-        if not hum then return end
-        stopHeadless(cfg)
-        local anim = Instance.new("Animation")
-        anim.AnimationId = "rbxassetid://" .. cfg.id
-        local track = hum:LoadAnimation(anim)
-        track.Priority = Enum.AnimationPriority.Action
-        track.Looped = true
-        track:Play()
-        cfg.track = track
-        cfg.stopped = track.Stopped:Connect(function()
-            if cfg.on then task.wait(0.1) playHeadless(cfg) end
-        end)
-    end
-    local keys = {"headless1", "headless2", "headless3"}
-    for i, cfg in ipairs(headlessConfigs) do
-        tgg(pages[SECRET_NAME], "Headless V" .. i, 120 + i, keys[i])
-    end
-    task.spawn(function()
-        while true do
-            task.wait(0.1)
-            if state.headless1 and LP.Character then
-                local head = LP.Character:FindFirstChild("Head")
-                if head and head.CanCollide then head.CanCollide = false end
-            end
-        end
-    end)
-    task.spawn(function()
-        while true do
-            task.wait(0.2)
-            for i, cfg in ipairs(headlessConfigs) do
-                local newOn = state[keys[i]] and true or false
-                if newOn ~= cfg.on then
-                    cfg.on = newOn
-                    if newOn then playHeadless(cfg) else stopHeadless(cfg) end
-                end
-            end
-        end
-    end)
-    LP.CharacterAdded:Connect(function()
-        task.wait(0.5)
-        for _, cfg in ipairs(headlessConfigs) do
-            if cfg.on then playHeadless(cfg) end
-        end
-    end)
-end
-
-addSect(pages[SECRET_NAME], "Camera Stretch", 140)
-tgg(pages[SECRET_NAME], "Enable Camera Stretch", 141, "cameraStretch")
-makeSlider(pages[SECRET_NAME], "Stretch Strength (%)", 142, state.cameraStretchStrength or 80, 10, 200, "cameraStretchStrength")
-RunService.RenderStepped:Connect(function()
-    if not state.cameraStretch then return end
-    local cam = Workspace.CurrentCamera
-    if not cam then return end
-    local s = (state.cameraStretchStrength or 80) / 100
-    cam.CFrame = cam.CFrame * CFrame.new(0, 0, 0, 1, 0, 0, 0, s, 0, 0, 0, 1)
-end)
-
-addSect(pages[SECRET_NAME], "Korblox", 150)
-tgg(pages[SECRET_NAME], "Enable Korblox Peg Leg", 151, "korbloxEnabled")
-tgg(pages[SECRET_NAME], "FE Korblox (deepspeaker peg leg)", 152, "korbloxFE")
-task.spawn(function()
-    while true do
-        task.wait(0.3)
-        if LP.Character and (state.korbloxEnabled or state.korbloxFE) then
-            local leg = LP.Character:FindFirstChild("RightUpperLeg") or LP.Character:FindFirstChild("Right Leg")
-            local lower = LP.Character:FindFirstChild("RightLowerLeg") or LP.Character:FindFirstChild("Right Leg")
-            local foot = LP.Character:FindFirstChild("RightFoot") or LP.Character:FindFirstChild("Right Foot")
-            if state.korbloxFE then
-                if leg and leg:IsA("BasePart") then pcall(function() leg.Color = Color3.fromRGB(0,0,0); leg.Material = Enum.Material.Metal; leg.Size = Vector3.new(0.6, 0.6, 0.6); leg.Transparency = 0 end) end
-                if lower and lower:IsA("BasePart") then pcall(function() lower.Color = Color3.fromRGB(0,0,0); lower.Material = Enum.Material.Metal; lower.Size = Vector3.new(0.35, 1, 0.35); lower.Transparency = 0 end) end
-                if foot and foot:IsA("BasePart") then pcall(function() foot.Color = Color3.fromRGB(0,0,0); foot.Material = Enum.Material.Metal; foot.Size = Vector3.new(0.5, 0.15, 0.8); foot.Transparency = 0 end) end
-            elseif state.korbloxEnabled then
-                if leg and leg:IsA("BasePart") then pcall(function() leg.Color = Color3.fromRGB(0,0,0); leg.Material = Enum.Material.SmoothPlastic; leg.Size = Vector3.new(1, 0.2, 1) end) end
-                if foot and foot:IsA("BasePart") then pcall(function() foot.Transparency = 1 end) end
-            end
-        end
-    end
-end)
-
-addSect(pages[SECRET_NAME], "Sign Spam", 160)
-tgg(pages[SECRET_NAME], "Enable Sign Spam", 161, "signSpam")
-do
-    local function findSignTool()
-        local char, bp = LP.Character, LP:FindFirstChild("Backpack")
-        for _, c in ipairs((char and char:GetChildren()) or {}) do
-            if c:IsA("Tool") and string.find(string.lower(c.Name), "sign", 1, true) then return c, char end
-        end
-        for _, c in ipairs((bp and bp:GetChildren()) or {}) do
-            if c:IsA("Tool") and string.find(string.lower(c.Name), "sign", 1, true) then return c, bp end
-        end
-        return nil, nil
-    end
-    task.spawn(function()
-        while true do
-            task.wait(0.05)
-            if state.signSpam and alive() then
-                local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-                if hum then
-                    local tool, loc = findSignTool()
-                    if tool then
-                        if loc == LP:FindFirstChild("Backpack") then pcall(function() hum:EquipTool(tool) end) end
-                        task.wait(0.04)
-                        pcall(function() hum:UnequipTools() end)
-                    end
-                end
-            end
-        end
-    end)
-end
-tgg(pages[SECRET_NAME], "Auto-Get GG Sign", 162, "autoGetGG")
-task.spawn(function()
-    while true do
-        task.wait(1)
-        if state.autoGetGG then
-            pcall(function()
-                local extra = ReplicatedStorage:FindFirstChild("Remotes")
-                extra = extra and extra:FindFirstChild("Extras")
-                extra = extra and extra:FindFirstChild("ReplicateToy")
-                if extra and extra:IsA("RemoteFunction") then extra:InvokeServer("GGSign") end
-            end)
-        end
-    end
-end)
-
-addSect(pages[SECRET_NAME], "FPS & Ping Monitor", 170)
-do
-    local Stats = game:GetService("Stats")
-    local monitorGui = Instance.new("ScreenGui")
-    monitorGui.Name = "AW_FPS_Ping"
-    monitorGui.ResetOnSpawn = false
-    monitorGui.DisplayOrder = 999992
-    monitorGui.IgnoreGuiInset = true
-    pcall(function() monitorGui.Parent = CoreGui end)
-    if not monitorGui.Parent then monitorGui.Parent = PlayerGui end
-    monitorGui.Enabled = false
-    local fpsLabel = Instance.new("TextLabel", monitorGui)
-    fpsLabel.Size = UDim2.new(0, 120, 0, 24)
-    fpsLabel.Position = UDim2.new(0, 12, 0, 12)
-    fpsLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    fpsLabel.BackgroundTransparency = 0.4
-    fpsLabel.TextColor3 = Color3.new(1,1,1)
-    fpsLabel.Font = Enum.Font.GothamBold
-    fpsLabel.TextSize = 14
-    fpsLabel.TextXAlignment = Enum.TextXAlignment.Left
-    fpsLabel.Text = "FPS: --"
-    Instance.new("UICorner", fpsLabel).CornerRadius = UDim.new(0, 6)
-    local fpsPad = Instance.new("UIPadding", fpsLabel)
-    fpsPad.PaddingLeft = UDim.new(0, 8)
-    local pingLabel = Instance.new("TextLabel", monitorGui)
-    pingLabel.Size = UDim2.new(0, 120, 0, 24)
-    pingLabel.Position = UDim2.new(0, 12, 0, 40)
-    pingLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    pingLabel.BackgroundTransparency = 0.4
-    pingLabel.TextColor3 = Color3.new(1,1,1)
-    pingLabel.Font = Enum.Font.GothamBold
-    pingLabel.TextSize = 14
-    pingLabel.TextXAlignment = Enum.TextXAlignment.Left
-    pingLabel.Text = "PING: --"
-    Instance.new("UICorner", pingLabel).CornerRadius = UDim.new(0, 6)
-    local pingPad = Instance.new("UIPadding", pingLabel)
-    pingPad.PaddingLeft = UDim.new(0, 8)
-    local fpsAccum, fpsTime = 0, 0
-    RunService.RenderStepped:Connect(function(dt)
-        if not monitorGui.Enabled then return end
-        fpsAccum = fpsAccum + 1
-        fpsTime = fpsTime + dt
-        if fpsTime >= 0.5 then
-            local fps = math.floor(fpsAccum / fpsTime + 0.5)
-            fpsAccum, fpsTime = 0, 0
-            fpsLabel.Text = "FPS: " .. fps
-            if state.fpsPingColor then
-                if fps >= 50 then fpsLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-                elseif fps >= 30 then fpsLabel.TextColor3 = Color3.fromRGB(255, 200, 0)
-                else fpsLabel.TextColor3 = Color3.fromRGB(255, 60, 60) end
-            else fpsLabel.TextColor3 = Color3.new(1,1,1) end
-        end
-    end)
-    task.spawn(function()
-        while true do
-            task.wait(0.5)
-            if monitorGui.Enabled then
-                local ok, ping = pcall(function() return Stats.Network.ServerStatsItem["Data Ping"]:GetValueString() end)
-                if ok and ping then
-                    local n = tonumber(tostring(ping):match("%-?%d+")) or 0
-                    pingLabel.Text = "PING: " .. n
-                    if state.fpsPingColor then
-                        if n <= 80 then pingLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
-                        elseif n <= 150 then pingLabel.TextColor3 = Color3.fromRGB(255, 200, 0)
-                        else pingLabel.TextColor3 = Color3.fromRGB(255, 60, 60) end
-                    else pingLabel.TextColor3 = Color3.new(1,1,1) end
-                end
-            end
-        end
-    end)
-    tgg(pages[SECRET_NAME], "Enable FPS & Ping Monitor", 171, "fpsPingMonitor")
-    tgg(pages[SECRET_NAME], "Color FPS & Ping", 172, "fpsPingColor")
-    task.spawn(function()
-        while true do
-            task.wait(0.3)
-            monitorGui.Enabled = state.fpsPingMonitor and true or false
-        end
-    end)
-end
-
-addSect(pages[SECRET_NAME], "Disable Trading", 180)
-tgg(pages[SECRET_NAME], "Disable Trading (rejoin to re-enable)", 181, "disableTrading")
-task.spawn(function()
-    while true do
-        task.wait(0.5)
-        local trade = ReplicatedStorage:FindFirstChild("Trade")
-        if trade then
-            local sendReq = trade:FindFirstChild("SendRequest")
-            local decline = trade:FindFirstChild("DeclineRequest")
-            if state.disableTrading then
-                if sendReq and decline and sendReq:IsA("RemoteFunction") then
-                    pcall(function()
-                        sendReq.OnClientInvoke = function()
-                            pcall(function() decline:FireServer() end)
-                            return nil
-                        end
-                    end)
-                end
-            else
-                if sendReq and sendReq:IsA("RemoteFunction") then
-                    pcall(function() sendReq.OnClientInvoke = nil end)
-                end
-            end
-        end
-    end
-end)
-
 addSect(pages[SECRET_NAME], "Credits", 900)
 do
     local creditCard = Instance.new("Frame", pages[SECRET_NAME])
@@ -4136,7 +3449,7 @@ do
     creditBody.Size = UDim2.new(1, -20, 1, -40)
     creditBody.Position = UDim2.new(0, 10, 0, 32)
     creditBody.BackgroundTransparency = 1
-    creditBody.Text = "• lzzzx\n• noir (7yd7)"
+    creditBody.Text = "- lzzzx\n- noir (7yd7)"
     creditBody.TextColor3 = cc3(settingsConfig.textColor)
     creditBody.Font = Enum.Font.Gotham
     creditBody.TextSize = 12
@@ -4156,7 +3469,7 @@ tgg(pages["Farm"], "Full Bag Gate", 6, "fullBagGate")
 addSect(pages["Combat"], "Silent Aim", 1)
 tgg(pages["Combat"], "Silent Aim", 2, "silentAimEnabled")
 tgg(pages["Combat"], "Silent Aim Wall Check", 3, "silentAimWallCheck")
-makeSlider(pages["Combat"], "Silent Aim Height (0=feet, 2=head)", 4, state.silentAimYHeight or 2, 0, 2, "silentAimYHeight")
+makeSlider(pages["Combat"], "Silent Aim Height", 4, state.silentAimYHeight or 2, 0, 2, "silentAimYHeight")
 tgg(pages["Combat"], "Shoot Through Walls", 10, "shootThroughWall")
 tgg(pages["Combat"], "Auto Shoot Murderer", 11, "autoShootMurderer")
 addBtn(pages["Combat"], "Shoot Murderer Now", 12, fullShootSequence)
@@ -4447,47 +3760,15 @@ tgg(pages["Misc"], "Round Timer", 8, "showRoundTimerCountdown")
 tgg(pages["Misc"], "Murderer Predictor", 9, "murdererPredictor")
 tgg(pages["Misc"], "Murderer Perk Notify", 10, "murdererPerkNotify")
 
--- ============ REMOVE BARRIERS ============
-do
-    local BARRIER_NAMES = {
-        ["Glitchproof Glitch"] = true,
-        ["THICC"] = true,
-        ["glitchproof glitch"] = true,
-        ["thicc"] = true,
-    }
-    _G.__AW_BARRIER_NAMES = BARRIER_NAMES
-    task.spawn(function()
-        while true do
-            task.wait(0.25)
-            if state.removeBarriers then
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    local n = obj.Name
-                    if BARRIER_NAMES[n] then
-                        pcall(function()
-                            if obj:IsA("BasePart") then
-                                obj.CanCollide = false
-                                obj.Transparency = 1
-                                obj.CanQuery = false
-                                obj.CanTouch = false
-                                if state.removeBarriersInstant then obj:Destroy() end
-                            elseif obj:IsA("Model") then
-                                if state.removeBarriersInstant then obj:Destroy() end
-                            end
-                        end)
-                    end
-                end
-            end
-        end
-    end)
-end
 addSect(pages["Misc"], "Barriers", 20)
 tgg(pages["Misc"], "Remove Barriers (Glitchproof Glitch / THICC)", 21, "removeBarriers")
 tgg(pages["Misc"], "Instantly Destroy Barriers", 22, "removeBarriersInstant")
-addBtn(pages["Misc"], "Remove Barriers Now (one-shot)", 23, function()
+tgg(pages["Misc"], "Auto-Remove Barriers Each Round", 23, "removeBarriersEveryRound")
+addBtn(pages["Misc"], "Remove Barriers Now (one-shot)", 24, function()
     local n = 0
-    local names = _G.__AW_BARRIER_NAMES or {}
     for _, obj in ipairs(Workspace:GetDescendants()) do
-        if names[obj.Name] then
+        local n2 = obj.Name
+        if n2 == "Glitchproof Glitch" or n2 == "THICC" or n2 == "glitchproof glitch" or n2 == "thicc" then
             pcall(function()
                 if obj:IsA("BasePart") then
                     obj.CanCollide = false
@@ -5149,6 +4430,66 @@ task.spawn(function()
         end
     end
 end)
+
+-- ============ AUTO-REMOVE BARRIERS EACH ROUND ============
+do
+    local BARRIER_NAMES = {
+        ["Glitchproof Glitch"] = true,
+        ["THICC"] = true,
+        ["glitchproof glitch"] = true,
+        ["thicc"] = true,
+    }
+
+    local function clearBarriers(destroy)
+        local count = 0
+        for _, obj in ipairs(Workspace:GetDescendants()) do
+            if BARRIER_NAMES[obj.Name] then
+                pcall(function()
+                    if obj:IsA("BasePart") then
+                        obj.CanCollide = false
+                        obj.Transparency = 1
+                        obj.CanQuery = false
+                        obj.CanTouch = false
+                        if destroy then obj:Destroy() end
+                    elseif obj:IsA("Model") then
+                        if destroy then obj:Destroy() end
+                    end
+                end)
+                count = count + 1
+            end
+        end
+        return count
+    end
+
+    _G.__AW_CLEAR_BARRIERS = clearBarriers
+
+    task.spawn(function()
+        while true do
+            task.wait(0.25)
+            if state.removeBarriers then
+                clearBarriers(state.removeBarriersInstant)
+            end
+        end
+    end)
+
+    task.spawn(function()
+        local wasInRound = false
+        while true do
+            task.wait(0.3)
+            local nowInRound = isInRound()
+            if nowInRound and not wasInRound then
+                if state.removeBarriersEveryRound then
+                    task.wait(0.5)
+                    local n = clearBarriers(state.removeBarriersInstant)
+                    if n > 0 then
+                        _G.__AW_NOTIFY("Round started - cleared " .. n .. " barrier(s)")
+                    end
+                end
+            end
+            wasInRound = nowInRound
+        end
+    end)
+end
 
 -- ============ HITBOX EXPANDER LOOP ============
 task.spawn(function()
