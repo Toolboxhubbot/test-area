@@ -1155,6 +1155,43 @@ local function teleportToLobby()
     if r then r.CFrame = LOBBY_CFRAME end
 end
 
+local lobbyBounds = nil
+local lobbyBoundsCheckedAt = 0
+local function detectLobbyBounds()
+    for _, obj in ipairs(Workspace:GetChildren()) do
+        local n = string.lower(obj.Name)
+        if string.find(n, "lobby", 1, true) or string.find(n, "waiting", 1, true) then
+            if obj:IsA("BasePart") then
+                return {center=obj.Position, size=obj.Size, min=obj.Position - obj.Size * 0.5, max=obj.Position + obj.Size * 0.5}
+            elseif obj:IsA("Model") then
+                local ok, cf, sz = pcall(function() local c, s = obj:GetBoundingBox(); return c, s end)
+                if ok and cf and sz then
+                    return {center=cf.Position, size=sz, min=cf.Position - sz * 0.5, max=cf.Position + sz * 0.5}
+                end
+            end
+        end
+    end
+    return nil
+end
+local LOBBY_FALLBACK_Y = 400
+local function isInLobby(position)
+    local now = tick()
+    if not lobbyBounds or (now - lobbyBoundsCheckedAt) > 5 then
+        lobbyBounds = detectLobbyBounds()
+        lobbyBoundsCheckedAt = now
+    end
+    if lobbyBounds then
+        local pad = 25
+        local mn = lobbyBounds.min - Vector3.new(pad, pad, pad)
+        local mx = lobbyBounds.max + Vector3.new(pad, pad, pad)
+        if position.X >= mn.X and position.X <= mx.X and position.Y >= mn.Y and position.Y <= mx.Y and position.Z >= mn.Z and position.Z <= mx.Z then
+            return true
+        end
+    end
+    if position.Y > LOBBY_FALLBACK_Y then return true end
+    return false
+end
+
 -- ================= VOID PLATFORM =================
 local VOID_PLATFORM_POS = Vector3.new(100, 5000, 2000)
 local VOID_PLATFORM_RADIUS = 10
@@ -2008,7 +2045,6 @@ sg.ResetOnSpawn = false
 sg.DisplayOrder = 999999
 sg.IgnoreGuiInset = true
 
--- ==== UI GLOW HELPERS ====
 local function attachFrameGlow(target, glowColor, strength)
     local glow = Instance.new("ImageLabel", target.Parent)
     glow.Name = "AW_OuterGlow"
@@ -5591,7 +5627,7 @@ do
     end)
 end
 
--- ============ INVISIBILITY (silent off/on between rounds) ============
+-- ============ INVISIBILITY ============
 local INVIS_POSITION = Vector3.new(-25.95, 84, 3537.55)
 local invisSeat = nil
 local invisWeld = nil
