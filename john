@@ -4119,25 +4119,6 @@ task.spawn(function()
     end
 end)
 
-addSect(pages[SECRET_NAME], "Remove Barriers", 190)
-tgg(pages[SECRET_NAME], "Enable Remove Barriers", 191, "removeBarriers")
-task.spawn(function()
-    while true do
-        task.wait(1)
-        if state.removeBarriers then
-            local count = 0
-            for _, v in ipairs(Workspace:GetDescendants()) do
-                if v.Name == "GlitchProof" or v.Name == "Glitchproof" or v.Name == "Glitch" or v.Name == "THICC" then
-                    pcall(function() v:Destroy(); count = count + 1 end)
-                end
-            end
-            if count > 0 then
-                _G.__AW_NOTIFY("Removed " .. count .. " barriers")
-            end
-        end
-    end
-end)
-
 addSect(pages[SECRET_NAME], "Credits", 900)
 do
     local creditCard = Instance.new("Frame", pages[SECRET_NAME])
