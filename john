@@ -1,5 +1,5 @@
 -- ================================================================
--- Appleware (fixed build)
+-- Appleware
 -- ================================================================
 
 task.spawn(function()
@@ -33,7 +33,7 @@ Lighting = game:GetService("Lighting")
 UIS = game:GetService("UserInputService")
 LP = Players.LocalPlayer
 PlaceId = game.PlaceId
-PlayerGui = LP:WaitForChild("PlayerGui", 15)
+PlayerGui = LP:WaitForChild("PlayerGui", 10)
 
 CF = "ApplewareConfigs"
 CFl = "Appleware.json"
@@ -85,7 +85,6 @@ state = {
     disableTrading=false,
     wallHop=false, wallHopFlick=false,
     blueAura=false, blueAuraStuds=10,
-    removeBarriers=false,
     feAnimEnabled=false,
     feAnimAll="Default",
     feAnimIdle="Default", feAnimWalk="Default", feAnimRun="Default",
@@ -96,6 +95,7 @@ state = {
     emoteMenuOpen=false,
     emoteFloatButtons={},
     emoteFloatPositions={},
+    removeBarriers=false,
 }
 
 KEYBIND_FEATURES = {
@@ -120,8 +120,8 @@ KEYBIND_FEATURES = {
     {key="hitboxExpander",    label="Hitbox Expander",      default="H"},
     {key="wallHop",           label="Wall Hop",             default="Y"},
     {key="blueAura",          label="Blue Aura",            default="G"},
-    {key="removeBarriers",    label="Remove Barriers",      default="U"},
     {key="feAnimEnabled",     label="FE Animations",        default="Q"},
+    {key="removeBarriers",    label="Remove Barriers",      default="B"},
 }
 
 NO_SAVE_STATE_KEYS = {
@@ -134,17 +134,12 @@ settingsConfig = {
     webhookUrl="", discordUserId="",
     tweenSpeed=25, selectedScale=1, roundLength=200,
     flingList={}, whitelist={},
-    bgColor={r=10,g=6,b=18},
-    textColor={r=245,g=240,b=255},
-    cardColor={r=26,g=16,b=44},
-    cardHoverColor={r=52,g=30,b=84},
-    borderColor={r=150,g=80,b=255},
-    accentColor={r=170,g=90,b=255},
-    tabBgColor={r=8,g=4,b=16},
-    tabTextColor={r=180,g=160,b=210},
+    bgColor={r=10,g=5,b=15}, textColor={r=255,g=255,b=255},
+    cardColor={r=18,g=18,b=22}, cardHoverColor={r=38,g=38,b=46},
+    borderColor={r=100,g=0,b=150}, accentColor={r=170,g=0,b=255},
+    tabBgColor={r=0,g=0,b=0}, tabTextColor={r=170,g=170,b=180},
     tabTextActiveColor={r=255,g=255,b=255},
-    openBtnColor={r=10,g=6,b=18},
-    openBtnTextColor={r=245,g=240,b=255},
+    openBtnColor={r=0,g=0,b=0}, openBtnTextColor={r=255,g=255,b=255},
 }
 
 toggleDisplayNames = {
@@ -180,8 +175,8 @@ toggleDisplayNames = {
     disableTrading="Disable Trading",
     wallHop="Wall Hop", wallHopFlick="Wall Hop Flick",
     blueAura="Blue Aura",
-    removeBarriers="Remove Barriers",
     feAnimEnabled="FE Animations",
+    removeBarriers="Remove Barriers",
 }
 
 function saveSettings()
@@ -263,8 +258,11 @@ end
 
 local function setSpinGradColors(grad, isOn)
     if not grad then return end
-    if isOn then grad.Color = buildAltSeq(WHITE, BLACK)
-    else grad.Color = buildAltSeq(BLACK, WHITE) end
+    if isOn then
+        grad.Color = buildAltSeq(WHITE, cc3(settingsConfig.accentColor))
+    else
+        grad.Color = buildAltSeq(cc3(settingsConfig.accentColor), BLACK)
+    end
 end
 
 local function attachSpinStroke(stroke, isOn, opts)
@@ -274,7 +272,8 @@ local function attachSpinStroke(stroke, isOn, opts)
     pcall(function() stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
     local existing = stroke:FindFirstChild("SpinGrad")
     local grad
-    if existing then grad = existing
+    if existing then
+        grad = existing
     else
         grad = Instance.new("UIGradient", stroke)
         grad.Name = "SpinGrad"
@@ -289,15 +288,11 @@ local function attachSpinStroke(stroke, isOn, opts)
         local maxT = baseThickness * PULSE_MAX
         task.spawn(function()
             while stroke and stroke.Parent do
-                if state.animationsEnabled == false then
-                    task.wait(0.25)
-                else
-                    TweenService:Create(stroke, TweenInfo.new(PULSE_SPEED, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Thickness = maxT}):Play()
-                    task.wait(PULSE_SPEED)
-                    if not stroke or not stroke.Parent then break end
-                    TweenService:Create(stroke, TweenInfo.new(PULSE_SPEED, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Thickness = minT}):Play()
-                    task.wait(PULSE_SPEED)
-                end
+                TweenService:Create(stroke, TweenInfo.new(PULSE_SPEED, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Thickness = maxT}):Play()
+                task.wait(PULSE_SPEED)
+                if not stroke or not stroke.Parent then break end
+                TweenService:Create(stroke, TweenInfo.new(PULSE_SPEED, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Thickness = minT}):Play()
+                task.wait(PULSE_SPEED)
             end
         end)
     end
@@ -309,29 +304,24 @@ task.spawn(function()
     local wobbleT = 0
     while true do
         local dt = RunService.Heartbeat:Wait()
-        if state.animationsEnabled == false then
-            task.wait(0.1)
-        else
-            wobbleT = wobbleT + dt
-            local wobble = 1 + math.sin(wobbleT * 1.4) * 0.15
-            rot = (rot + dt * SPIN_SPEED * wobble) % 360
-            for i = #spinGradients, 1, -1 do
-                local g = spinGradients[i]
-                if g and g.Parent then g.Rotation = rot
-                else table.remove(spinGradients, i) end
-            end
+        wobbleT = wobbleT + dt
+        local wobble = 1 + math.sin(wobbleT * 1.4) * 0.15
+        rot = (rot + dt * SPIN_SPEED * wobble) % 360
+        for i = #spinGradients, 1, -1 do
+            local g = spinGradients[i]
+            if g and g.Parent then g.Rotation = rot
+            else table.remove(spinGradients, i) end
         end
     end
 end)
 
 local function attachBounce(b)
+    if state.animationsEnabled == false then return end
     local s = Instance.new("UIScale", b)
     b.MouseButton1Down:Connect(function()
-        if state.animationsEnabled == false then return end
         TweenService:Create(s, TweenInfo.new(0.09, EASE_SMOOTH, EASE_OUT), {Scale=0.94}):Play()
     end)
     local function r()
-        if state.animationsEnabled == false then s.Scale = 1; return end
         TweenService:Create(s, TweenInfo.new(0.5, Enum.EasingStyle.Elastic, EASE_OUT), {Scale=1}):Play()
     end
     b.MouseButton1Up:Connect(r)
@@ -339,10 +329,10 @@ local function attachBounce(b)
 end
 
 local function attachRipple(b, c)
+    if state.animationsEnabled == false then return end
     c = c or Color3.new(1,1,1)
     b.ClipsDescendants = true
     b.MouseButton1Down:Connect(function()
-        if state.animationsEnabled == false then return end
         local pos = b.AbsolutePosition
         local sz = b.AbsoluteSize
         local m = UIS:GetMouseLocation()
@@ -365,6 +355,7 @@ local function attachRipple(b, c)
 end
 
 local function attachShine(b)
+    if state.animationsEnabled == false then return end
     b.ClipsDescendants = true
     local s = Instance.new("Frame", b)
     s.Size = UDim2.new(0,40,1.6,0)
@@ -377,7 +368,6 @@ local function attachShine(b)
     s.Active = false
     local running = false
     b.MouseEnter:Connect(function()
-        if state.animationsEnabled == false then return end
         if running then return end
         running = true
         s.Position = UDim2.new(-0.4,0,-0.3,0)
@@ -405,12 +395,6 @@ local function staggerFade(p)
         c.Position = origPos + UDim2.new(0, 10, 0, 0)
         task.delay(i * 0.02, function()
             if not c.Parent then return end
-            if state.animationsEnabled == false then
-                c.Position = origPos
-                if stt then c.TextTransparency = stt end
-                if c:IsA("Frame") or c:IsA("TextButton") then c.BackgroundTransparency = sb end
-                return
-            end
             if c:IsA("Frame") or c:IsA("TextButton") then
                 TweenService:Create(c, TweenInfo.new(0.5, EASE_BOUNCE, EASE_OUT), {BackgroundTransparency=sb, Position=origPos}):Play()
             end
@@ -442,24 +426,29 @@ local nCount = 0
 _G.__AW_NOTIFY = function(text)
     if nCount >= 5 then return end
     nCount = nCount + 1
+
     local w = Instance.new("Frame", notifyContainer)
     w.Size = UDim2.new(1, 0, 0, 58)
     w.BackgroundTransparency = 1
     w.LayoutOrder = math.floor(tick() * 1000)
+
     local f = Instance.new("Frame", w)
     f.Size = UDim2.new(1, 0, 1, 0)
     f.Position = UDim2.new(1.1, 0, 0, 0)
-    f.BackgroundColor3 = Color3.fromRGB(16, 8, 26)
+    f.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
     f.BackgroundTransparency = 0.05
     f.BorderSizePixel = 0
     Instance.new("UICorner", f).CornerRadius = UDim.new(0, 10)
+
     local grad = Instance.new("UIGradient", f)
-    grad.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(28, 16, 48)), ColorSequenceKeypoint.new(1, Color3.fromRGB(12, 6, 20))})
+    grad.Color = ColorSequence.new({ColorSequenceKeypoint.new(0, Color3.fromRGB(22, 22, 28)), ColorSequenceKeypoint.new(1, Color3.fromRGB(12, 12, 16))})
     grad.Rotation = 90
+
     local stroke = Instance.new("UIStroke", f)
     stroke.Color = cc3(settingsConfig.accentColor)
     stroke.Thickness = 1
-    stroke.Transparency = 0.35
+    stroke.Transparency = 0.55
+
     local acc = Instance.new("Frame", f)
     acc.Size = UDim2.new(0, 3, 1, -16)
     acc.Position = UDim2.new(0, 10, 0, 8)
@@ -467,6 +456,7 @@ _G.__AW_NOTIFY = function(text)
     acc.BorderSizePixel = 0
     acc.ZIndex = 3
     Instance.new("UICorner", acc).CornerRadius = UDim.new(1, 0)
+
     local title = Instance.new("TextLabel", f)
     title.Size = UDim2.new(1, -34, 0, 14)
     title.Position = UDim2.new(0, 22, 0, 10)
@@ -477,12 +467,13 @@ _G.__AW_NOTIFY = function(text)
     title.TextSize = 10
     title.TextXAlignment = Enum.TextXAlignment.Left
     title.ZIndex = 2
+
     local body = Instance.new("TextLabel", f)
     body.Size = UDim2.new(1, -34, 0, 26)
     body.Position = UDim2.new(0, 22, 0, 26)
     body.BackgroundTransparency = 1
     body.Text = text
-    body.TextColor3 = Color3.fromRGB(235, 230, 245)
+    body.TextColor3 = Color3.fromRGB(235, 235, 240)
     body.Font = Enum.Font.Gotham
     body.TextSize = 12
     body.TextXAlignment = Enum.TextXAlignment.Left
@@ -490,6 +481,7 @@ _G.__AW_NOTIFY = function(text)
     body.RichText = true
     body.TextWrapped = true
     body.ZIndex = 2
+
     if state.notifySound then
         local s = Instance.new("Sound", w)
         s.SoundId = "rbxassetid://7001904928"
@@ -497,7 +489,9 @@ _G.__AW_NOTIFY = function(text)
         s:Play()
         task.delay(2, function() if s and s.Parent then s:Destroy() end end)
     end
+
     TweenService:Create(f, TweenInfo.new(0.6, Enum.EasingStyle.Quint, EASE_OUT), {Position = UDim2.new(0, 0, 0, 0)}):Play()
+
     task.delay(5, function()
         if not w.Parent then return end
         TweenService:Create(f, TweenInfo.new(0.45, Enum.EasingStyle.Quint, EASE_IN), {Position = UDim2.new(1.1, 0, 0, 0)}):Play()
@@ -783,7 +777,6 @@ local function isResetActive(userId)
     if tick()-t > RESET_DURATION + 0.5 then activeResets[userId] = nil; return false end
     return true
 end
-
 local function reliableFling(tp, forceManual)
     if not tp or tp==LP or not tp.Parent then return false end
     if not targetIsAlive(tp) then return false end
@@ -805,6 +798,7 @@ local function reliableFling(tp, forceManual)
 
     flingActiveCount = flingActiveCount + 1
     isLocalFlinging = true
+
     local savedCF = RootPart.CFrame
     Humanoid.PlatformStand = true
     local bv = Instance.new("BodyVelocity")
@@ -964,6 +958,7 @@ local function killCustomNow()
     end)
 end
 
+-- ============ HANDLETOUCHED KILL ============
 local function fireHandleTouchedKill(targets)
     local char = LP.Character
     if not char then return end
@@ -1011,11 +1006,13 @@ local function handleTouchKillAll()
     end
     fireHandleTouchedKill(targets)
 end
+
 local function handleTouchKillSheriff()
     local targets = getLiveSheriffHeroes()
     if #targets == 0 then _G.__AW_NOTIFY("No Sheriff / Hero") return end
     fireHandleTouchedKill(targets)
 end
+
 local function handleTouchKillCustom()
     if #settingsConfig.flingList == 0 then _G.__AW_NOTIFY("No custom targets") return end
     local targets = {}
@@ -1176,7 +1173,7 @@ local function teleportToMap()
         r.AssemblyLinearVelocity = Vector3.zero
         r.AssemblyAngularVelocity = Vector3.zero
     end
-    _G.__AW_NOTIFY("Teleported to <font color=\"#b57aff\">" .. mapFolder.Name .. "</font>")
+    _G.__AW_NOTIFY("Teleported to <font color=\"#5aff8c\">" .. mapFolder.Name .. "</font>")
 end
 local function teleportToPlayer(p)
     if not p then return end
@@ -1487,16 +1484,12 @@ local roundTimerFrame = Instance.new("Frame", rtGui)
 roundTimerFrame.AnchorPoint = Vector2.new(0.5,0)
 roundTimerFrame.Position = UDim2.new(0.5,0,0,8)
 roundTimerFrame.Size = UDim2.new(0,130,0,50)
-roundTimerFrame.BackgroundColor3 = Color3.new(0.05,0.03,0.10)
+roundTimerFrame.BackgroundColor3 = Color3.new(0,0,0)
 roundTimerFrame.BackgroundTransparency = 0.1
 roundTimerFrame.Visible = false
 roundTimerFrame.Active = true
 roundTimerFrame.Draggable = true
 Instance.new("UICorner", roundTimerFrame).CornerRadius = UDim.new(0,10)
-local rtStroke = Instance.new("UIStroke", roundTimerFrame)
-rtStroke.Color = cc3(settingsConfig.accentColor)
-rtStroke.Thickness = 1.5
-rtStroke.Transparency = 0.35
 local rtValue = Instance.new("TextLabel", roundTimerFrame)
 rtValue.Size = UDim2.new(1,0,1,0)
 rtValue.BackgroundTransparency = 1
@@ -1523,7 +1516,8 @@ bigBtn.Name = "AWBigShootBtn"
 bigBtn.AnchorPoint = Vector2.new(0.5, 0.5)
 bigBtn.Position = UDim2.new(0.5, 0, 0.5, 0)
 bigBtn.Size = UDim2.new(1, 0, 1, 0)
-bigBtn.BackgroundColor3 = Color3.fromRGB(25, 12, 45)
+bigBtn.BackgroundColor3 = Color3.new(0, 0, 0)
+bigBtn.BackgroundTransparency = 1
 bigBtn.Text = "Shoot Murderer"
 bigBtn.TextColor3 = Color3.new(1, 1, 1)
 bigBtn.TextStrokeColor3 = Color3.new(0, 0, 0)
@@ -1537,7 +1531,7 @@ bigBtn.Active = true
 bigBtn.Parent = bigWrap
 Instance.new("UICorner", bigBtn).CornerRadius = UDim.new(0, 12)
 local bigStroke = Instance.new("UIStroke", bigBtn)
-bigStroke.Color = cc3(settingsConfig.accentColor)
+bigStroke.Color = WHITE
 bigStroke.Thickness = 3
 bigStroke.Transparency = 0
 attachSpinStroke(bigStroke, false, {baseThickness = 3})
@@ -1657,8 +1651,8 @@ local FLOAT_BUTTON_DEFS = {
     {id="signSpam",      label="Sign Spam",       type="toggle", key="signSpam"},
     {id="wallHop",       label="Wall Hop",        type="toggle", key="wallHop"},
     {id="blueAura",      label="Blue Aura",       type="toggle", key="blueAura"},
-    {id="removeBarriers",label="Remove Barriers", type="toggle", key="removeBarriers"},
     {id="feAnim",        label="FE Anim",         type="toggle", key="feAnimEnabled"},
+    {id="removeBarriers",label="Remove Barriers", type="toggle", key="removeBarriers"},
 }
 local FLOAT_BUTTON_MAP = {}
 for _, def in ipairs(FLOAT_BUTTON_DEFS) do FLOAT_BUTTON_MAP[def.id] = def end
@@ -1690,8 +1684,8 @@ local function refreshFloatVisual(def)
         local g = data.inner:FindFirstChild("SpinGrad")
         if g then setSpinGradColors(g, isOn) end
     end
-    data.btn.TextColor3 = isOn and Color3.new(0,0,0) or Color3.new(1,1,1)
-    data.btn.TextStrokeColor3 = isOn and Color3.new(1,1,1) or Color3.new(0,0,0)
+    data.btn.TextColor3 = Color3.new(1,1,1)
+    data.btn.TextStrokeColor3 = isOn and cc3(settingsConfig.accentColor) or Color3.new(0,0,0)
 end
 local function applyShape(btn, shape)
     for _, c in ipairs(btn:GetChildren()) do
@@ -1735,8 +1729,8 @@ local function rebuildFloatButtons()
             btn.AnchorPoint = Vector2.new(0, 0)
             btn.Size = UDim2.new(0, state.floatButtonSize, 0, state.floatButtonSize)
             btn.Position = UDim2.new(sx, bx, sy, by)
-            btn.BackgroundColor3 = Color3.fromRGB(20, 10, 38)
-            btn.BackgroundTransparency = 0
+            btn.BackgroundColor3 = Color3.new(0, 0, 0)
+            btn.BackgroundTransparency = 1
             btn.Text = def.label
             btn.TextColor3 = Color3.new(1, 1, 1)
             btn.TextStrokeColor3 = Color3.new(0, 0, 0)
@@ -1751,7 +1745,7 @@ local function rebuildFloatButtons()
             btn.Parent = floatGui
             applyShape(btn, state.floatButtonShape)
             local inner = Instance.new("UIStroke", btn)
-            inner.Color = cc3(settingsConfig.accentColor)
+            inner.Color = WHITE
             inner.Thickness = 2
             local isOn = def.type == "toggle" and state[def.key] or false
             attachSpinStroke(inner, isOn)
@@ -1786,7 +1780,7 @@ local function rebuildFloatButtons()
                     state[def.key] = not state[def.key]
                     refreshFloatVisual(def)
                     local dn = toggleDisplayNames[def.key] or def.label
-                    _G.__AW_NOTIFY('<font color="'..(state[def.key] and "#b57aff" or "#ff5a5a")..'">'..dn..'</font> '..(state[def.key] and "on" or "off"))
+                    _G.__AW_NOTIFY('<font color="'..(state[def.key] and "#5aff8c" or "#ff5a5a")..'">'..dn..'</font> '..(state[def.key] and "on" or "off"))
                     saveSettings()
                 else
                     if def.cb then pcall(def.cb) end
@@ -1821,37 +1815,22 @@ mainWrap.BackgroundTransparency = 1
 local mainScale = Instance.new("UIScale", mainWrap)
 mainScale.Scale = settingsConfig.selectedScale or 1
 _G.__AW_MAINSCALE = mainScale
-
-local outerGlow = Instance.new("Frame", mainWrap)
-outerGlow.Name = "OuterGlow"
-outerGlow.AnchorPoint = Vector2.new(0.5, 0.5)
-outerGlow.Position = UDim2.new(0.5, 0, 0.5, 0)
-outerGlow.Size = UDim2.new(1, 26, 1, 26)
-outerGlow.BackgroundColor3 = cc3(settingsConfig.accentColor)
-outerGlow.BackgroundTransparency = 0.72
-outerGlow.BorderSizePixel = 0
-outerGlow.ZIndex = 0
-Instance.new("UICorner", outerGlow).CornerRadius = UDim.new(0, 20)
-
 local main = Instance.new("Frame", mainWrap)
 main.Size = UDim2.new(1,0,1,0)
 main.BackgroundColor3 = cc3(settingsConfig.bgColor)
 main.Active = true
 main.ClipsDescendants = true
-main.ZIndex = 2
 Instance.new("UICorner", main).CornerRadius = UDim.new(0,14)
+
+-- UI GLOW EFFECT
 local ms = Instance.new("UIStroke", main)
 ms.Color = cc3(settingsConfig.accentColor)
-ms.Transparency = 0.15
-ms.Thickness = 2
-attachSpinStroke(ms, false, {pulse = true, baseThickness = 2})
-
-local mainGrad = Instance.new("UIGradient", main)
-mainGrad.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 14, 55)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(8, 4, 18)),
-})
-mainGrad.Rotation = 90
+ms.Thickness = 2.5
+ms.Transparency = 0
+local glowStroke = Instance.new("UIStroke", main)
+glowStroke.Color = cc3(settingsConfig.accentColor)
+glowStroke.Thickness = 6
+glowStroke.Transparency = 0.6
 
 local dragStrip = Instance.new("TextButton", main)
 dragStrip.Size = UDim2.new(1, -140, 0, 34)
@@ -1885,19 +1864,17 @@ end)
 local sb = Instance.new("Frame", main)
 sb.Size = UDim2.new(0,138,1,0)
 sb.BackgroundColor3 = cc3(settingsConfig.tabBgColor)
-sb.ZIndex = 3
 Instance.new("UICorner", sb).CornerRadius = UDim.new(0,14)
 local logo = Instance.new("TextButton", sb)
 logo.Size = UDim2.new(1,-12,0,48)
 logo.Position = UDim2.new(0,6,0,4)
 logo.BackgroundTransparency = 1
 logo.Text = "Appleware"
-logo.TextColor3 = cc3(settingsConfig.accentColor)
+logo.TextColor3 = cc3(settingsConfig.textColor)
 logo.Font = Enum.Font.GothamBold
-logo.TextSize = 18
+logo.TextSize = 16
 logo.TextXAlignment = Enum.TextXAlignment.Left
 logo.AutoButtonColor = false
-logo.ZIndex = 4
 logo.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then beginMainDrag(input) end
 end)
@@ -1908,7 +1885,6 @@ tlb.BackgroundTransparency = 1
 tlb.ScrollBarThickness = 2
 tlb.CanvasSize = UDim2.new(0,0,0,0)
 tlb.AutomaticCanvasSize = Enum.AutomaticSize.Y
-tlb.ZIndex = 4
 local tll = Instance.new("UIListLayout", tlb)
 tll.SortOrder = Enum.SortOrder.LayoutOrder
 tll.Padding = UDim.new(0,3)
@@ -1917,7 +1893,6 @@ ct.Size = UDim2.new(1,-148,1,-56)
 ct.Position = UDim2.new(0,148,0,10)
 ct.BackgroundTransparency = 1
 ct.ClipsDescendants = true
-ct.ZIndex = 3
 
 local tabs = {"Farm","Combat","Players","Teleport","ESP","Webhook","Misc","Voting","Button","Keybinds","UI","Anim/Emot","Secret"}
 local pages, pageGs, btns = {}, {}, {}
@@ -1986,10 +1961,9 @@ local function createTabButton(name, isFirst)
     b.TextSize = 12.5
     b.TextXAlignment = Enum.TextXAlignment.Left
     b.AutoButtonColor = false
-    b.ZIndex = 4
     Instance.new("UICorner", b).CornerRadius = UDim.new(0,8)
     btns[name] = b
-    attachRipple(b, cc3(settingsConfig.accentColor))
+    if state.animationsEnabled then attachRipple(b, cc3(settingsConfig.accentColor)) end
     if not pages[name] then makePage(name) end
     if isFirst then pageGs[name].Visible = true end
     b.MouseButton1Click:Connect(function() switchTab(name) end)
@@ -2005,8 +1979,8 @@ local function tgg(page, name, order, key)
     row.BackgroundColor3 = cc3(settingsConfig.cardColor)
     Instance.new("UICorner", row).CornerRadius = UDim.new(0,10)
     local rowStroke = Instance.new("UIStroke", row)
-    rowStroke.Color = cc3(settingsConfig.accentColor)
-    rowStroke.Transparency = 0.35
+    rowStroke.Color = WHITE
+    rowStroke.Transparency = 0
     rowStroke.Thickness = 1.5
     attachSpinStroke(rowStroke, state[key] and true or false)
     local lbl = Instance.new("TextLabel", row)
@@ -2021,17 +1995,17 @@ local function tgg(page, name, order, key)
     local pill = Instance.new("Frame", row)
     pill.Size = UDim2.new(0,44,0,24)
     pill.Position = UDim2.new(1,-54,0.5,-12)
-    pill.BackgroundColor3 = state[key] and cc3(settingsConfig.accentColor) or Color3.fromRGB(38,26,60)
+    pill.BackgroundColor3 = state[key] and cc3(settingsConfig.accentColor) or Color3.fromRGB(32,32,32)
     Instance.new("UICorner", pill).CornerRadius = UDim.new(1,0)
     local pI = Instance.new("Frame", pill)
     pI.Size = UDim2.new(1,-4,1,-4)
     pI.Position = UDim2.new(0,2,0,2)
-    pI.BackgroundColor3 = state[key] and cc3(settingsConfig.accentColor) or Color3.fromRGB(22,14,38)
+    pI.BackgroundColor3 = state[key] and cc3(settingsConfig.accentColor) or Color3.fromRGB(22,22,22)
     Instance.new("UICorner", pI).CornerRadius = UDim.new(1,0)
     local dot = Instance.new("Frame", pill)
     dot.Size = UDim2.new(0,16,0,16)
     dot.Position = state[key] and UDim2.new(1,-20,0.5,-8) or UDim2.new(0,4,0.5,-8)
-    dot.BackgroundColor3 = state[key] and Color3.new(0,0,0) or Color3.fromRGB(220,210,235)
+    dot.BackgroundColor3 = state[key] and Color3.new(0,0,0) or Color3.fromRGB(200,200,200)
     Instance.new("UICorner", dot).CornerRadius = UDim.new(1,0)
     mainTgls[key] = {pill=pill, dot=dot, inner=pI, row=row, lbl=lbl, stroke=rowStroke}
     local hit = Instance.new("TextButton", row)
@@ -2043,16 +2017,16 @@ local function tgg(page, name, order, key)
         local ns = not state[key]
         state[key] = ns
         local ac = cc3(settingsConfig.accentColor)
-        TweenService:Create(pill, TweenInfo.new(0.28, EASE_BOUNCE, EASE_OUT), {BackgroundColor3 = ns and ac or Color3.fromRGB(38,26,60)}):Play()
-        TweenService:Create(pI, TweenInfo.new(0.28, EASE_BOUNCE, EASE_OUT), {BackgroundColor3 = ns and ac or Color3.fromRGB(22,14,38)}):Play()
-        TweenService:Create(dot, TweenInfo.new(0.4, Enum.EasingStyle.Elastic, EASE_OUT), {Position = ns and UDim2.new(1,-20,0.5,-8) or UDim2.new(0,4,0.5,-8), BackgroundColor3 = ns and Color3.new(0,0,0) or Color3.fromRGB(220,210,235)}):Play()
+        TweenService:Create(pill, TweenInfo.new(0.28, EASE_BOUNCE, EASE_OUT), {BackgroundColor3 = ns and ac or Color3.fromRGB(32,32,32)}):Play()
+        TweenService:Create(pI, TweenInfo.new(0.28, EASE_BOUNCE, EASE_OUT), {BackgroundColor3 = ns and ac or Color3.fromRGB(22,22,22)}):Play()
+        TweenService:Create(dot, TweenInfo.new(0.4, Enum.EasingStyle.Elastic, EASE_OUT), {Position = ns and UDim2.new(1,-20,0.5,-8) or UDim2.new(0,4,0.5,-8), BackgroundColor3 = ns and Color3.new(0,0,0) or Color3.fromRGB(200,200,200)}):Play()
         local g = rowStroke:FindFirstChild("SpinGrad")
         if g then setSpinGradColors(g, ns) end
         if key == "bigButtonEnabled" and bigWrap then bigWrap.Visible = ns end
         if key == "floatButtonsEnabled" then setFloatVisible(ns) end
         if FLOAT_BUTTON_MAP[key] then refreshFloatVisual(FLOAT_BUTTON_MAP[key]) end
         local dn = toggleDisplayNames[key] or key
-        _G.__AW_NOTIFY('<font color="'..(ns and "#b57aff" or "#ff5a5a")..'">'..dn..'</font> '..(ns and "on" or "off"))
+        _G.__AW_NOTIFY('<font color="'..(ns and "#5aff8c" or "#ff5a5a")..'">'..dn..'</font> '..(ns and "on" or "off"))
         saveSettings()
     end)
 end
@@ -2066,8 +2040,8 @@ local function addBtn(page, name, order, cb)
     b.AutoButtonColor = false
     Instance.new("UICorner", b).CornerRadius = UDim.new(0,10)
     local st = Instance.new("UIStroke", b)
-    st.Color = cc3(settingsConfig.accentColor)
-    st.Transparency = 0.5
+    st.Color = WHITE
+    st.Transparency = 0
     st.Thickness = 1.5
     attachSpinStroke(st, false)
     local l = Instance.new("TextLabel", b)
@@ -2079,7 +2053,7 @@ local function addBtn(page, name, order, cb)
     l.Font = Enum.Font.GothamMedium
     l.TextSize = 12.5
     l.TextXAlignment = Enum.TextXAlignment.Left
-    attachBounce(b); attachShine(b); attachRipple(b)
+    if state.animationsEnabled then attachBounce(b); attachShine(b); attachRipple(b) end
     b.MouseButton1Click:Connect(cb)
     return b
 end
@@ -2121,7 +2095,7 @@ local function makeSlider(page, label, order, iv, minV, maxV, sK, onChange)
     local ib = Instance.new("TextBox", row)
     ib.Size = UDim2.new(0,50,0,24)
     ib.Position = UDim2.new(1,-64,0,4)
-    ib.BackgroundColor3 = Color3.fromRGB(24,14,42)
+    ib.BackgroundColor3 = Color3.fromRGB(20,20,20)
     ib.Text = tostring(iv)
     ib.TextColor3 = cc3(settingsConfig.accentColor)
     ib.Font = Enum.Font.Gotham
@@ -2239,7 +2213,7 @@ local function makeDropdown(page, label, order, options, initial, onSelect)
     arrow.Size = UDim2.new(0, 24, 0, 24)
     arrow.Position = UDim2.new(1, -32, 0.5, -12)
     arrow.BackgroundTransparency = 1
-    arrow.Text = "v"
+    arrow.Text = "▼"
     arrow.TextColor3 = cc3(settingsConfig.textColor)
     arrow.Font = Enum.Font.GothamBold
     arrow.TextSize = 13
@@ -2276,7 +2250,7 @@ local function makeDropdown(page, label, order, options, initial, onSelect)
     local function setOpen(want)
         if open == want then return end
         open = want
-        arrow.Text = want and "^" or "v"
+        arrow.Text = want and "▲" or "▼"
         if want then
             local visibleCount = math.min(#options, MAX_VISIBLE)
             local targetH = 10 + visibleCount * OPTION_H + math.max(0, visibleCount - 1) * 3
@@ -2350,7 +2324,7 @@ do
         {id=4646306583,name="Curtsy"},{id=85936805522788,name="Caramell"},{id=14900153406,name="Feel Special"},
         {id=102492229412911,name="Tenna Dance"},{id=133142324349281,name="Flopping Fish"},{id=10214406616,name="Frosty Flair"},
         {id=120224229260879,name="Cute Crouch"},{id=15679955281,name="Festive Dance"},{id=4849502101,name="Sad"},
-        {id=10214418283,name="V Pose"},{id=92853367837757,name="Garry Dance"},{id=104485625389237,name="Make You Mine"},
+        {id=10214418283,name="V Pose"},{id=92853367837757,name="Garry's Dance"},{id=104485625389237,name="Make You Mine"},
         {id=139830733782518,name="Phut On"},{id=132382355371060,name="Tank Transformation"},{id=103046131635200,name="Love Scenario"},
         {id=15123050663,name="Bone Chillin Bop"},{id=124305244640379,name="Shattered"},{id=134311528115559,name="Hit Every Beat"},
         {id=17748346932,name="Heart Shuffle"},{id=93105950995997,name="Caramelldansen"},{id=7466046574,name="Quiet Waves"},
@@ -2420,37 +2394,309 @@ do
         {id=91927498467600,name="Koto Nai Meme"},{id=117450501566142,name="Hidden Box"},{id=4272484885,name="Baby Dance"},
         {id=88024974500195,name="Oppa Gangnam"},{id=7202896732,name="Boxing Punch"},{id=128792127841374,name="Watching Videos"},
         {id=87756443172440,name="Xavier Based Dance"},{id=116770268279002,name="Teto Birdbrain"},{id=124935873390035,name="Hiding Human Box"},
-        {id=94121796810251,name="Kicking Feet Blush"},{id=3333491102,name="Robot Dance"},{id=3333494571,name="Cheer"},
-        {id=3333492333,name="Catwalk"},{id=3607128469,name="Old Town Road"},{id=3900201554,name="Hype Dance"},
-        {id=4335182504,name="Smooth Dance"},{id=4794761111,name="Elegant"},{id=5517341874,name="Orange Justice"},
-        {id=5517388105,name="Electro Shuffle"},{id=5906818978,name="Zombie Dance"},{id=6073803083,name="Applause"},
-        {id=6262288506,name="Sneaky Dance"},{id=6262288795,name="Confident Dance"},{id=6686381374,name="Beach Dance"},
-        {id=6697541960,name="Spooky Dance"},{id=6901380777,name="Disco Fever"},{id=6998221694,name="Pop Dance"},
-        {id=7444043551,name="Kawaii Idle"},{id=7550850969,name="Boom Dance"},{id=7577891427,name="Warrior Stance"},
-        {id=7699099042,name="Salsa"},{id=7870534217,name="Fashionista"},{id=8085917147,name="Hero Pose"},
-        {id=8215917147,name="Cool Stance"},{id=8443742914,name="Break Dance"},{id=8757879964,name="Moon Knight Pose"},
-        {id=8997840417,name="Cheer Squad"},{id=9127348801,name="Hip Hop Dance"},{id=9180479573,name="Flex Pose"},
-        {id=9233454261,name="Glam Stance"},{id=9335789417,name="Stage Dance"},{id=9553750557,name="Chill Vibe"},
-        {id=9658439896,name="Sit Cross Legged"},{id=9734632145,name="Look At Hand"},{id=9834586245,name="Lean Pose"},
-        {id=9944275123,name="Power Up"},{id=10020993727,name="Look Smart"},{id=10141969862,name="Bad Guy Walk"},
-        {id=10264423389,name="Crouch Idle"},{id=10337302447,name="Russian Dance"},{id=10472426327,name="Arms Out"},
-        {id=10560550340,name="Belly Flop"},{id=10657216101,name="Fancy Wave"},{id=10781635801,name="Fighter Idle"},
-        {id=10893447261,name="Boom Boom Dance"},{id=10971649103,name="Wait Wave"},{id=11130056272,name="Deep Meditation"},
-        {id=11206624306,name="Ninja Pose"},{id=11270438641,name="Floating Sit"},{id=11333425483,name="Rap Pose"},
-        {id=11429794179,name="Magician Wave"},{id=11512970289,name="Glide Pose"},{id=11616103344,name="Lean Back"},
-        {id=11660333383,name="Rocket Pose"},{id=11715477481,name="Super Saiyan"},{id=11769559176,name="Tornado Spin"},
-        {id=11820715553,name="Kung Fu Pose"},{id=11961438587,name="Stargaze Pose"},{id=12012197151,name="Dab"},
-        {id=12095871798,name="Tilted Head"},{id=12194099658,name="Thinking Pose"},{id=12324873219,name="Pop Star Pose"},
-        {id=12393700557,name="Karate Pose"},{id=12477425749,name="Snowman Pose"},{id=12549246188,name="Roller Skate"},
-        {id=12744820542,name="Skate Pose"},{id=12845600353,name="Surf Pose"},{id=12945143688,name="Yoga Pose"},
-        {id=13033758672,name="Arms Crossed"},{id=13138496699,name="Superman Pose"},{id=13239333468,name="Shadow Box"},
-        {id=13345405769,name="Wolf Pose"},{id=13445481268,name="Penguin Waddle"},{id=13543125743,name="Rainbow Pose"},
-        {id=13654548293,name="Cute Pose"},{id=13734575382,name="Angry Pose"},{id=13834873121,name="Scared Pose"},
-        {id=13934564364,name="Happy Pose"},{id=14035862054,name="Cool Guy"},{id=14134815397,name="Chill Pose"},
-        {id=14235481231,name="Sleeping Pose"},{id=14335441253,name="Sitting on Floor"},{id=14445873215,name="Leaning Back"},
-        {id=14544785291,name="Warrior Pose"},{id=14645874125,name="Ninja Stance"},{id=14745874253,name="Defeated"},
-        {id=14845874512,name="Flying Kick"},{id=14945874689,name="Jumping Jacks"},
+        {id=94121796810251,name="Kicking Feet Blush"},
     }
+    -- Additional Emotes added for variety
+    local MORE_EMOTES = {
+        {id=1824359982,name="Old School"},{id=3360687722,name="Radio Tuning"},{id=3576686446,name="Point"},
+        {id=3823158750,name="Godlike"},{id=4555808220,name="Elephant"},{id=4689362868,name="Sleep"},
+        {id=4849499887,name="Happy"},{id=4940597758,name="Cower"},{id=5104377791,name="Hero Landing"},
+        {id=5230661597,name="Bored"},{id=5915779043,name="Applaud"},{id=5917570207,name="Floss Dance"},
+        {id=616158929,name="Zombie Idle"},{id=656117400,name="Ninja Idle"},{id=750781874,name="Pirate Idle"},
+        {id=782841498,name="Toy Idle"},{id=891621366,name="Astronaut Idle"},{id=1083445855,name="Vampire Idle"},
+        {id=1083195517,name="Werewolf Idle"},{id=1132473842,name="Sneaky Idle"},{id=1132477671,name="Sneaky Idle 2"},
+        {id=1132489853,name="Sneaky Jump"},{id=1132494274,name="Sneaky Run"},{id=1132510133,name="Sneaky Walk"},
+        {id=134737246939931,name="Gag It Death Drop"},{id=14353423348,name="Bouncy Twirl"},{id=15694504637,name="Backflip"},
+        {id=16126526506,name="Paris Sanasa"},{id=17746270218,name="Sturdy Dance"},{id=18526338976,name="Breaking"},
+        {id=4049646104,name="Line Dance"},{id=4272484885,name="Baby Dance"},{id=5938365243,name="Dolphin Dance"},
+        {id=70788193750089,name="Kickn Around"},{id=71302743123422,name="Popular"},{id=71787387963141,name="Worm Dance"},
+        {id=7202896732,name="Boxing Punch"},{id=75017857395637,name="TV Time"},{id=75703899901487,name="6 7 Transform"},
+        {id=79312439851071,name="Hot To Go"},{id=79752538807060,name="Griddy 2"},{id=80422524668416,name="Dreamer"},
+        {id=80436375269036,name="Headless Hooper"},{id=80544397800234,name="Helicopter 3"},{id=80877772569772,name="Default Dance OG"},
+        {id=81390693780805,name="Proxima"},{id=82217023310738,name="Thanos Jump"},{id=82345302788133,name="Dia Delicia"},
+        {id=82739386299071,name="Jackpot Groove"},{id=83018514370428,name="Stargazing"},{id=84052327668385,name="Floating 2"},
+        {id=84067050907557,name="Pickle Rick"},{id=84195923658292,name="Jojo"},{id=84511772437190,name="Spinning Robloxian"},
+        {id=84555218084038,name="Helicopter Spin"},{id=84822284410814,name="Maraschino Step"},{id=85361710130557,name="Caramelldansen 3"},
+        {id=85623000473425,name="Takedown Pt 2"},{id=85936805522788,name="Caramell"},{id=86849720336961,name="Ant Tennas Dance"},
+        {id=86982022610765,name="Caramelldansen 2"},{id=87756443172440,name="Xavier Based Dance"},{id=87826892596287,name="Levitate 2"},
+        {id=88024974500195,name="Oppa Gangnam"},{id=88598010609888,name="Angry Stomp"},{id=88721672617892,name="P.B.J.T."},
+        {id=88922397617835,name="What You Want"},{id=89174456614428,name="Daydreaming"},{id=89413575288931,name="Blue Shirt Guy"},
+        {id=89633087256727,name="Weird Spin"},{id=90524692306889,name="Chill Sit"},{id=90608224567833,name="Expendable"},
+        {id=91023138078288,name="Oh Who Is You"},{id=91274761264433,name="Macarena 2"},{id=91423783304464,name="Criss Cross Sit"},
+        {id=91927498467600,name="Koto Nai Meme"},{id=92707348383277,name="Mesmerizer"},{id=92853367837757,name="Garry's Dance"},
+        {id=92859581691366,name="Couldnt Care Less"},{id=92903522317071,name="Magnetic"},{id=93105950995997,name="Caramelldansen"},
+        {id=93262662842394,name="Sit 2"},{id=94118707925458,name="Go Mufasa"},{id=94121796810251,name="Kicking Feet Blush"},
+        {id=94319114655768,name="Rat Dance 3"},{id=94451497143711,name="Hakari Dance"},{id=94534169345613,name="Casual Sit"},
+        {id=94663026124741,name="Torture Dance"},{id=94796833553521,name="Takedown Pt 1"},{id=95323795166399,name="Rat Dance"},
+        {id=96405718067779,name="Cute Sit"},{id=97263450325496,name="Teto Territory"},{id=97629500912487,name="BlockyKick"},
+        {id=97847706148165,name="Kawaii Dance"},{id=97968838104258,name="Subject Three"},{id=97999370392804,name="Spin My Head"},
+        {id=98603994713783,name="Rat Dance 2"},{id=99005087791705,name="Death Pose"},{id=99563839802389,name="Jumpstyle"},
+        {id=99568437064777,name="Relaxed Sit"},{id=99818263438846,name="Default Dance"},{id=100532972764499,name="Monster Mash"},
+        {id=100773414188482,name="Walkin On Water"},{id=100782362883099,name="Car Transform"},{id=10214406616,name="Frosty Flair"},
+        {id=10214418283,name="V Pose"},{id=102323907950469,name="Space Dance"},{id=102492229412911,name="Tenna Dance"},
+        {id=102610758906338,name="Possessed"},{id=103040723950430,name="Gojo Floating"},{id=103046131635200,name="Love Scenario"},
+        {id=103102322875221,name="Laser Spin"},{id=103139492736941,name="Tenna Swing"},{id=103197720369544,name="Dani Gangnam"},
+        {id=104142334418357,name="Gangnam Style"},{id=104304182344567,name="Once Hop Hop"},{id=104485625389237,name="Make You Mine"},
+        {id=105730788757021,name="Birdbrain"},{id=105851216004006,name="Electro Swing"},{id=107899954696611,name="Spongebob Shuffle"},
+        {id=107978036345855,name="Prince Of Egypt"},{id=108128682361404,name="Rambunctious"},{id=108474079699304,name="Dep"},
+        {id=108922782921118,name="Pose For The Pic"},{id=109755476052324,name="IShowSpeed Dance"},{id=110521067391235,name="Old Jitterbug"},
+        {id=110537281410647,name="Wall Lean Idle"},{id=110731335896907,name="Headless Emote"},{id=111304332281521,name="Druski Shuffle"},
+        {id=111426928948833,name="Floating on Clouds"},{id=112758073578333,name="Bubbly Sit"},{id=112924687333965,name="Aura Farm"},
+        {id=112949099442762,name="Griddy 3"},{id=113016438012253,name="Best Mates"},{id=11309263077,name="Heart Skip"},
+        {id=113547795536875,name="Gangnam Style 3"},{id=11394056822,name="Elevate"},{id=114899970878842,name="R15 Death"},
+        {id=115319301809339,name="2 Phut Hon"},{id=115810068374896,name="Garry Dance 2"},{id=116770268279002,name="Teto Birdbrain"},
+        {id=117301403779781,name="Talm Bout Innit"},{id=117450501566142,name="Hidden Box"},{id=117734400993750,name="Virtual Singer"},
+        {id=119431985170060,name="Helicopter"},{id=119454955259757,name="Caramel Hip Sway"},{id=119746055344304,name="Plane"},
+        {id=120224229260879,name="Cute Crouch"},{id=120377619472998,name="Macarena"},{id=120437019363089,name="Peter Griffin Death"},
+        {id=120642514156293,name="Secret Handshake"},{id=120896030393583,name="Get Sturdy"},{id=121067808279598,name="Parrot Party"},
+        {id=121167704249654,name="Hide"},{id=121259524934987,name="Xavier Jig"},{id=122899100558551,name="Its TV Time"},
+        {id=122949892043249,name="Sit Idle"},{id=123015710605336,name="Onion"},{id=124305244640379,name="Shattered"},
+        {id=124754178569693,name="Die Lit"},{id=124828909173982,name="Skibidi"},{id=124935873390035,name="Hiding Human Box"},
+        {id=125032357496729,name="Fake Death Best"},{id=12507097350,name="Lotus Position"},{id=126614732606871,name="Sit"},
+        {id=127271798262177,name="M3GAN Dance"},{id=127562607220778,name="Gangnam Style 4"},{id=128658037413893,name="Going To Die Here"},
+        {id=128792127841374,name="Watching Videos"},{id=128972617664804,name="Fortnite Default"},{id=129132611803602,name="Helicopter 2"},
+        {id=129149402922241,name="Griddy"},{id=129916107176034,name="Discombobulated"},{id=130245358716273,name="Starboy Strut"},
+        {id=130641944883645,name="Jinu Pose"},{id=130726889233022,name="Rolling Crybaby"},{id=130998336536045,name="Gangnam Style 2"},
+        {id=131221550165951,name="Heart Hands"},{id=131544122623505,name="Become A Car"},{id=131763631172236,name="Xaviersobased"},
+        {id=132074413582912,name="California Girl"},{id=132382355371060,name="Tank Transformation"},{id=132384701706046,name="MM2 Fake Dead"},
+        {id=132508867759412,name="Xavier Based Emote"},{id=133142324349281,name="Flopping Fish"},{id=133477296392756,name="Rasputin"},
+        {id=133596366979822,name="Biblically Accurate"},{id=133600250245899,name="Soda Pop"},{id=133765015173412,name="Ariana"},
+        {id=134311528115559,name="Hit Every Beat"},{id=134615135651900,name="Head Spin Squid Game"},{id=135489824748823,name="Magical Pose"},
+        {id=136055001302601,name="Headless 1"},{id=136740085081295,name="Hidden Animation"},{id=137006085779408,name="Speed Glitch Plus"},
+        {id=137261874619072,name="Sponge Dance"},{id=137873580964093,name="Human Spinner"},{id=13823339506,name="Archer"},
+        {id=139021427684680,name="Touch"},{id=139271706064778,name="Hip Bounce"},{id=139830733782518,name="Phut On"},
+        {id=139859849852362,name="Dead"},{id=140037329261678,name="Caramel Dance"},{id=140466682449054,name="Head Spin"},
+        {id=14353417553,name="Air Guitar"},{id=14353419229,name="Dramatic Bow"},{id=14353421343,name="Face Frame"},
+        {id=14353425085,name="Strut"},{id=14900151704,name="Likey"},{id=14900153406,name="Feel Special"},
+        {id=15123050663,name="Bone Chillin Bop"},{id=15392927897,name="Sliving Groove"},{id=15392932768,name="IT-Grrrl"},
+        {id=15392937495,name="Checking Angles"},{id=15506496093,name="Rock n Roll"},{id=15506503658,name="Victory Dance"},
+        {id=15506506103,name="Flex Walk"},{id=15554010118,name="Head Bop"},{id=15554016057,name="Fall Back Float"},
+        {id=15571538346,name="Boom Boom Boom"},{id=15571540519,name="Starships"},{id=15610015346,name="Yungblud Jump"},
+        {id=15679955281,name="Festive Dance"},{id=15694504637,name="Backflip"},{id=15698511500,name="Levitate"},
+        {id=16126526506,name="Paris Sanasa"},{id=16276506814,name="Samba"},{id=16303091119,name="Beauty Touchdown"},
+        {id=16553249658,name="Piano Hands"},{id=16572756230,name="Hipmotion"},{id=17000058939,name="Mini Kong"},
+        {id=17360720445,name="Lets Drive"},{id=17746270218,name="Sturdy Dance"},{id=17748346932,name="Heart Shuffle"},
+        {id=1824359982,name="Old School"},{id=3360686498,name="Stadium"},{id=3360687722,name="Radio Tuning"},
+        {id=3360689775,name="Salute"},{id=3360692915,name="Tilt"},{id=3576686446,name="Point"},
+        {id=3576717965,name="Shy"},{id=3576823880,name="Point2"},{id=3576968026,name="Shrug"},
+        {id=3716636630,name="Monkey"},{id=3762654854,name="Greatest"},{id=3823158750,name="Godlike"},
+        {id=3934986896,name="Dizzy"},{id=3994130516,name="Bodybuilder"},{id=4049646104,name="Line Dance"},
+        {id=4102315500,name="Haha"},{id=4212496830,name="Zombie"},{id=4272351660,name="Fast Hands"},
+        {id=4272484885,name="Baby Dance"},{id=4555808220,name="Elephant"},{id=4646306583,name="Curtsy"},
+        {id=4689362868,name="Sleep"},{id=4849497510,name="Power Blast"},{id=4849499887,name="Happy"},
+        {id=4940597758,name="Cower"},{id=4940602656,name="Jumping Wave"},{id=5104377791,name="Hero Landing"},
+        {id=5230615437,name="Beckon"},{id=5230661597,name="Bored"},{id=5915776835,name="High Wave"},
+        {id=5915779043,name="Applaud"},{id=5917570207,name="Floss Dance"},{id=5938365243,name="Dolphin Dance"},
+        {id=616006778,name="Levitation Idle"},{id=616008087,name="Levitation Idle 2"},{id=616008936,name="Levitation Jump"},
+        {id=616010382,name="Levitation Walk"},{id=616013216,name="Levitation Run"},{id=616088211,name="Robot Idle"},
+        {id=616089559,name="Robot Idle 2"},{id=616090089,name="Robot Jump"},{id=616091570,name="Robot Run"},
+        {id=616093864,name="Robot Swim"},{id=616095330,name="Robot Walk"},{id=616104706,name="Hero Climb"},
+        {id=616108001,name="Hero Fall"},{id=616111295,name="Hero Idle"},{id=616112897,name="Hero Swim"},
+        {id=616113536,name="Hero Idle 2"},{id=616115533,name="Hero Jump"},{id=616117076,name="Hero Run"},
+        {id=616122287,name="Hero Walk"},{id=616156119,name="Zombie Climb"},{id=616157476,name="Zombie Fall"},
+        {id=616158929,name="Zombie Idle"},{id=616159314,name="Zombie Swim"},{id=616160636,name="Zombie Idle 2"},
+        {id=616161997,name="Zombie Jump"},{id=616163682,name="Zombie Run"},{id=616168032,name="Zombie Walk"},
+        {id=656114359,name="Ninja Climb"},{id=656115606,name="Ninja Fall"},{id=656116322,name="Ninja Swim"},
+        {id=656117400,name="Ninja Idle"},{id=656117878,name="Ninja Jump"},{id=656118341,name="Ninja Idle 2"},
+        {id=656118852,name="Ninja Run"},{id=656121766,name="Ninja Walk"},{id=657552124,name="Knight Walk"},
+        {id=657564596,name="Knight Run"},{id=657568135,name="Knight Idle 2"},{id=657582909,name="Knight Swim"},
+        {id=657595757,name="Knight Idle"},{id=657600338,name="Knight Fall"},{id=658360781,name="Knight Climb"},
+        {id=658409194,name="Knight Jump"},{id=707826056,name="Mage Climb"},{id=707829716,name="Mage Fall"},
+        {id=707843699,name="Mage Swim"},{id=707853694,name="Mage Jump"},{id=707855907,name="Mage Idle 2"},
+        {id=707861613,name="Mage Run"},{id=707897309,name="Mage Walk"},{id=707742142,name="Mage Idle"},
+        {id=71302743123422,name="Popular"},{id=71363859760586,name="Golden Freddy"},{id=71787387963141,name="Worm Dance"},
+        {id=7202896732,name="Boxing Punch"},{id=7202898984,name="Show Dem Wrists"},{id=7202900159,name="Wake Up Call"},
+        {id=73556976257737,name="Saja Boy Pose"},{id=73683655527605,name="Fashion Roadkill"},{id=73796726960568,name="Nyan Nyan"},
+        {id=742636889,name="Cartoon Climb"},{id=742637151,name="Cartoon Fall"},{id=742637544,name="Cartoon Idle"},
+        {id=742637942,name="Cartoon Jump"},{id=742638209,name="Cartoon Swim"},{id=742638445,name="Cartoon Idle 2"},
+        {id=742638842,name="Cartoon Run"},{id=742640026,name="Cartoon Walk"},{id=74646784680842,name="Ishowspeed Shake"},
+        {id=7466046574,name="Quiet Waves"},{id=75017857395637,name="TV Time"},{id=750779899,name="Pirate Climb"},
+        {id=750780242,name="Pirate Fall"},{id=750781874,name="Pirate Idle"},{id=750782230,name="Pirate Jump"},
+        {id=750782770,name="Pirate Idle 2"},{id=750783107,name="Pirate Swim"},{id=750783738,name="Pirate Run"},
+        {id=750785693,name="Pirate Walk"},{id=75528418031928,name="Rambunctious 2"},{id=75703899901487,name="6 7 Transform"},
+        {id=75842745124834,name="Human Snake"},{id=76700167742736,name="Belly Dance"},{id=782841498,name="Toy Idle"},
+        {id=782842708,name="Toy Run"},{id=782843345,name="Toy Walk"},{id=782843869,name="Toy Climb"},
+        {id=782844417,name="Toy Swim"},{id=782845736,name="Toy Idle 2"},{id=782846423,name="Toy Fall"},
+        {id=782847020,name="Toy Jump"},{id=78459263478161,name="Family Man Death"},{id=78620443286892,name="Cute Laying Down"},
+        {id=78758922757947,name="Kicking Feet Sit"},{id=79127989560307,name="Moon Walk"},{id=79312439851071,name="Hot To Go"},
+        {id=79752538807060,name="Griddy 2"},{id=80422524668416,name="Dreamer"},{id=80436375269036,name="Headless Hooper"},
+        {id=80544397800234,name="Helicopter 3"},{id=80877772569772,name="Default Dance OG"},{id=81177294287826,name="Hug"},
+        {id=81390693780805,name="Proxima"},{id=82217023310738,name="Thanos Jump"},{id=82345302788133,name="Dia Delicia"},
+        {id=82739386299071,name="Jackpot Groove"},{id=83018514370428,name="Stargazing"},{id=84052327668385,name="Floating 2"},
+        {id=84067050907557,name="Pickle Rick"},{id=84195923658292,name="Jojo"},{id=84511772437190,name="Spinning Robloxian"},
+        {id=84555218084038,name="Helicopter Spin"},{id=84822284410814,name="Maraschino Step"},{id=85361710130557,name="Caramelldansen 3"},
+        {id=85623000473425,name="Takedown Pt 2"},{id=85936805522788,name="Caramell"},{id=86849720336961,name="Ant Tennas Dance"},
+        {id=86982022610765,name="Caramelldansen 2"},{id=87756443172440,name="Xavier Based Dance"},{id=87826892596287,name="Levitate 2"},
+        {id=88024974500195,name="Oppa Gangnam"},{id=88598010609888,name="Angry Stomp"},{id=88721672617892,name="P.B.J.T."},
+        {id=88922397617835,name="What You Want"},{id=89174456614428,name="Daydreaming"},{id=89413575288931,name="Blue Shirt Guy"},
+        {id=89633087256727,name="Weird Spin"},{id=90524692306889,name="Chill Sit"},{id=90608224567833,name="Expendable"},
+        {id=91023138078288,name="Oh Who Is You"},{id=91274761264433,name="Macarena 2"},{id=91423783304464,name="Criss Cross Sit"},
+        {id=91927498467600,name="Koto Nai Meme"},{id=92707348383277,name="Mesmerizer"},{id=92853367837757,name="Garry's Dance"},
+        {id=92859581691366,name="Couldnt Care Less"},{id=92903522317071,name="Magnetic"},{id=93105950995997,name="Caramelldansen"},
+        {id=93262662842394,name="Sit 2"},{id=94118707925458,name="Go Mufasa"},{id=94121796810251,name="Kicking Feet Blush"},
+        {id=94319114655768,name="Rat Dance 3"},{id=94451497143711,name="Hakari Dance"},{id=94534169345613,name="Casual Sit"},
+        {id=94663026124741,name="Torture Dance"},{id=94796833553521,name="Takedown Pt 1"},{id=95323795166399,name="Rat Dance"},
+        {id=96405718067779,name="Cute Sit"},{id=97263450325496,name="Teto Territory"},{id=97629500912487,name="BlockyKick"},
+        {id=97847706148165,name="Kawaii Dance"},{id=97968838104258,name="Subject Three"},{id=97999370392804,name="Spin My Head"},
+        {id=98603994713783,name="Rat Dance 2"},{id=99005087791705,name="Death Pose"},{id=99563839802389,name="Jumpstyle"},
+        {id=99568437064777,name="Relaxed Sit"},{id=99818263438846,name="Default Dance"},{id=100532972764499,name="Monster Mash"},
+        {id=100773414188482,name="Walkin On Water"},{id=100782362883099,name="Car Transform"},{id=10214406616,name="Frosty Flair"},
+        {id=10214418283,name="V Pose"},{id=102323907950469,name="Space Dance"},{id=102492229412911,name="Tenna Dance"},
+        {id=102610758906338,name="Possessed"},{id=103040723950430,name="Gojo Floating"},{id=103046131635200,name="Love Scenario"},
+        {id=103102322875221,name="Laser Spin"},{id=103139492736941,name="Tenna Swing"},{id=103197720369544,name="Dani Gangnam"},
+        {id=104142334418357,name="Gangnam Style"},{id=104304182344567,name="Once Hop Hop"},{id=104485625389237,name="Make You Mine"},
+        {id=105730788757021,name="Birdbrain"},{id=105851216004006,name="Electro Swing"},{id=107899954696611,name="Spongebob Shuffle"},
+        {id=107978036345855,name="Prince Of Egypt"},{id=108128682361404,name="Rambunctious"},{id=108474079699304,name="Dep"},
+        {id=108922782921118,name="Pose For The Pic"},{id=109755476052324,name="IShowSpeed Dance"},{id=110521067391235,name="Old Jitterbug"},
+        {id=110537281410647,name="Wall Lean Idle"},{id=110731335896907,name="Headless Emote"},{id=111304332281521,name="Druski Shuffle"},
+        {id=111426928948833,name="Floating on Clouds"},{id=112758073578333,name="Bubbly Sit"},{id=112924687333965,name="Aura Farm"},
+        {id=112949099442762,name="Griddy 3"},{id=113016438012253,name="Best Mates"},{id=11309263077,name="Heart Skip"},
+        {id=113547795536875,name="Gangnam Style 3"},{id=11394056822,name="Elevate"},{id=114899970878842,name="R15 Death"},
+        {id=115319301809339,name="2 Phut Hon"},{id=115810068374896,name="Garry Dance 2"},{id=116770268279002,name="Teto Birdbrain"},
+        {id=117301403779781,name="Talm Bout Innit"},{id=117450501566142,name="Hidden Box"},{id=117734400993750,name="Virtual Singer"},
+        {id=119431985170060,name="Helicopter"},{id=119454955259757,name="Caramel Hip Sway"},{id=119746055344304,name="Plane"},
+        {id=120224229260879,name="Cute Crouch"},{id=120377619472998,name="Macarena"},{id=120437019363089,name="Peter Griffin Death"},
+        {id=120642514156293,name="Secret Handshake"},{id=120896030393583,name="Get Sturdy"},{id=121067808279598,name="Parrot Party"},
+        {id=121167704249654,name="Hide"},{id=121259524934987,name="Xavier Jig"},{id=122899100558551,name="Its TV Time"},
+        {id=122949892043249,name="Sit Idle"},{id=123015710605336,name="Onion"},{id=124305244640379,name="Shattered"},
+        {id=124754178569693,name="Die Lit"},{id=124828909173982,name="Skibidi"},{id=124935873390035,name="Hiding Human Box"},
+        {id=125032357496729,name="Fake Death Best"},{id=12507097350,name="Lotus Position"},{id=126614732606871,name="Sit"},
+        {id=127271798262177,name="M3GAN Dance"},{id=127562607220778,name="Gangnam Style 4"},{id=128658037413893,name="Going To Die Here"},
+        {id=128792127841374,name="Watching Videos"},{id=128972617664804,name="Fortnite Default"},{id=129132611803602,name="Helicopter 2"},
+        {id=129149402922241,name="Griddy"},{id=129916107176034,name="Discombobulated"},{id=130245358716273,name="Starboy Strut"},
+        {id=130641944883645,name="Jinu Pose"},{id=130726889233022,name="Rolling Crybaby"},{id=130998336536045,name="Gangnam Style 2"},
+        {id=131221550165951,name="Heart Hands"},{id=131544122623505,name="Become A Car"},{id=131763631172236,name="Xaviersobased"},
+        {id=132074413582912,name="California Girl"},{id=132382355371060,name="Tank Transformation"},{id=132384701706046,name="MM2 Fake Dead"},
+        {id=132508867759412,name="Xavier Based Emote"},{id=133142324349281,name="Flopping Fish"},{id=133477296392756,name="Rasputin"},
+        {id=133596366979822,name="Biblically Accurate"},{id=133600250245899,name="Soda Pop"},{id=133765015173412,name="Ariana"},
+        {id=134311528115559,name="Hit Every Beat"},{id=134615135651900,name="Head Spin Squid Game"},{id=135489824748823,name="Magical Pose"},
+        {id=136055001302601,name="Headless 1"},{id=136740085081295,name="Hidden Animation"},{id=137006085779408,name="Speed Glitch Plus"},
+        {id=137261874619072,name="Sponge Dance"},{id=137873580964093,name="Human Spinner"},{id=13823339506,name="Archer"},
+        {id=139021427684680,name="Touch"},{id=139271706064778,name="Hip Bounce"},{id=139830733782518,name="Phut On"},
+        {id=139859849852362,name="Dead"},{id=140037329261678,name="Caramel Dance"},{id=140466682449054,name="Head Spin"},
+        {id=14353417553,name="Air Guitar"},{id=14353419229,name="Dramatic Bow"},{id=14353421343,name="Face Frame"},
+        {id=14353425085,name="Strut"},{id=14900151704,name="Likey"},{id=14900153406,name="Feel Special"},
+        {id=15123050663,name="Bone Chillin Bop"},{id=15392927897,name="Sliving Groove"},{id=15392932768,name="IT-Grrrl"},
+        {id=15392937495,name="Checking Angles"},{id=15506496093,name="Rock n Roll"},{id=15506503658,name="Victory Dance"},
+        {id=15506506103,name="Flex Walk"},{id=15554010118,name="Head Bop"},{id=15554016057,name="Fall Back Float"},
+        {id=15571538346,name="Boom Boom Boom"},{id=15571540519,name="Starships"},{id=15610015346,name="Yungblud Jump"},
+        {id=15679955281,name="Festive Dance"},{id=15694504637,name="Backflip"},{id=15698511500,name="Levitate"},
+        {id=16126526506,name="Paris Sanasa"},{id=16276506814,name="Samba"},{id=16303091119,name="Beauty Touchdown"},
+        {id=16553249658,name="Piano Hands"},{id=16572756230,name="Hipmotion"},{id=17000058939,name="Mini Kong"},
+        {id=17360720445,name="Lets Drive"},{id=17746270218,name="Sturdy Dance"},{id=17748346932,name="Heart Shuffle"},
+        {id=1824359982,name="Old School"},{id=3360686498,name="Stadium"},{id=3360687722,name="Radio Tuning"},
+        {id=3360689775,name="Salute"},{id=3360692915,name="Tilt"},{id=3576686446,name="Point"},
+        {id=3576717965,name="Shy"},{id=3576823880,name="Point2"},{id=3576968026,name="Shrug"},
+        {id=3716636630,name="Monkey"},{id=3762654854,name="Greatest"},{id=3823158750,name="Godlike"},
+        {id=3934986896,name="Dizzy"},{id=3994130516,name="Bodybuilder"},{id=4049646104,name="Line Dance"},
+        {id=4102315500,name="Haha"},{id=4212496830,name="Zombie"},{id=4272351660,name="Fast Hands"},
+        {id=4272484885,name="Baby Dance"},{id=4555808220,name="Elephant"},{id=4646306583,name="Curtsy"},
+        {id=4689362868,name="Sleep"},{id=4849497510,name="Power Blast"},{id=4849499887,name="Happy"},
+        {id=4940597758,name="Cower"},{id=4940602656,name="Jumping Wave"},{id=5104377791,name="Hero Landing"},
+        {id=5230615437,name="Beckon"},{id=5230661597,name="Bored"},{id=5915776835,name="High Wave"},
+        {id=5915779043,name="Applaud"},{id=5917570207,name="Floss Dance"},{id=5938365243,name="Dolphin Dance"},
+        {id=616006778,name="Levitation Idle"},{id=616008087,name="Levitation Idle 2"},{id=616008936,name="Levitation Jump"},
+        {id=616010382,name="Levitation Walk"},{id=616013216,name="Levitation Run"},{id=616088211,name="Robot Idle"},
+        {id=616089559,name="Robot Idle 2"},{id=616090089,name="Robot Jump"},{id=616091570,name="Robot Run"},
+        {id=616093864,name="Robot Swim"},{id=616095330,name="Robot Walk"},{id=616104706,name="Hero Climb"},
+        {id=616108001,name="Hero Fall"},{id=616111295,name="Hero Idle"},{id=616112897,name="Hero Swim"},
+        {id=616113536,name="Hero Idle 2"},{id=616115533,name="Hero Jump"},{id=616117076,name="Hero Run"},
+        {id=616122287,name="Hero Walk"},{id=616156119,name="Zombie Climb"},{id=616157476,name="Zombie Fall"},
+        {id=616158929,name="Zombie Idle"},{id=616159314,name="Zombie Swim"},{id=616160636,name="Zombie Idle 2"},
+        {id=616161997,name="Zombie Jump"},{id=616163682,name="Zombie Run"},{id=616168032,name="Zombie Walk"},
+        {id=656114359,name="Ninja Climb"},{id=656115606,name="Ninja Fall"},{id=656116322,name="Ninja Swim"},
+        {id=656117400,name="Ninja Idle"},{id=656117878,name="Ninja Jump"},{id=656118341,name="Ninja Idle 2"},
+        {id=656118852,name="Ninja Run"},{id=656121766,name="Ninja Walk"},{id=657552124,name="Knight Walk"},
+        {id=657564596,name="Knight Run"},{id=657568135,name="Knight Idle 2"},{id=657582909,name="Knight Swim"},
+        {id=657595757,name="Knight Idle"},{id=657600338,name="Knight Fall"},{id=658360781,name="Knight Climb"},
+        {id=658409194,name="Knight Jump"},{id=707826056,name="Mage Climb"},{id=707829716,name="Mage Fall"},
+        {id=707843699,name="Mage Swim"},{id=707853694,name="Mage Jump"},{id=707855907,name="Mage Idle 2"},
+        {id=707861613,name="Mage Run"},{id=707897309,name="Mage Walk"},{id=707742142,name="Mage Idle"},
+        {id=71302743123422,name="Popular"},{id=71363859760586,name="Golden Freddy"},{id=71787387963141,name="Worm Dance"},
+        {id=7202896732,name="Boxing Punch"},{id=7202898984,name="Show Dem Wrists"},{id=7202900159,name="Wake Up Call"},
+        {id=73556976257737,name="Saja Boy Pose"},{id=73683655527605,name="Fashion Roadkill"},{id=73796726960568,name="Nyan Nyan"},
+        {id=742636889,name="Cartoon Climb"},{id=742637151,name="Cartoon Fall"},{id=742637544,name="Cartoon Idle"},
+        {id=742637942,name="Cartoon Jump"},{id=742638209,name="Cartoon Swim"},{id=742638445,name="Cartoon Idle 2"},
+        {id=742638842,name="Cartoon Run"},{id=742640026,name="Cartoon Walk"},{id=74646784680842,name="Ishowspeed Shake"},
+        {id=7466046574,name="Quiet Waves"},{id=75017857395637,name="TV Time"},{id=750779899,name="Pirate Climb"},
+        {id=750780242,name="Pirate Fall"},{id=750781874,name="Pirate Idle"},{id=750782230,name="Pirate Jump"},
+        {id=750782770,name="Pirate Idle 2"},{id=750783107,name="Pirate Swim"},{id=750783738,name="Pirate Run"},
+        {id=750785693,name="Pirate Walk"},{id=75528418031928,name="Rambunctious 2"},{id=75703899901487,name="6 7 Transform"},
+        {id=75842745124834,name="Human Snake"},{id=76700167742736,name="Belly Dance"},{id=782841498,name="Toy Idle"},
+        {id=782842708,name="Toy Run"},{id=782843345,name="Toy Walk"},{id=782843869,name="Toy Climb"},
+        {id=782844417,name="Toy Swim"},{id=782845736,name="Toy Idle 2"},{id=782846423,name="Toy Fall"},
+        {id=782847020,name="Toy Jump"},{id=78459263478161,name="Family Man Death"},{id=78620443286892,name="Cute Laying Down"},
+        {id=78758922757947,name="Kicking Feet Sit"},{id=79127989560307,name="Moon Walk"},{id=79312439851071,name="Hot To Go"},
+        {id=79752538807060,name="Griddy 2"},{id=80422524668416,name="Dreamer"},{id=80436375269036,name="Headless Hooper"},
+        {id=80544397800234,name="Helicopter 3"},{id=80877772569772,name="Default Dance OG"},{id=81177294287826,name="Hug"},
+        {id=81390693780805,name="Proxima"},{id=82217023310738,name="Thanos Jump"},{id=82345302788133,name="Dia Delicia"},
+        {id=82739386299071,name="Jackpot Groove"},{id=83018514370428,name="Stargazing"},{id=84052327668385,name="Floating 2"},
+        {id=84067050907557,name="Pickle Rick"},{id=84195923658292,name="Jojo"},{id=84511772437190,name="Spinning Robloxian"},
+        {id=84555218084038,name="Helicopter Spin"},{id=84822284410814,name="Maraschino Step"},{id=85361710130557,name="Caramelldansen 3"},
+        {id=85623000473425,name="Takedown Pt 2"},{id=85936805522788,name="Caramell"},{id=86849720336961,name="Ant Tennas Dance"},
+        {id=86982022610765,name="Caramelldansen 2"},{id=87756443172440,name="Xavier Based Dance"},{id=87826892596287,name="Levitate 2"},
+        {id=88024974500195,name="Oppa Gangnam"},{id=88598010609888,name="Angry Stomp"},{id=88721672617892,name="P.B.J.T."},
+        {id=88922397617835,name="What You Want"},{id=89174456614428,name="Daydreaming"},{id=89413575288931,name="Blue Shirt Guy"},
+        {id=89633087256727,name="Weird Spin"},{id=90524692306889,name="Chill Sit"},{id=90608224567833,name="Expendable"},
+        {id=91023138078288,name="Oh Who Is You"},{id=91274761264433,name="Macarena 2"},{id=91423783304464,name="Criss Cross Sit"},
+        {id=91927498467600,name="Koto Nai Meme"},{id=92707348383277,name="Mesmerizer"},{id=92853367837757,name="Garry's Dance"},
+        {id=92859581691366,name="Couldnt Care Less"},{id=92903522317071,name="Magnetic"},{id=93105950995997,name="Caramelldansen"},
+        {id=93262662842394,name="Sit 2"},{id=94118707925458,name="Go Mufasa"},{id=94121796810251,name="Kicking Feet Blush"},
+        {id=94319114655768,name="Rat Dance 3"},{id=94451497143711,name="Hakari Dance"},{id=94534169345613,name="Casual Sit"},
+        {id=94663026124741,name="Torture Dance"},{id=94796833553521,name="Takedown Pt 1"},{id=95323795166399,name="Rat Dance"},
+        {id=96405718067779,name="Cute Sit"},{id=97263450325496,name="Teto Territory"},{id=97629500912487,name="BlockyKick"},
+        {id=97847706148165,name="Kawaii Dance"},{id=97968838104258,name="Subject Three"},{id=97999370392804,name="Spin My Head"},
+        {id=98603994713783,name="Rat Dance 2"},{id=99005087791705,name="Death Pose"},{id=99563839802389,name="Jumpstyle"},
+        {id=99568437064777,name="Relaxed Sit"},{id=99818263438846,name="Default Dance"},{id=100532972764499,name="Monster Mash"},
+        {id=100773414188482,name="Walkin On Water"},{id=100782362883099,name="Car Transform"},{id=10214406616,name="Frosty Flair"},
+        {id=10214418283,name="V Pose"},{id=102323907950469,name="Space Dance"},{id=102492229412911,name="Tenna Dance"},
+        {id=102610758906338,name="Possessed"},{id=103040723950430,name="Gojo Floating"},{id=103046131635200,name="Love Scenario"},
+        {id=103102322875221,name="Laser Spin"},{id=103139492736941,name="Tenna Swing"},{id=103197720369544,name="Dani Gangnam"},
+        {id=104142334418357,name="Gangnam Style"},{id=104304182344567,name="Once Hop Hop"},{id=104485625389237,name="Make You Mine"},
+        {id=105730788757021,name="Birdbrain"},{id=105851216004006,name="Electro Swing"},{id=107899954696611,name="Spongebob Shuffle"},
+        {id=107978036345855,name="Prince Of Egypt"},{id=108128682361404,name="Rambunctious"},{id=108474079699304,name="Dep"},
+        {id=108922782921118,name="Pose For The Pic"},{id=109755476052324,name="IShowSpeed Dance"},{id=110521067391235,name="Old Jitterbug"},
+        {id=110537281410647,name="Wall Lean Idle"},{id=110731335896907,name="Headless Emote"},{id=111304332281521,name="Druski Shuffle"},
+        {id=111426928948833,name="Floating on Clouds"},{id=112758073578333,name="Bubbly Sit"},{id=112924687333965,name="Aura Farm"},
+        {id=112949099442762,name="Griddy 3"},{id=113016438012253,name="Best Mates"},{id=11309263077,name="Heart Skip"},
+        {id=113547795536875,name="Gangnam Style 3"},{id=11394056822,name="Elevate"},{id=114899970878842,name="R15 Death"},
+        {id=115319301809339,name="2 Phut Hon"},{id=115810068374896,name="Garry Dance 2"},{id=116770268279002,name="Teto Birdbrain"},
+        {id=117301403779781,name="Talm Bout Innit"},{id=117450501566142,name="Hidden Box"},{id=117734400993750,name="Virtual Singer"},
+        {id=119431985170060,name="Helicopter"},{id=119454955259757,name="Caramel Hip Sway"},{id=119746055344304,name="Plane"},
+        {id=120224229260879,name="Cute Crouch"},{id=120377619472998,name="Macarena"},{id=120437019363089,name="Peter Griffin Death"},
+        {id=120642514156293,name="Secret Handshake"},{id=120896030393583,name="Get Sturdy"},{id=121067808279598,name="Parrot Party"},
+        {id=121167704249654,name="Hide"},{id=121259524934987,name="Xavier Jig"},{id=122899100558551,name="Its TV Time"},
+        {id=122949892043249,name="Sit Idle"},{id=123015710605336,name="Onion"},{id=124305244640379,name="Shattered"},
+        {id=124754178569693,name="Die Lit"},{id=124828909173982,name="Skibidi"},{id=124935873390035,name="Hiding Human Box"},
+        {id=125032357496729,name="Fake Death Best"},{id=12507097350,name="Lotus Position"},{id=126614732606871,name="Sit"},
+        {id=127271798262177,name="M3GAN Dance"},{id=127562607220778,name="Gangnam Style 4"},{id=128658037413893,name="Going To Die Here"},
+        {id=128792127841374,name="Watching Videos"},{id=128972617664804,name="Fortnite Default"},{id=129132611803602,name="Helicopter 2"},
+        {id=129149402922241,name="Griddy"},{id=129916107176034,name="Discombobulated"},{id=130245358716273,name="Starboy Strut"},
+        {id=130641944883645,name="Jinu Pose"},{id=130726889233022,name="Rolling Crybaby"},{id=130998336536045,name="Gangnam Style 2"},
+        {id=131221550165951,name="Heart Hands"},{id=131544122623505,name="Become A Car"},{id=131763631172236,name="Xaviersobased"},
+        {id=132074413582912,name="California Girl"},{id=132382355371060,name="Tank Transformation"},{id=132384701706046,name="MM2 Fake Dead"},
+        {id=132508867759412,name="Xavier Based Emote"},{id=133142324349281,name="Flopping Fish"},{id=133477296392756,name="Rasputin"},
+        {id=133596366979822,name="Biblically Accurate"},{id=133600250245899,name="Soda Pop"},{id=133765015173412,name="Ariana"},
+        {id=134311528115559,name="Hit Every Beat"},{id=134615135651900,name="Head Spin Squid Game"},{id=135489824748823,name="Magical Pose"},
+        {id=136055001302601,name="Headless 1"},{id=136740085081295,name="Hidden Animation"},{id=137006085779408,name="Speed Glitch Plus"},
+        {id=137261874619072,name="Sponge Dance"},{id=137873580964093,name="Human Spinner"},{id=13823339506,name="Archer"},
+        {id=139021427684680,name="Touch"},{id=139271706064778,name="Hip Bounce"},{id=139830733782518,name="Phut On"},
+        {id=139859849852362,name="Dead"},{id=140037329261678,name="Caramel Dance"},{id=140466682449054,name="Head Spin"},
+        {id=14353417553,name="Air Guitar"},{id=14353419229,name="Dramatic Bow"},{id=14353421343,name="Face Frame"},
+        {id=14353425085,name="Strut"},{id=14900151704,name="Likey"},{id=14900153406,name="Feel Special"},
+        {id=15123050663,name="Bone Chillin Bop"},{id=15392927897,name="Sliving Groove"},{id=15392932768,name="IT-Grrrl"},
+        {id=15392937495,name="Checking Angles"},{id=15506496093,name="Rock n Roll"},{id=15506503658,name="Victory Dance"},
+        {id=15506506103,name="Flex Walk"},{id=15554010118,name="Head Bop"},{id=15554016057,name="Fall Back Float"},
+        {id=15571538346,name="Boom Boom Boom"},{id=15571540519,name="Starships"},{id=15610015346,name="Yungblud Jump"},
+        {id=15679955281,name="Festive Dance"},{id=15694504637,name="Backflip"},{id=15698511500,name="Levitate"},
+        {id=16126526506,name="Paris Sanasa"},{id=16276506814,name="Samba"},{id=16303091119,name="Beauty Touchdown"},
+        {id=16553249658,name="Piano Hands"},{id=16572756230,name="Hipmotion"},{id=17000058939,name="Mini Kong"},
+        {id=17360720445,name="Lets Drive"},{id=17746270218,name="Sturdy Dance"},{id=17748346932,name="Heart Shuffle"},
+    }
+    for _, e in ipairs(MORE_EMOTES) do
+        table.insert(EMOTES, e)
+    end
+
     local seen, dedup = {}, {}
     for _, e in ipairs(EMOTES) do
         if not seen[e.id] then seen[e.id] = true; table.insert(dedup, e) end
@@ -2490,8 +2736,8 @@ do
         end
         local btn = Instance.new("TextButton", outer)
         btn.Size = UDim2.new(1, 0, 1, 0)
-        btn.BackgroundColor3 = Color3.fromRGB(20,10,38)
-        btn.BackgroundTransparency = 0.3
+        btn.BackgroundColor3 = Color3.fromRGB(0,0,0)
+        btn.BackgroundTransparency = 1
         btn.Text = ""
         btn.AutoButtonColor = false
         Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
@@ -2608,6 +2854,16 @@ do
     searchStroke.Color = cc3(settingsConfig.accentColor)
     searchStroke.Thickness = 1.5
     searchStroke.Transparency = 0.6
+    searchBox.Focused:Connect(function()
+        if state.animationsEnabled == false then return end
+        TweenService:Create(searchStroke, TweenInfo.new(0.2), {Transparency = 0}):Play()
+        TweenService:Create(searchBox, TweenInfo.new(0.2), {BackgroundColor3 = cc3(settingsConfig.cardHoverColor)}):Play()
+    end)
+    searchBox.FocusLost:Connect(function()
+        if state.animationsEnabled == false then return end
+        TweenService:Create(searchStroke, TweenInfo.new(0.2), {Transparency = 0.6}):Play()
+        TweenService:Create(searchBox, TweenInfo.new(0.2), {BackgroundColor3 = cc3(settingsConfig.cardColor)}):Play()
+    end)
 
     local sizeBtn = Instance.new("TextButton", controlsRow)
     sizeBtn.Size = UDim2.new(0, 100, 1, 0)
@@ -2675,18 +2931,18 @@ do
                 playBtn.Size = UDim2.new(1, -32, 0, 20)
                 playBtn.Position = UDim2.new(0, 4, 0, currentSize - 14)
                 playBtn.BackgroundColor3 = cc3(settingsConfig.accentColor)
-                playBtn.Text = "Play"
+                playBtn.Text = "▶"
                 playBtn.TextColor3 = Color3.new(0,0,0)
                 playBtn.Font = Enum.Font.GothamBold
-                playBtn.TextSize = 11
+                playBtn.TextSize = 13
                 playBtn.AutoButtonColor = false
                 Instance.new("UICorner", playBtn).CornerRadius = UDim.new(0, 6)
 
                 local circleBtn = Instance.new("TextButton", card)
                 circleBtn.Size = UDim2.new(0, 24, 0, 24)
                 circleBtn.Position = UDim2.new(1, -28, 0, currentSize - 16)
-                circleBtn.BackgroundColor3 = state.emoteFloatButtons[tostring(emote.id)] and cc3(settingsConfig.accentColor) or Color3.fromRGB(40,24,60)
-                circleBtn.Text = "+"
+                circleBtn.BackgroundColor3 = state.emoteFloatButtons[tostring(emote.id)] and cc3(settingsConfig.accentColor) or Color3.fromRGB(40,40,40)
+                circleBtn.Text = "●"
                 circleBtn.TextColor3 = Color3.new(1,1,1)
                 circleBtn.Font = Enum.Font.GothamBold
                 circleBtn.TextSize = 12
@@ -2699,7 +2955,7 @@ do
                     if cur then
                         state.emoteFloatButtons[tostring(emote.id)] = nil
                         removeEmoteFloat(emote.id)
-                        circleBtn.BackgroundColor3 = Color3.fromRGB(40,24,60)
+                        circleBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
                     else
                         state.emoteFloatButtons[tostring(emote.id)] = true
                         buildEmoteFloat(emote.id, emote)
@@ -2801,6 +3057,7 @@ do
         end
     end)
 
+    -- ============ FE ANIMATIONS ============
     addSect(pages["Anim/Emot"], "FE Animations", 10)
 
     local ANIM_SLOT_PATHS = {
@@ -2899,6 +3156,27 @@ do
         ["Kawaii"] = {idle1="rbxassetid://782841498",idle2="rbxassetid://782845736",walk="rbxassetid://782843345",run="rbxassetid://782842708",jump="rbxassetid://782847020",climb="rbxassetid://782843869",fall="rbxassetid://782846423",swim="rbxassetid://782844417"},
         ["Cowboy"] = {idle1="rbxassetid://750781874",idle2="rbxassetid://750782770",walk="rbxassetid://750785693",run="rbxassetid://750783738",jump="rbxassetid://750782230",climb="rbxassetid://750779899",fall="rbxassetid://750780242",swim="rbxassetid://750783107"},
         ["Ghost"] = {idle1="rbxassetid://616006778",idle2="rbxassetid://616008087",walk="rbxassetid://616010382",run="rbxassetid://616013216",jump="rbxassetid://616008936",climb="rbxassetid://616003713",fall="rbxassetid://616005863",swim="rbxassetid://616007791"},
+        ["Skeleton"] = {idle1="rbxassetid://616158929",idle2="rbxassetid://616160636",walk="rbxassetid://616168032",run="rbxassetid://616163682",jump="rbxassetid://616161997",climb="rbxassetid://616156119",fall="rbxassetid://616157476",swim="rbxassetid://616159314"},
+        ["Werewolf"] = {idle1="rbxassetid://1083195517",idle2="rbxassetid://1083214717",walk="rbxassetid://1083178339",run="rbxassetid://1083216690",jump="rbxassetid://1083218792",climb="rbxassetid://1083182000",fall="rbxassetid://1083189019",swim="rbxassetid://1083191111"},
+        ["Pirate"] = {idle1="rbxassetid://750781874",idle2="rbxassetid://750782770",walk="rbxassetid://750785693",run="rbxassetid://750783738",jump="rbxassetid://750782230",climb="rbxassetid://750779899",fall="rbxassetid://750780242",swim="rbxassetid://750783107"},
+        ["Astronaut"] = {idle1="rbxassetid://891621366",idle2="rbxassetid://891633237",walk="rbxassetid://891667138",run="rbxassetid://891636393",jump="rbxassetid://891627522",climb="rbxassetid://891609353",fall="rbxassetid://891617961",swim="rbxassetid://891626255"},
+        ["Toy"] = {idle1="rbxassetid://782841498",idle2="rbxassetid://782845736",walk="rbxassetid://782843345",run="rbxassetid://782842708",jump="rbxassetid://782847020",climb="rbxassetid://782843869",fall="rbxassetid://782846423",swim="rbxassetid://782844417"},
+        ["Knight"] = {idle1="rbxassetid://657595757",idle2="rbxassetid://657568135",walk="rbxassetid://657552124",run="rbxassetid://657564596",jump="rbxassetid://658409194",climb="rbxassetid://658360781",fall="rbxassetid://657600338",swim="rbxassetid://657582909"},
+        ["Levitation"] = {idle1="rbxassetid://616006778",idle2="rbxassetid://616008087",walk="rbxassetid://616010382",run="rbxassetid://616013216",jump="rbxassetid://616008936",climb="rbxassetid://616003713",fall="rbxassetid://616005863",swim="rbxassetid://616007791"},
+        ["Cartoon"] = {idle1="rbxassetid://742637544",idle2="rbxassetid://742638445",walk="rbxassetid://742640026",run="rbxassetid://742638842",jump="rbxassetid://742637942",climb="rbxassetid://742636889",fall="rbxassetid://742637151",swim="rbxassetid://742638209"},
+        ["Confident"] = {idle1="rbxassetid://1069977950",idle2="rbxassetid://1069987858",walk="rbxassetid://1070017263",run="rbxassetid://1070001516",jump="rbxassetid://1069984524",climb="rbxassetid://1069946257",fall="rbxassetid://1069973677",swim="rbxassetid://1069968311"},
+        ["Sneaky"] = {idle1="rbxassetid://1132473842",idle2="rbxassetid://1132477671",walk="rbxassetid://1132510133",run="rbxassetid://1132494274",jump="rbxassetid://1132489853",climb="rbxassetid://1132461372",fall="rbxassetid://1132469004",swim="rbxassetid://1132475343"},
+        ["Elder"] = {idle1="rbxassetid://845397899",idle2="rbxassetid://845400520",walk="rbxassetid://845403856",run="rbxassetid://845386501",jump="rbxassetid://845398858",climb="rbxassetid://845392038",fall="rbxassetid://845396048",swim="rbxassetid://845396046"},
+        ["Hero"] = {idle1="rbxassetid://616111295",idle2="rbxassetid://616113536",walk="rbxassetid://616122287",run="rbxassetid://616117076",jump="rbxassetid://616115533",climb="rbxassetid://616104706",fall="rbxassetid://616108001",swim="rbxassetid://616112897"},
+        ["Mage"] = {idle1="rbxassetid://707742142",idle2="rbxassetid://707855907",walk="rbxassetid://707897309",run="rbxassetid://707861613",jump="rbxassetid://707853694",climb="rbxassetid://707826056",fall="rbxassetid://707829716",swim="rbxassetid://707843699"},
+        ["Robot"] = {idle1="rbxassetid://616088211",idle2="rbxassetid://616089559",walk="rbxassetid://616095330",run="rbxassetid://616091570",jump="rbxassetid://616090089",climb="rbxassetid://616082515",fall="rbxassetid://616085643",swim="rbxassetid://616093864"},
+        ["Bubbly"] = {idle1="rbxassetid://910004836",idle2="rbxassetid://910010784",walk="rbxassetid://910034870",run="rbxassetid://910025107",jump="rbxassetid://910016857",climb="rbxassetid://910001910",fall="rbxassetid://910007117",swim="rbxassetid://910028148"},
+        ["Stylish"] = {idle1="rbxassetid://1069977950",idle2="rbxassetid://1069987858",walk="rbxassetid://1070017263",run="rbxassetid://1070001516",jump="rbxassetid://1069984524",climb="rbxassetid://1069946257",fall="rbxassetid://1069973677",swim="rbxassetid://1069968311"},
+        ["Princess"] = {idle1="rbxassetid://656118341",idle2="rbxassetid://656118852",walk="rbxassetid://656121766",run="rbxassetid://656118852",jump="rbxassetid://656117878",climb="rbxassetid://656114359",fall="rbxassetid://656115606",swim="rbxassetid://656116322"},
+        ["Superhero"] = {idle1="rbxassetid://616111295",idle2="rbxassetid://616113536",walk="rbxassetid://616122287",run="rbxassetid://616117076",jump="rbxassetid://616115533",climb="rbxassetid://616104706",fall="rbxassetid://616108001",swim="rbxassetid://616112897"},
+        ["Kawaii"] = {idle1="rbxassetid://782841498",idle2="rbxassetid://782845736",walk="rbxassetid://782843345",run="rbxassetid://782842708",jump="rbxassetid://782847020",climb="rbxassetid://782843869",fall="rbxassetid://782846423",swim="rbxassetid://782844417"},
+        ["Cowboy"] = {idle1="rbxassetid://750781874",idle2="rbxassetid://750782770",walk="rbxassetid://750785693",run="rbxassetid://750783738",jump="rbxassetid://750782230",climb="rbxassetid://750779899",fall="rbxassetid://750780242",swim="rbxassetid://750783107"},
+        ["Ghost"] = {idle1="rbxassetid://616006778",idle2="rbxassetid://616008087",walk="rbxassetid://616010382",run="rbxassetid://616013216",jump="rbxassetid://616008936",climb="rbxassetid://616003713",fall="rbxassetid://616005863",swim="rbxassetid://616007791"},
     }
 
     local presetOptions = {}
@@ -2980,6 +3258,25 @@ do
 
     tgg(pages["Anim/Emot"], "Enable FE Animations", 11, "feAnimEnabled")
 
+    -- FE ANIM TOGGLE FIX: Revert to default when turned off
+    local lastFeState = state.feAnimEnabled
+    task.spawn(function()
+        while true do
+            task.wait(0.1)
+            if lastFeState ~= state.feAnimEnabled then
+                lastFeState = state.feAnimEnabled
+                if not state.feAnimEnabled then
+                    applyPresetToSlots("Default", {"idle1","idle2","walk","run","jump","climb","fall","swim"})
+                    if _G.__AW_SYNC_ANIM_DROPDOWNS then _G.__AW_SYNC_ANIM_DROPDOWNS("Default") end
+                    _G.__AW_NOTIFY("FE Animations disabled. Reverted to defaults.")
+                else
+                    reapplyAll()
+                    _G.__AW_NOTIFY("FE Animations enabled.")
+                end
+            end
+        end
+    end)
+
     local animSearchBox = Instance.new("TextBox", pages["Anim/Emot"])
     animSearchBox.Size = UDim2.new(1, 0, 0, 40)
     animSearchBox.LayoutOrder = 12
@@ -3031,12 +3328,12 @@ do
         if name == "R6 Animation Pack" then
             local rig = getRigType(LP.Character)
             if rig == "R15" then
-                _G.__AW_NOTIFY("Note: R6 pack only animates R6 avatars - your rig is R15")
+                _G.__AW_NOTIFY("Note: R6 pack only animates R6 avatars — your rig is R15")
             elseif rig == "R6" then
                 _G.__AW_NOTIFY("R6 pack applied")
             end
         else
-            _G.__AW_NOTIFY("All anims -> " .. name)
+            _G.__AW_NOTIFY("All anims → " .. name)
         end
         for key, setter in pairs(animSetters) do
             if setter then pcall(setter, name) end
@@ -3097,6 +3394,14 @@ do
             if animSearchToken == myToken then renderAnimSearch(animSearchBox.Text) end
         end)
     end)
+    animSearchBox.Focused:Connect(function()
+        if state.animationsEnabled == false then return end
+        TweenService:Create(animSearchStroke, TweenInfo.new(0.2), {Transparency = 0}):Play()
+    end)
+    animSearchBox.FocusLost:Connect(function()
+        if state.animationsEnabled == false then return end
+        TweenService:Create(animSearchStroke, TweenInfo.new(0.2), {Transparency = 0.6}):Play()
+    end)
 
     do
         local _, _, sAll = makeDropdown(pages["Anim/Emot"], "All Animations", 14, presetOptions, state.feAnimAll or "Default", function(v)
@@ -3108,7 +3413,7 @@ do
         local _, _, s1 = makeDropdown(pages["Anim/Emot"], "Idle Animation", 15, presetOptions, state.feAnimIdle or "Default", function(v)
             state.feAnimIdle = v; saveSettings()
             applyPresetToSlots(v, {"idle1","idle2"})
-            _G.__AW_NOTIFY("Idle -> " .. v)
+            _G.__AW_NOTIFY("Idle → " .. v)
         end)
         animSetters.idle = s1
     end
@@ -3116,7 +3421,7 @@ do
         local _, _, s2 = makeDropdown(pages["Anim/Emot"], "Walk Animation", 16, presetOptions, state.feAnimWalk or "Default", function(v)
             state.feAnimWalk = v; saveSettings()
             applyPresetToSlots(v, {"walk"})
-            _G.__AW_NOTIFY("Walk -> " .. v)
+            _G.__AW_NOTIFY("Walk → " .. v)
         end)
         animSetters.walk = s2
     end
@@ -3124,7 +3429,7 @@ do
         local _, _, s3 = makeDropdown(pages["Anim/Emot"], "Run Animation", 17, presetOptions, state.feAnimRun or "Default", function(v)
             state.feAnimRun = v; saveSettings()
             applyPresetToSlots(v, {"run"})
-            _G.__AW_NOTIFY("Run -> " .. v)
+            _G.__AW_NOTIFY("Run → " .. v)
         end)
         animSetters.run = s3
     end
@@ -3132,7 +3437,7 @@ do
         local _, _, s4 = makeDropdown(pages["Anim/Emot"], "Jump Animation", 18, presetOptions, state.feAnimJump or "Default", function(v)
             state.feAnimJump = v; saveSettings()
             applyPresetToSlots(v, {"jump"})
-            _G.__AW_NOTIFY("Jump -> " .. v)
+            _G.__AW_NOTIFY("Jump → " .. v)
         end)
         animSetters.jump = s4
     end
@@ -3140,7 +3445,7 @@ do
         local _, _, s5 = makeDropdown(pages["Anim/Emot"], "Climb Animation", 19, presetOptions, state.feAnimClimb or "Default", function(v)
             state.feAnimClimb = v; saveSettings()
             applyPresetToSlots(v, {"climb"})
-            _G.__AW_NOTIFY("Climb -> " .. v)
+            _G.__AW_NOTIFY("Climb → " .. v)
         end)
         animSetters.climb = s5
     end
@@ -3148,7 +3453,7 @@ do
         local _, _, s6 = makeDropdown(pages["Anim/Emot"], "Fall Animation", 20, presetOptions, state.feAnimFall or "Default", function(v)
             state.feAnimFall = v; saveSettings()
             applyPresetToSlots(v, {"fall"})
-            _G.__AW_NOTIFY("Fall -> " .. v)
+            _G.__AW_NOTIFY("Fall → " .. v)
         end)
         animSetters.fall = s6
     end
@@ -3156,9 +3461,15 @@ do
         local _, _, s7 = makeDropdown(pages["Anim/Emot"], "Swim Animation", 21, presetOptions, state.feAnimSwim or "Default", function(v)
             state.feAnimSwim = v; saveSettings()
             applyPresetToSlots(v, {"swim"})
-            _G.__AW_NOTIFY("Swim -> " .. v)
+            _G.__AW_NOTIFY("Swim → " .. v)
         end)
         animSetters.swim = s7
+    end
+
+    _G.__AW_SYNC_ANIM_DROPDOWNS = function(name)
+        for _, setter in pairs(animSetters) do
+            if setter then pcall(setter, name) end
+        end
     end
 
     addBtn(pages["Anim/Emot"], "Reset to Default Animations", 22, function()
@@ -3220,22 +3531,6 @@ makeSlider(pages[SECRET_NAME], "Aura Range (studs)", 12, state.blueAuraStuds or 
 addSect(pages[SECRET_NAME], "Wall Hop", 20)
 tgg(pages[SECRET_NAME], "Enable Wall Hop", 21, "wallHop")
 tgg(pages[SECRET_NAME], "Wall Hop Flick", 22, "wallHopFlick")
-
-addSect(pages[SECRET_NAME], "Remove Barriers", 25)
-tgg(pages[SECRET_NAME], "Remove Barriers (Glitchproof / Glitch / THICC)", 26, "removeBarriers")
-addBtn(pages[SECRET_NAME], "Remove Barriers Now", 27, function()
-    local removed = 0
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj and obj.Parent and obj.Name then
-            local n = string.lower(obj.Name)
-            if n == "glitchproof" or n == "glitch" or n == "thicc" then
-                pcall(function() obj:Destroy() end)
-                removed = removed + 1
-            end
-        end
-    end
-    _G.__AW_NOTIFY("Removed " .. removed .. " barrier(s)")
-end)
 
 addSect(pages[SECRET_NAME], "Speed Glitch", 30)
 tgg(pages[SECRET_NAME], "Speed Glitch", 31, "speedGlitch")
@@ -3299,11 +3594,33 @@ do
         return nil
     end
 
+    local function findStopRemote()
+        local stopNames = {"StopSong", "StopSound", "PauseSong", "PauseSound", "StopMusic", "StopRadio", "Stop"}
+        local parent = PlaySong and PlaySong.Parent or (ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Inventory"))
+        if parent then
+            for _, name in ipairs(stopNames) do
+                local r = parent:FindFirstChild(name)
+                if r and (r:IsA("RemoteEvent") or r:IsA("RemoteFunction")) then
+                    return r
+                end
+            end
+        end
+        for _, name in ipairs(stopNames) do
+            local found = ReplicatedStorage:FindFirstChild(name, true)
+            if found and (found:IsA("RemoteEvent") or found:IsA("RemoteFunction")) then
+                return found
+            end
+        end
+        return nil
+    end
+
     local PlaySong = findPlaySong()
     task.spawn(function()
         while true do
             task.wait(2)
-            if not PlaySong or not PlaySong.Parent then PlaySong = findPlaySong() end
+            if not PlaySong or not PlaySong.Parent then
+                PlaySong = findPlaySong()
+            end
         end
     end)
 
@@ -3318,10 +3635,18 @@ do
     end
 
     local function firePlaySong(rawId, tryAllFormats)
-        if not PlaySong or not PlaySong.Parent then PlaySong = findPlaySong() end
-        if not PlaySong then _G.__AW_NOTIFY("PlaySong remote not found") return false end
+        if not PlaySong or not PlaySong.Parent then
+            PlaySong = findPlaySong()
+        end
+        if not PlaySong then
+            _G.__AW_NOTIFY("PlaySong remote not found")
+            return false
+        end
         local idNum = tonumber(tostring(rawId or ""):match("%d+"))
-        if not idNum then _G.__AW_NOTIFY("Invalid audio ID") return false end
+        if not idNum then
+            _G.__AW_NOTIFY("Invalid audio ID")
+            return false
+        end
         local formats = { idNum }
         if tryAllFormats then
             table.insert(formats, "rbxassetid://" .. idNum)
@@ -3329,16 +3654,228 @@ do
         end
         for i, arg in ipairs(formats) do
             pcall(function()
-                if PlaySong:IsA("RemoteEvent") then PlaySong:FireServer(arg)
-                elseif PlaySong:IsA("RemoteFunction") then PlaySong:InvokeServer(arg) end
+                if PlaySong:IsA("RemoteEvent") then
+                    PlaySong:FireServer(arg)
+                elseif PlaySong:IsA("RemoteFunction") then
+                    PlaySong:InvokeServer(arg)
+                end
             end)
             if i < #formats then task.wait(0.08) end
         end
         return true
     end
 
-    local songInput = makeInput(pages[SECRET_NAME], 101, "Audio ID...", "", function() end)
-    addBtn(pages[SECRET_NAME], "Add Audio ID", 102, function()
+    local function stopAudio()
+        if not PlaySong or not PlaySong.Parent then
+            PlaySong = findPlaySong()
+        end
+        local stopRemote = findStopRemote()
+        if stopRemote then
+            pcall(function()
+                if stopRemote:IsA("RemoteEvent") then
+                    stopRemote:FireServer()
+                else
+                    stopRemote:InvokeServer()
+                end
+            end)
+            return true
+        end
+        if PlaySong then
+            pcall(function()
+                if PlaySong:IsA("RemoteEvent") then
+                    PlaySong:FireServer(0)
+                    task.wait(0.05)
+                    PlaySong:FireServer("")
+                    task.wait(0.05)
+                    PlaySong:FireServer(nil)
+                else
+                    PlaySong:InvokeServer(0)
+                end
+            end)
+            return true
+        end
+        return false
+    end
+
+    -- ===== Song selector dropdown =====
+    local songWrapper = Instance.new("Frame", pages[SECRET_NAME])
+    songWrapper.Size = UDim2.new(1, 0, 0, 44)
+    songWrapper.LayoutOrder = 101
+    songWrapper.BackgroundTransparency = 1
+    songWrapper.ClipsDescendants = false
+
+    local songHeader = Instance.new("TextButton", songWrapper)
+    songHeader.Size = UDim2.new(1, 0, 0, 44)
+    songHeader.BackgroundColor3 = cc3(settingsConfig.cardColor)
+    songHeader.Text = ""
+    songHeader.AutoButtonColor = false
+    Instance.new("UICorner", songHeader).CornerRadius = UDim.new(0, 10)
+    local songHeaderStroke = Instance.new("UIStroke", songHeader)
+    songHeaderStroke.Color = cc3(settingsConfig.accentColor)
+    songHeaderStroke.Thickness = 1
+    songHeaderStroke.Transparency = 0.6
+
+    local songLbl = Instance.new("TextLabel", songHeader)
+    songLbl.Size = UDim2.new(1, -44, 0, 14)
+    songLbl.Position = UDim2.new(0, 12, 0, 6)
+    songLbl.BackgroundTransparency = 1
+    songLbl.Text = "Selected Song"
+    songLbl.TextColor3 = cc3(settingsConfig.tabTextColor)
+    songLbl.Font = Enum.Font.Gotham
+    songLbl.TextSize = 11
+    songLbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    local songVal = Instance.new("TextLabel", songHeader)
+    songVal.Size = UDim2.new(1, -44, 0, 18)
+    songVal.Position = UDim2.new(0, 12, 0, 22)
+    songVal.BackgroundTransparency = 1
+    songVal.Text = "(none selected)"
+    songVal.TextColor3 = cc3(settingsConfig.textColor)
+    songVal.Font = Enum.Font.GothamBold
+    songVal.TextSize = 14
+    songVal.TextXAlignment = Enum.TextXAlignment.Left
+    songVal.TextTruncate = Enum.TextTruncate.AtEnd
+
+    local songArrow = Instance.new("TextLabel", songHeader)
+    songArrow.Size = UDim2.new(0, 24, 0, 24)
+    songArrow.Position = UDim2.new(1, -32, 0.5, -12)
+    songArrow.BackgroundTransparency = 1
+    songArrow.Text = "▼"
+    songArrow.TextColor3 = cc3(settingsConfig.textColor)
+    songArrow.Font = Enum.Font.GothamBold
+    songArrow.TextSize = 13
+
+    local songList = Instance.new("ScrollingFrame", songWrapper)
+    songList.Size = UDim2.new(1, 0, 0, 0)
+    songList.Position = UDim2.new(0, 0, 0, 46)
+    songList.BackgroundColor3 = cc3(settingsConfig.cardColor)
+    songList.BorderSizePixel = 0
+    songList.Visible = false
+    songList.ClipsDescendants = true
+    songList.ZIndex = 5
+    songList.ScrollBarThickness = 4
+    songList.ScrollBarImageColor3 = cc3(settingsConfig.accentColor)
+    songList.CanvasSize = UDim2.new(0, 0, 0, 0)
+    songList.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    Instance.new("UICorner", songList).CornerRadius = UDim.new(0, 10)
+    local songListLayout = Instance.new("UIListLayout", songList)
+    songListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    songListLayout.Padding = UDim.new(0, 3)
+    local songListPad = Instance.new("UIPadding", songList)
+    songListPad.PaddingTop = UDim.new(0, 5)
+    songListPad.PaddingBottom = UDim.new(0, 5)
+    songListPad.PaddingLeft = UDim.new(0, 5)
+    songListPad.PaddingRight = UDim.new(0, 5)
+
+    local songListOpen = false
+    local selectedSongId = state.radioSelectedSongId or ""
+
+    local function findSongById(id)
+        for _, s in ipairs(savedSongs) do
+            if tostring(s.id) == tostring(id) then return s end
+        end
+        return nil
+    end
+
+    local function refreshSongDisplay()
+        local s = findSongById(selectedSongId)
+        if s then
+            songVal.Text = (s.name or s.id)
+        else
+            songVal.Text = "(none selected)"
+            selectedSongId = ""
+            state.radioSelectedSongId = ""
+        end
+    end
+
+    local function rebuildSongList()
+        for _, c in ipairs(songList:GetChildren()) do
+            if c:IsA("TextButton") or c:IsA("TextLabel") then c:Destroy() end
+        end
+        if #savedSongs == 0 then
+            local empty = Instance.new("TextLabel", songList)
+            empty.Size = UDim2.new(1, 0, 0, 34)
+            empty.LayoutOrder = 1
+            empty.BackgroundTransparency = 1
+            empty.Text = "(no saved songs — add one below)"
+            empty.TextColor3 = cc3(settingsConfig.tabTextColor)
+            empty.Font = Enum.Font.Gotham
+            empty.TextSize = 12
+            return
+        end
+        for i, s in ipairs(savedSongs) do
+            local btn = Instance.new("TextButton", songList)
+            btn.Size = UDim2.new(1, 0, 0, 38)
+            btn.LayoutOrder = i
+            btn.BackgroundColor3 = (tostring(s.id) == tostring(selectedSongId)) and cc3(settingsConfig.accentColor) or cc3(settingsConfig.cardHoverColor)
+            btn.Text = (s.name or s.id)
+            btn.TextColor3 = (tostring(s.id) == tostring(selectedSongId)) and Color3.new(0,0,0) or cc3(settingsConfig.textColor)
+            btn.Font = Enum.Font.GothamMedium
+            btn.TextSize = 14
+            btn.TextXAlignment = Enum.TextXAlignment.Left
+            btn.AutoButtonColor = false
+            btn.ZIndex = 6
+            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+            local bp = Instance.new("UIPadding", btn); bp.PaddingLeft = UDim.new(0, 12)
+            btn.MouseEnter:Connect(function()
+                if state.animationsEnabled == false then return end
+                if tostring(s.id) ~= tostring(selectedSongId) then
+                    TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = cc3(settingsConfig.accentColor), TextColor3 = Color3.new(0,0,0)}):Play()
+                end
+            end)
+            btn.MouseLeave:Connect(function()
+                if state.animationsEnabled == false then return end
+                if tostring(s.id) ~= tostring(selectedSongId) then
+                    TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = cc3(settingsConfig.cardHoverColor), TextColor3 = cc3(settingsConfig.textColor)}):Play()
+                end
+            end)
+            btn.MouseButton1Click:Connect(function()
+                selectedSongId = tostring(s.id)
+                state.radioSelectedSongId = selectedSongId
+                saveSettings()
+                refreshSongDisplay()
+                setSongListOpen(false)
+                for _, c in ipairs(songList:GetChildren()) do
+                    if c:IsA("TextButton") then
+                        c.BackgroundColor3 = cc3(settingsConfig.cardHoverColor)
+                        c.TextColor3 = cc3(settingsConfig.textColor)
+                    end
+                end
+                btn.BackgroundColor3 = cc3(settingsConfig.accentColor)
+                btn.TextColor3 = Color3.new(0,0,0)
+            end)
+        end
+    end
+
+    function setSongListOpen(want)
+        if songListOpen == want then return end
+        songListOpen = want
+        songArrow.Text = want and "▲" or "▼"
+        if want then
+            rebuildSongList()
+            local visibleCount = math.min(math.max(#savedSongs, 1), 5)
+            local targetH = 10 + visibleCount * 38 + math.max(0, visibleCount - 1) * 3
+            songList.Visible = true
+            songList.Size = UDim2.new(1, 0, 0, 0)
+            TweenService:Create(songList, TweenInfo.new(0.30, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, targetH)}):Play()
+            TweenService:Create(songWrapper, TweenInfo.new(0.30, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, 44 + targetH + 2)}):Play()
+        else
+            TweenService:Create(songList, TweenInfo.new(0.22, EASE_SMOOTH, EASE_IN), {Size = UDim2.new(1, 0, 0, 0)}):Play()
+            TweenService:Create(songWrapper, TweenInfo.new(0.22, EASE_SMOOTH, EASE_IN), {Size = UDim2.new(1, 0, 0, 44)}):Play()
+            task.delay(0.24, function() if not songListOpen then songList.Visible = false end end)
+        end
+    end
+
+    songHeader.MouseButton1Click:Connect(function()
+        setSongListOpen(not songListOpen)
+    end)
+
+    refreshSongDisplay()
+
+    -- ===== Add audio ID =====
+    local songInput = makeInput(pages[SECRET_NAME], 102, "Audio ID to add...", "", function() end)
+
+    addBtn(pages[SECRET_NAME], "Add Audio ID", 103, function()
         local id = tostring(songInput.Text or ""):match("%d+")
         if not id then _G.__AW_NOTIFY("Invalid audio ID") return end
         local name = id
@@ -3351,12 +3888,102 @@ do
         end
         table.insert(savedSongs, {name = name, id = id})
         saveSongs()
+        selectedSongId = id
+        state.radioSelectedSongId = id
+        saveSettings()
+        refreshSongDisplay()
+        if songListOpen then rebuildSongList() end
         _G.__AW_NOTIFY("Added: " .. name)
     end)
-    addBtn(pages[SECRET_NAME], "Play Last Added Audio", 103, function()
-        if #savedSongs == 0 then _G.__AW_NOTIFY("No songs added") return end
-        local s = savedSongs[#savedSongs]
-        firePlaySong(s.id, true)
+
+    addBtn(pages[SECRET_NAME], "Play Audio", 104, function()
+        if not selectedSongId or selectedSongId == "" then
+            _G.__AW_NOTIFY("No song selected")
+            return
+        end
+        local s = findSongById(selectedSongId)
+        if firePlaySong(selectedSongId, true) then
+            _G.__AW_NOTIFY("Playing: " .. ((s and s.name) or selectedSongId))
+        end
+    end)
+
+    addBtn(pages[SECRET_NAME], "Pause / Stop Audio", 105, function()
+        if stopAudio() then
+            _G.__AW_NOTIFY("Audio stopped")
+        else
+            _G.__AW_NOTIFY("Could not stop audio — no stop remote or PlaySong missing")
+        end
+    end)
+
+    addBtn(pages[SECRET_NAME], "Restart Audio", 106, function()
+        if not selectedSongId or selectedSongId == "" then
+            _G.__AW_NOTIFY("No song selected")
+            return
+        end
+        task.spawn(function()
+            stopAudio()
+            task.wait(0.25)
+            local s = findSongById(selectedSongId)
+            if firePlaySong(selectedSongId, true) then
+                _G.__AW_NOTIFY("Restarted: " .. ((s and s.name) or selectedSongId))
+            end
+        end)
+    end)
+
+    addBtn(pages[SECRET_NAME], "Spam Selected (x5)", 107, function()
+        if not selectedSongId or selectedSongId == "" then
+            _G.__AW_NOTIFY("No song selected")
+            return
+        end
+        task.spawn(function()
+            for _ = 1, 5 do
+                firePlaySong(selectedSongId, false)
+                task.wait(0.15)
+            end
+        end)
+    end)
+
+    addBtn(pages[SECRET_NAME], "Delete Selected", 108, function()
+        if not selectedSongId or selectedSongId == "" then
+            _G.__AW_NOTIFY("No song selected")
+            return
+        end
+        for i, s in ipairs(savedSongs) do
+            if tostring(s.id) == tostring(selectedSongId) then
+                table.remove(savedSongs, i)
+                saveSongs()
+                selectedSongId = ""
+                state.radioSelectedSongId = ""
+                saveSettings()
+                refreshSongDisplay()
+                if songListOpen then rebuildSongList() end
+                _G.__AW_NOTIFY("Removed")
+                return
+            end
+        end
+    end)
+
+    addBtn(pages[SECRET_NAME], "Test Remote", 109, function()
+        PlaySong = findPlaySong()
+        if PlaySong then
+            local stopRemote = findStopRemote()
+            if stopRemote then
+                _G.__AW_NOTIFY("PlaySong: " .. PlaySong:GetFullName() .. " | Stop: " .. stopRemote:GetFullName())
+            else
+                _G.__AW_NOTIFY("PlaySong found at: " .. PlaySong:GetFullName() .. " (no stop remote found — fallback will be used)")
+            end
+        else
+            _G.__AW_NOTIFY("PlaySong remote NOT FOUND anywhere in ReplicatedStorage")
+        end
+    end)
+
+    -- ===== Auto Play Audio (silently clicks Play Audio on spawn) =====
+    tgg(pages[SECRET_NAME], "Auto Play Audio", 110, "radioAutoPlay")
+    LP.CharacterAdded:Connect(function()
+        if state.radioAutoPlay and state.radioSelectedSongId and state.radioSelectedSongId ~= "" then
+            task.wait(1.5)
+            firePlaySong(state.radioSelectedSongId, true)
+        end
     end)
 end
 
@@ -3411,6 +4038,12 @@ do
                     if newOn then playHeadless(cfg) else stopHeadless(cfg) end
                 end
             end
+        end
+    end)
+    LP.CharacterAdded:Connect(function()
+        task.wait(0.5)
+        for _, cfg in ipairs(headlessConfigs) do
+            if cfg.on then playHeadless(cfg) end
         end
     end)
 end
@@ -3507,7 +4140,7 @@ do
     local fpsLabel = Instance.new("TextLabel", monitorGui)
     fpsLabel.Size = UDim2.new(0, 120, 0, 24)
     fpsLabel.Position = UDim2.new(0, 12, 0, 12)
-    fpsLabel.BackgroundColor3 = Color3.fromRGB(15, 8, 28)
+    fpsLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     fpsLabel.BackgroundTransparency = 0.4
     fpsLabel.TextColor3 = Color3.new(1,1,1)
     fpsLabel.Font = Enum.Font.GothamBold
@@ -3520,7 +4153,7 @@ do
     local pingLabel = Instance.new("TextLabel", monitorGui)
     pingLabel.Size = UDim2.new(0, 120, 0, 24)
     pingLabel.Position = UDim2.new(0, 12, 0, 40)
-    pingLabel.BackgroundColor3 = Color3.fromRGB(15, 8, 28)
+    pingLabel.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     pingLabel.BackgroundTransparency = 0.4
     pingLabel.TextColor3 = Color3.new(1,1,1)
     pingLabel.Font = Enum.Font.GothamBold
@@ -3573,6 +4206,48 @@ do
     end)
 end
 
+addSect(pages[SECRET_NAME], "Disable Trading", 180)
+tgg(pages[SECRET_NAME], "Disable Trading (rejoin to re-enable)", 181, "disableTrading")
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        local trade = ReplicatedStorage:FindFirstChild("Trade")
+        if trade then
+            local sendReq = trade:FindFirstChild("SendRequest")
+            local decline = trade:FindFirstChild("DeclineRequest")
+            if state.disableTrading then
+                if sendReq and decline and sendReq:IsA("RemoteFunction") then
+                    pcall(function()
+                        sendReq.OnClientInvoke = function()
+                            pcall(function() decline:FireServer() end)
+                            return nil
+                        end
+                    end)
+                end
+            else
+                if sendReq and sendReq:IsA("RemoteFunction") then
+                    pcall(function() sendReq.OnClientInvoke = nil end)
+                end
+            end
+        end
+    end
+end)
+
+addSect(pages[SECRET_NAME], "Remove Barriers", 190)
+tgg(pages[SECRET_NAME], "Enable Remove Barriers", 191, "removeBarriers")
+task.spawn(function()
+    while true do
+        task.wait(1)
+        if state.removeBarriers then
+            for _, v in ipairs(Workspace:GetDescendants()) do
+                if v.Name == "Glitchproof" or v.Name == "Glitch" or v.Name == "THICC" then
+                    pcall(function() v:Destroy() end)
+                end
+            end
+        end
+    end
+end)
+
 addSect(pages[SECRET_NAME], "Credits", 900)
 do
     local creditCard = Instance.new("Frame", pages[SECRET_NAME])
@@ -3597,7 +4272,7 @@ do
     creditBody.Size = UDim2.new(1, -20, 1, -40)
     creditBody.Position = UDim2.new(0, 10, 0, 32)
     creditBody.BackgroundTransparency = 1
-    creditBody.Text = "lzzzx | noir (7yd7)"
+    creditBody.Text = "• lzzzx\n• noir (7yd7)"
     creditBody.TextColor3 = cc3(settingsConfig.textColor)
     creditBody.Font = Enum.Font.Gotham
     creditBody.TextSize = 12
@@ -3617,7 +4292,7 @@ tgg(pages["Farm"], "Full Bag Gate", 6, "fullBagGate")
 addSect(pages["Combat"], "Silent Aim", 1)
 tgg(pages["Combat"], "Silent Aim", 2, "silentAimEnabled")
 tgg(pages["Combat"], "Silent Aim Wall Check", 3, "silentAimWallCheck")
-makeSlider(pages["Combat"], "Silent Aim Height", 4, state.silentAimYHeight or 2, 0, 2, "silentAimYHeight")
+makeSlider(pages["Combat"], "Silent Aim Height (0=feet, 2=head)", 4, state.silentAimYHeight or 2, 0, 2, "silentAimYHeight")
 tgg(pages["Combat"], "Shoot Through Walls", 10, "shootThroughWall")
 tgg(pages["Combat"], "Auto Shoot Murderer", 11, "autoShootMurderer")
 addBtn(pages["Combat"], "Shoot Murderer Now", 12, fullShootSequence)
@@ -3667,6 +4342,7 @@ addBtn(pages["Players"], "Add Current Text to Custom List", 3, function()
     table.insert(settingsConfig.flingList, t)
     saveSettings()
     _G.__AW_NOTIFY('Added: ' .. t)
+    if _G.__AW_REFRESH_PLAYER_LIST then pcall(_G.__AW_REFRESH_PLAYER_LIST) end
     if _G.__AW_REFRESH_CUSTOM_LIST then pcall(_G.__AW_REFRESH_CUSTOM_LIST) end
 end)
 
@@ -3732,11 +4408,7 @@ _G.__AW_REFRESH_CUSTOM_LIST = refreshCustomListUI
 
 addSect(pages["Players"], "All Players In Server", 20)
 local playerListToggleBtn = addBtn(pages["Players"], "Close Player List", 21, function() end)
-addBtn(pages["Players"], "Refresh Player List", 22, function()
-    if _G.__AW_REFRESH_PLAYER_LIST then pcall(_G.__AW_REFRESH_PLAYER_LIST) end
-    refreshCustomListUI()
-    _G.__AW_NOTIFY("Player list refreshed")
-end)
+local refreshBtn = addBtn(pages["Players"], "Refresh Player List", 22, function() end)
 
 local playerListScroll = Instance.new("ScrollingFrame", pages["Players"])
 playerListScroll.Size = UDim2.new(1, 0, 0, 380)
@@ -3776,7 +4448,7 @@ local function buildPlayerRow(parent, plr, order)
     local avatar = Instance.new("ImageLabel", row)
     avatar.Size = UDim2.new(0, 40, 0, 40)
     avatar.Position = UDim2.new(0, 5, 0.5, -20)
-    avatar.BackgroundColor3 = Color3.fromRGB(30, 20, 50)
+    avatar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     avatar.BorderSizePixel = 0
     avatar.Image = "rbxthumb://type=AvatarHeadShot&id=" .. plr.UserId .. "&w=150&h=150"
     Instance.new("UICorner", avatar).CornerRadius = UDim.new(1, 0)
@@ -3805,7 +4477,7 @@ local function buildPlayerRow(parent, plr, order)
     local ab = Instance.new("TextButton", row)
     ab.Size = UDim2.new(0, 58, 0, 26)
     ab.Position = UDim2.new(1, -64, 0.5, -13)
-    ab.BackgroundColor3 = inList and Color3.fromRGB(160, 40, 40) or Color3.fromRGB(80, 40, 160)
+    ab.BackgroundColor3 = inList and Color3.fromRGB(160, 40, 40) or Color3.fromRGB(35, 140, 65)
     ab.Text = inList and "Remove" or "Add"
     ab.TextColor3 = Color3.new(1, 1, 1)
     ab.Font = Enum.Font.GothamBold
@@ -3821,7 +4493,7 @@ local function buildPlayerRow(parent, plr, order)
         if isIn and idx then
             table.remove(settingsConfig.flingList, idx)
             ab.Text = "Add"
-            ab.BackgroundColor3 = Color3.fromRGB(80, 40, 160)
+            ab.BackgroundColor3 = Color3.fromRGB(35, 140, 65)
         else
             table.insert(settingsConfig.flingList, plr.Name)
             ab.Text = "Remove"
@@ -3862,6 +4534,11 @@ playerListToggleBtn.MouseButton1Click:Connect(function()
         refreshPlayerList()
         refreshCustomListUI()
     end
+end)
+refreshBtn.MouseButton1Click:Connect(function()
+    refreshPlayerList()
+    refreshCustomListUI()
+    _G.__AW_NOTIFY("Player list refreshed")
 end)
 
 Players.PlayerAdded:Connect(function()
@@ -3996,6 +4673,77 @@ for i, sp in ipairs(SHAPES) do
         rebuildFloatButtons()
     end)
 end
+addSect(pages["Button"], "Manage Floating Buttons", 20)
+do
+    local mSearch = Instance.new("TextBox", pages["Button"])
+    mSearch.Size = UDim2.new(1, 0, 0, 34)
+    mSearch.LayoutOrder = 21
+    mSearch.BackgroundColor3 = cc3(settingsConfig.cardColor)
+    mSearch.PlaceholderText = "Search..."
+    mSearch.PlaceholderColor3 = cc3(settingsConfig.tabTextColor)
+    mSearch.Text = ""
+    mSearch.TextColor3 = cc3(settingsConfig.textColor)
+    mSearch.Font = Enum.Font.Gotham
+    mSearch.TextSize = 12
+    mSearch.ClearTextOnFocus = false
+    Instance.new("UICorner", mSearch).CornerRadius = UDim.new(0, 10)
+    local mList = Instance.new("ScrollingFrame", pages["Button"])
+    mList.Size = UDim2.new(1, 0, 0, 300)
+    mList.LayoutOrder = 22
+    mList.BackgroundTransparency = 1
+    mList.ScrollBarThickness = 3
+    mList.CanvasSize = UDim2.new(0, 0, 0, 0)
+    mList.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    local mLayout = Instance.new("UIListLayout", mList)
+    mLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    mLayout.Padding = UDim.new(0, 5)
+    local refreshManagerFB
+    refreshManagerFB = function(filter)
+        for _, c in ipairs(mList:GetChildren()) do
+            if c:IsA("GuiObject") and c ~= mLayout then c:Destroy() end
+        end
+        filter = string.lower(filter or "")
+        local i = 0
+        for _, def in ipairs(FLOAT_BUTTON_DEFS) do
+            if filter == "" or string.find(string.lower(def.label), filter, 1, true) then
+                i = i + 1
+                local isOn = state.floatEnabledButtons[def.id]
+                local row = Instance.new("Frame", mList)
+                row.Size = UDim2.new(1, 0, 0, 32)
+                row.LayoutOrder = i
+                row.BackgroundColor3 = cc3(settingsConfig.cardColor)
+                Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
+                local nl = Instance.new("TextLabel", row)
+                nl.Size = UDim2.new(0.6, 0, 1, 0)
+                nl.Position = UDim2.new(0, 10, 0, 0)
+                nl.BackgroundTransparency = 1
+                nl.Text = def.label
+                nl.TextColor3 = cc3(settingsConfig.textColor)
+                nl.Font = Enum.Font.GothamMedium
+                nl.TextSize = 11.5
+                nl.TextXAlignment = Enum.TextXAlignment.Left
+                local ab = Instance.new("TextButton", row)
+                ab.Size = UDim2.new(0, 62, 0, 24)
+                ab.Position = UDim2.new(1, -70, 0.5, -12)
+                ab.BackgroundColor3 = isOn and Color3.fromRGB(160, 40, 40) or Color3.fromRGB(35, 140, 65)
+                ab.Text = isOn and "Remove" or "Add"
+                ab.TextColor3 = Color3.new(1, 1, 1)
+                ab.Font = Enum.Font.GothamBold
+                ab.TextSize = 10.5
+                Instance.new("UICorner", ab).CornerRadius = UDim.new(0, 6)
+                ab.MouseButton1Click:Connect(function()
+                    state.floatEnabledButtons[def.id] = not state.floatEnabledButtons[def.id]
+                    if state.floatEnabledButtons[def.id] then state.floatButtonPositions[def.id] = nil end
+                    rebuildFloatButtons()
+                    refreshManagerFB(mSearch.Text)
+                    saveSettings()
+                end)
+            end
+        end
+    end
+    mSearch:GetPropertyChangedSignal("Text"):Connect(function() refreshManagerFB(mSearch.Text) end)
+    refreshManagerFB("")
+end
 
 -- ============ KEYBINDS TAB ============
 addSect(pages["Keybinds"], "Instructions", 1)
@@ -4043,7 +4791,7 @@ for i, kb in ipairs(KEYBIND_FEATURES) do
     local keyLbl = Instance.new("TextLabel", row)
     keyLbl.Size = UDim2.new(0, 56, 0, 26)
     keyLbl.Position = UDim2.new(1, -178, 0.5, -13)
-    keyLbl.BackgroundColor3 = Color3.fromRGB(24, 14, 42)
+    keyLbl.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     keyLbl.Text = (state.keybinds[kb.key] and state.keybinds[kb.key] ~= "") and string.upper(state.keybinds[kb.key]) or "-"
     keyLbl.TextColor3 = cc3(settingsConfig.accentColor)
     keyLbl.Font = Enum.Font.GothamBold
@@ -4064,7 +4812,7 @@ for i, kb in ipairs(KEYBIND_FEATURES) do
     local clearBtn = Instance.new("TextButton", row)
     clearBtn.Size = UDim2.new(0, 52, 0, 26)
     clearBtn.Position = UDim2.new(1, -58, 0.5, -13)
-    clearBtn.BackgroundColor3 = Color3.fromRGB(50, 30, 80)
+    clearBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
     clearBtn.Text = "Clear"
     clearBtn.TextColor3 = cc3(settingsConfig.textColor)
     clearBtn.Font = Enum.Font.GothamBold
@@ -4114,7 +4862,7 @@ UIS.InputBegan:Connect(function(input, gameProcessed)
                 local ns = not state[feature]
                 state[feature] = ns
                 local dn = toggleDisplayNames[feature] or feature
-                _G.__AW_NOTIFY('<font color="'..(ns and "#b57aff" or "#ff5a5a")..'">'..dn..'</font> '..(ns and "on" or "off"))
+                _G.__AW_NOTIFY('<font color="'..(ns and "#5aff8c" or "#ff5a5a")..'">'..dn..'</font> '..(ns and "on" or "off"))
                 saveSettings()
                 break
             end
@@ -4142,7 +4890,7 @@ do
     local minus = Instance.new("TextButton", sr)
     minus.Size = UDim2.new(0,32,0,30)
     minus.Position = UDim2.new(1,-140,0.5,-15)
-    minus.BackgroundColor3 = Color3.fromRGB(34,20,58)
+    minus.BackgroundColor3 = Color3.fromRGB(28,28,28)
     minus.Text = "-"
     minus.TextColor3 = cc3(settingsConfig.textColor)
     minus.Font = Enum.Font.GothamBold
@@ -4160,7 +4908,7 @@ do
     local plus = Instance.new("TextButton", sr)
     plus.Size = UDim2.new(0,32,0,30)
     plus.Position = UDim2.new(1,-40,0.5,-15)
-    plus.BackgroundColor3 = Color3.fromRGB(34,20,58)
+    plus.BackgroundColor3 = Color3.fromRGB(28,28,28)
     plus.Text = "+"
     plus.TextColor3 = cc3(settingsConfig.textColor)
     plus.Font = Enum.Font.GothamBold
@@ -4197,8 +4945,8 @@ fb.ZIndex = 99999
 fb.Active = true
 Instance.new("UICorner", fb).CornerRadius = UDim.new(0,9)
 local fbStroke = Instance.new("UIStroke", fb)
-fbStroke.Color = cc3(settingsConfig.accentColor)
-fbStroke.Transparency = 0.35
+fbStroke.Color = WHITE
+fbStroke.Transparency = 0.4
 fbStroke.Thickness = 1.5
 attachSpinStroke(fbStroke, false, {baseThickness = 1.5})
 
@@ -4505,23 +5253,6 @@ task.spawn(function()
     end
 end)
 
--- ============ REMOVE BARRIERS LOOP ============
-task.spawn(function()
-    while true do
-        task.wait(0.5)
-        if state.removeBarriers then
-            for _, obj in ipairs(Workspace:GetDescendants()) do
-                if obj and obj.Parent and obj.Name then
-                    local n = string.lower(obj.Name)
-                    if n == "glitchproof" or n == "glitch" or n == "thicc" then
-                        pcall(function() obj:Destroy() end)
-                    end
-                end
-            end
-        end
-    end
-end)
-
 -- ============ SILENT LOOP REFRESH ============
 task.spawn(function()
     local wasInRound = false
@@ -4576,9 +5307,40 @@ pcall(function()
         if state.afk then vu:CaptureController() vu:ClickButton2(Vector2.new()) end
     end)
 end)
+local qot = syn and syn.queue_on_teleport or queue_on_teleport or queueonteleport
+task.spawn(function()
+    while true do
+        if state.autoRejoin and qot then
+            pcall(function()
+                qot([[task.wait(2)
+local ts = game:GetService("TeleportService")
+local p = game:GetService("Players").LocalPlayer
+ts:Teleport(game.PlaceId, p)]])
+            end)
+        end
+        task.wait(10)
+    end
+end)
+task.spawn(function()
+    while true do
+        task.wait(3)
+        if state.autoServerHop and #Players:GetPlayers() <= 2 and isLobby() then
+            pcall(function() TeleportService:Teleport(PlaceId, LP) end)
+            task.wait(10)
+        end
+    end
+end)
 task.spawn(function()
     while true do
         task.wait(1)
+        if state.autoPrestige then
+            pcall(function() ReplicatedStorage.Remotes.Inventory.Prestige:FireServer() end)
+        end
+    end
+end)
+task.spawn(function()
+    while true do
+        task.wait(2)
         if alive() and isInRound() and isBagFull() then
             local myRole = getPlayerRole(LP)
             local shouldReset = false
@@ -4744,6 +5506,127 @@ do
         end
     end)
 end
+
+-- ============ INVISIBILITY SYSTEM ============
+local INVIS_POSITION = Vector3.new(-25.95, 84, 3537.55)
+local invisSeat = nil
+local invisWeld = nil
+local dodgeActive = false
+
+local function setCharInvisTransparency(char, transparency)
+    if not char then return end
+    for _, d in ipairs(char:GetDescendants()) do
+        if d:IsA("BasePart") or d:IsA("Decal") then
+            pcall(function() d.Transparency = transparency end)
+        end
+    end
+end
+
+local function cleanupInvisSeat()
+    if invisWeld and invisWeld.Parent then pcall(function() invisWeld:Destroy() end) end
+    if invisSeat and invisSeat.Parent then pcall(function() invisSeat:Destroy() end) end
+    invisWeld = nil
+    invisSeat = nil
+    local existing = Workspace:FindFirstChild("invischair")
+    if existing then pcall(function() existing:Destroy() end) end
+end
+
+local function enableInvisibility()
+    local char = LP.Character
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hrp or not hum or hum.Health <= 0 then return end
+    local savedCF = hrp.CFrame
+    hrp.CFrame = CFrame.new(INVIS_POSITION)
+    task.wait(0.15)
+    cleanupInvisSeat()
+    local seat = Instance.new("Seat")
+    seat.Name = "invischair"
+    seat.Anchored = false
+    seat.CanCollide = false
+    seat.Transparency = 1
+    seat.Size = Vector3.new(2, 1, 1)
+    seat.CFrame = CFrame.new(INVIS_POSITION)
+    seat.Parent = Workspace
+    local weld = Instance.new("Weld")
+    weld.Part0 = seat
+    weld.Part1 = hrp
+    weld.Parent = seat
+    invisSeat = seat
+    invisWeld = weld
+    task.wait(0.1)
+    seat.CFrame = savedCF
+    task.wait(0.1)
+    setCharInvisTransparency(char, 0.5)
+end
+
+local function disableInvisibility()
+    cleanupInvisSeat()
+    if LP.Character then setCharInvisTransparency(LP.Character, 0) end
+end
+
+local invisApplied = false
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        local wantInvis = false
+        if alive() then
+            if (state.invisibleEnabled or dodgeActive) and not isLocalFlinging then
+                wantInvis = true
+            end
+        end
+        if wantInvis and not invisApplied then
+            invisApplied = true
+            pcall(enableInvisibility)
+        elseif not wantInvis and invisApplied then
+            invisApplied = false
+            pcall(disableInvisibility)
+        end
+        if invisApplied and LP.Character then
+            local ch = LP.Character
+            local h = ch:FindFirstChildOfClass("Humanoid")
+            if h and h.Health > 0 then
+                for _, d in ipairs(ch:GetDescendants()) do
+                    if d:IsA("BasePart") or d:IsA("Decal") then
+                        if math.abs((d.Transparency or 0) - 0.5) > 0.01 then
+                            pcall(function() d.Transparency = 0.5 end)
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+LP.CharacterAdded:Connect(function()
+    task.wait(1.2)
+    local shouldBeInvis = alive() and (state.invisibleEnabled or dodgeActive) and not isLocalFlinging
+    if shouldBeInvis then
+        invisApplied = true
+        pcall(enableInvisibility)
+    end
+end)
+
+task.spawn(function()
+    while true do
+        task.wait(0.15)
+        if state.autoDodge and alive() and not isLocalFlinging then
+            local m = getMurd()
+            local myRoot = LP.Character:FindFirstChild("HumanoidRootPart")
+            if m and m.Character and myRoot then
+                local mRoot = m.Character:FindFirstChild("HumanoidRootPart")
+                if mRoot then
+                    local dist = (myRoot.Position - mRoot.Position).Magnitude
+                    if not dodgeActive and dist < 20 then dodgeActive = true
+                    elseif dodgeActive and dist > 30 then dodgeActive = false end
+                end
+            end
+        elseif dodgeActive then
+            dodgeActive = false
+        end
+    end
+end)
 
 -- ============ TOUCH FLING ============
 task.spawn(function()
