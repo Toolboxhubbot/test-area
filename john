@@ -4132,8 +4132,28 @@ task.spawn(function()
     while true do
         task.wait(1)
         if state.removeBarriers then
+            -- Handle specific path: workspace.[MapName].Base.GlitchProof
+            for _, obj in ipairs(Workspace:GetChildren()) do
+                if obj.Name ~= "lobby" and obj.Name ~= "Camera" and obj:IsA("Model") then
+                    local base = obj:FindFirstChild("Base")
+                    if base then
+                        local glitch = base:FindFirstChild("GlitchProof")
+                        if glitch then pcall(function() glitch:Destroy() end) end
+                    end
+                end
+            end
+            -- Handle specific path: workspace.lobby.Base.GlitchProof
+            local lobby = Workspace:FindFirstChild("lobby")
+            if lobby then
+                local base = lobby:FindFirstChild("Base")
+                if base then
+                    local glitch = base:FindFirstChild("GlitchProof")
+                    if glitch then pcall(function() glitch:Destroy() end) end
+                end
+            end
+            -- Fallback global check for any other barriers
             for _, v in ipairs(Workspace:GetDescendants()) do
-                if v.Name == "Glitchproof" or v.Name == "Glitch" or v.Name == "THICC" then
+                if v.Name == "GlitchProof" or v.Name == "Glitchproof" or v.Name == "Glitch" or v.Name == "THICC" then
                     pcall(function() v:Destroy() end)
                 end
             end
