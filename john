@@ -1,24 +1,7 @@
 -- ================================================================
--- Appleware
+-- Appleware  (antifling remote loader removed — it was the source
+-- of the `vMucDJIKQPDfOHNqz:1: attempt to call a nil value` error)
 -- ================================================================
-
-task.spawn(function()
-    pcall(function()
-        local url = "https://raw.githubusercontent.com/Toolboxhubbot/antifling/refs/heads/main/antifling"
-        local src
-        pcall(function() if game.HttpGet then src = game.HttpGet(url) end end)
-        if not src and syn and syn.request then
-            pcall(function() local r = syn.request({Url=url, Method="GET"}); if r and r.Body then src = r.Body end end)
-        end
-        if not src and request then
-            pcall(function() local r = request({Url=url, Method="GET"}); if r and r.Body then src = r.Body end end)
-        end
-        if not src or #src < 10 then return end
-        local fn
-        pcall(function() fn = loadstring(src) end)
-        if fn then pcall(fn) end
-    end)
-end)
 
 Players = game:GetService("Players")
 RunService = game:GetService("RunService")
@@ -928,7 +911,7 @@ local function killAllNow()
             end
         end
         if #targets == 0 then _G.__AW_NOTIFY('No targets') return end
-        fireHandleTouchedKill(targets)
+        if fireHandleTouchedKill then fireHandleTouchedKill(targets) end
     end)
 end
 
@@ -941,7 +924,7 @@ local function killSheriffNow()
         if not findTool("Knife") then _G.__AW_NOTIFY('No Knife') return end
         local targets = getLiveSheriffHeroes()
         if #targets == 0 then _G.__AW_NOTIFY("No Sheriff / Hero") return end
-        fireHandleTouchedKill(targets)
+        if fireHandleTouchedKill then fireHandleTouchedKill(targets) end
     end)
 end
 
@@ -958,7 +941,7 @@ local function killCustomNow()
             end
         end
         if #targets == 0 then _G.__AW_NOTIFY("No custom targets in server") return end
-        fireHandleTouchedKill(targets)
+        if fireHandleTouchedKill then fireHandleTouchedKill(targets) end
     end)
 end
 
@@ -4210,12 +4193,14 @@ addBtn(pages["Players"], "Lock All Players", 31, function()
     end
     saveSettings()
     _G.__AW_NOTIFY("Locked " .. added .. " player(s)")
+    if _G.__AW_REFRESH_LOCK_LIST then pcall(_G.__AW_REFRESH_LOCK_LIST) end
 end)
 
 addBtn(pages["Players"], "Unlock All Players", 32, function()
     settingsConfig.whitelist = {}
     saveSettings()
     _G.__AW_NOTIFY("Unlocked all")
+    if _G.__AW_REFRESH_LOCK_LIST then pcall(_G.__AW_REFRESH_LOCK_LIST) end
 end)
 
 addBtn(pages["Players"], "Lock Certain (from search box)", 33, function()
@@ -4228,6 +4213,7 @@ addBtn(pages["Players"], "Lock Certain (from search box)", 33, function()
     table.insert(settingsConfig.whitelist, t)
     saveSettings()
     _G.__AW_NOTIFY("Locked: " .. t)
+    if _G.__AW_REFRESH_LOCK_LIST then pcall(_G.__AW_REFRESH_LOCK_LIST) end
 end)
 
 addBtn(pages["Players"], "Unlock Certain (from search box)", 34, function()
@@ -4239,6 +4225,7 @@ addBtn(pages["Players"], "Unlock Certain (from search box)", 34, function()
             table.remove(settingsConfig.whitelist, i)
             saveSettings()
             _G.__AW_NOTIFY("Unlocked: " .. t)
+            if _G.__AW_REFRESH_LOCK_LIST then pcall(_G.__AW_REFRESH_LOCK_LIST) end
             return
         end
     end
