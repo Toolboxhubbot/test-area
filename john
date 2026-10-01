@@ -1150,6 +1150,11 @@ local function grabGunNow()
 end
 local LOBBY_CFRAME = CFrame.new(14.47, 516.73, -25.34)
 
+local function teleportToLobby()
+    local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    if r then r.CFrame = LOBBY_CFRAME end
+end
+
 -- ================= VOID PLATFORM =================
 local VOID_PLATFORM_POS = Vector3.new(100, 5000, 2000)
 local VOID_PLATFORM_RADIUS = 10
@@ -2052,7 +2057,6 @@ ms.Color = cc3(settingsConfig.accentColor)
 ms.Transparency = 0.35
 ms.Thickness = 2
 
--- Glow + accent bar
 pcall(function()
     attachFrameGlow(main, cc3(settingsConfig.accentColor), 46)
     attachInnerGlow(main, cc3(settingsConfig.accentColor), 2)
@@ -2308,7 +2312,11 @@ local function addBtn(page, name, order, cb)
     l.TextSize = 12.5
     l.TextXAlignment = Enum.TextXAlignment.Left
     if state.animationsEnabled then attachBounce(b); attachShine(b); attachRipple(b) end
-    b.MouseButton1Click:Connect(cb)
+    if type(cb) == "function" then
+        b.MouseButton1Click:Connect(cb)
+    else
+        warn("[Appleware] addBtn called with nil/invalid callback for: " .. tostring(name))
+    end
     return b
 end
 local function addSect(page, text, order)
@@ -5676,7 +5684,6 @@ task.spawn(function()
 end)
 
 LP.CharacterAdded:Connect(function()
-    -- silently reset invis state on respawn
     invisApplied = false
     dodgeActive = false
     pcall(cleanupInvisSeat)
@@ -5688,7 +5695,6 @@ LP.CharacterAdded:Connect(function()
     end
 end)
 
--- Silent off / on across round transitions
 task.spawn(function()
     local wasInRound = false
     while true do
@@ -6156,3 +6162,4 @@ end)
 
 print("AppleWare fully loaded - made by p04j on discord")
 print("Credits: lzzzx, noir (7yd7)")
+print("Patched: void platform, loop-teleports, cyan glow UI, silent invis round resets")
