@@ -229,6 +229,9 @@ EASE_SOFT = Enum.EasingStyle.Sine
 EASE_OUT = Enum.EasingDirection.Out
 EASE_IN = Enum.EasingDirection.In
 
+-- ============ COLOR HELPER (MOVED TO TOP TO FIX NIL ERROR) ============
+local function cc3(t) return Color3.fromRGB(t.r or 0, t.g or 0, t.b or 0) end
+
 -- ============ SPINNING STROKE GRADIENT ============
 spinGradients = {}
 local SPIN_SPEED = 130
@@ -419,8 +422,6 @@ notifyContainer.BackgroundTransparency = 1
 local notifyLayout = Instance.new("UIListLayout", notifyContainer)
 notifyLayout.Padding = UDim.new(0,10)
 notifyLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
-
-local function cc3(t) return Color3.fromRGB(t.r or 0, t.g or 0, t.b or 0) end
 
 local nCount = 0
 _G.__AW_NOTIFY = function(text)
@@ -1822,7 +1823,7 @@ main.Active = true
 main.ClipsDescendants = true
 Instance.new("UICorner", main).CornerRadius = UDim.new(0,14)
 
--- UI GLOW EFFECT
+-- UI GLOW EFFECT (PURPLE OUTRING)
 local ms = Instance.new("UIStroke", main)
 ms.Color = cc3(settingsConfig.accentColor)
 ms.Thickness = 2.5
@@ -2413,114 +2414,6 @@ do
         {id=7202896732,name="Boxing Punch"},{id=75017857395637,name="TV Time"},{id=75703899901487,name="6 7 Transform"},
         {id=79312439851071,name="Hot To Go"},{id=79752538807060,name="Griddy 2"},{id=80422524668416,name="Dreamer"},
         {id=80436375269036,name="Headless Hooper"},{id=80544397800234,name="Helicopter 3"},{id=80877772569772,name="Default Dance OG"},
-        {id=81390693780805,name="Proxima"},{id=82217023310738,name="Thanos Jump"},{id=82345302788133,name="Dia Delicia"},
-        {id=82739386299071,name="Jackpot Groove"},{id=83018514370428,name="Stargazing"},{id=84052327668385,name="Floating 2"},
-        {id=84067050907557,name="Pickle Rick"},{id=84195923658292,name="Jojo"},{id=84511772437190,name="Spinning Robloxian"},
-        {id=84555218084038,name="Helicopter Spin"},{id=84822284410814,name="Maraschino Step"},{id=85361710130557,name="Caramelldansen 3"},
-        {id=85623000473425,name="Takedown Pt 2"},{id=85936805522788,name="Caramell"},{id=86849720336961,name="Ant Tennas Dance"},
-        {id=86982022610765,name="Caramelldansen 2"},{id=87756443172440,name="Xavier Based Dance"},{id=87826892596287,name="Levitate 2"},
-        {id=88024974500195,name="Oppa Gangnam"},{id=88598010609888,name="Angry Stomp"},{id=88721672617892,name="P.B.J.T."},
-        {id=88922397617835,name="What You Want"},{id=89174456614428,name="Daydreaming"},{id=89413575288931,name="Blue Shirt Guy"},
-        {id=89633087256727,name="Weird Spin"},{id=90524692306889,name="Chill Sit"},{id=90608224567833,name="Expendable"},
-        {id=91023138078288,name="Oh Who Is You"},{id=91274761264433,name="Macarena 2"},{id=91423783304464,name="Criss Cross Sit"},
-        {id=91927498467600,name="Koto Nai Meme"},{id=92707348383277,name="Mesmerizer"},{id=92853367837757,name="Garry's Dance"},
-        {id=92859581691366,name="Couldnt Care Less"},{id=92903522317071,name="Magnetic"},{id=93105950995997,name="Caramelldansen"},
-        {id=93262662842394,name="Sit 2"},{id=94118707925458,name="Go Mufasa"},{id=94121796810251,name="Kicking Feet Blush"},
-        {id=94319114655768,name="Rat Dance 3"},{id=94451497143711,name="Hakari Dance"},{id=94534169345613,name="Casual Sit"},
-        {id=94663026124741,name="Torture Dance"},{id=94796833553521,name="Takedown Pt 1"},{id=95323795166399,name="Rat Dance"},
-        {id=96405718067779,name="Cute Sit"},{id=97263450325496,name="Teto Territory"},{id=97629500912487,name="BlockyKick"},
-        {id=97847706148165,name="Kawaii Dance"},{id=97968838104258,name="Subject Three"},{id=97999370392804,name="Spin My Head"},
-        {id=98603994713783,name="Rat Dance 2"},{id=99005087791705,name="Death Pose"},{id=99563839802389,name="Jumpstyle"},
-        {id=99568437064777,name="Relaxed Sit"},{id=99818263438846,name="Default Dance"},{id=100532972764499,name="Monster Mash"},
-        {id=100773414188482,name="Walkin On Water"},{id=100782362883099,name="Car Transform"},{id=10214406616,name="Frosty Flair"},
-        {id=10214418283,name="V Pose"},{id=102323907950469,name="Space Dance"},{id=102492229412911,name="Tenna Dance"},
-        {id=102610758906338,name="Possessed"},{id=103040723950430,name="Gojo Floating"},{id=103046131635200,name="Love Scenario"},
-        {id=103102322875221,name="Laser Spin"},{id=103139492736941,name="Tenna Swing"},{id=103197720369544,name="Dani Gangnam"},
-        {id=104142334418357,name="Gangnam Style"},{id=104304182344567,name="Once Hop Hop"},{id=104485625389237,name="Make You Mine"},
-        {id=105730788757021,name="Birdbrain"},{id=105851216004006,name="Electro Swing"},{id=107899954696611,name="Spongebob Shuffle"},
-        {id=107978036345855,name="Prince Of Egypt"},{id=108128682361404,name="Rambunctious"},{id=108474079699304,name="Dep"},
-        {id=108922782921118,name="Pose For The Pic"},{id=109755476052324,name="IShowSpeed Dance"},{id=110521067391235,name="Old Jitterbug"},
-        {id=110537281410647,name="Wall Lean Idle"},{id=110731335896907,name="Headless Emote"},{id=111304332281521,name="Druski Shuffle"},
-        {id=111426928948833,name="Floating on Clouds"},{id=112758073578333,name="Bubbly Sit"},{id=112924687333965,name="Aura Farm"},
-        {id=112949099442762,name="Griddy 3"},{id=113016438012253,name="Best Mates"},{id=11309263077,name="Heart Skip"},
-        {id=113547795536875,name="Gangnam Style 3"},{id=11394056822,name="Elevate"},{id=114899970878842,name="R15 Death"},
-        {id=115319301809339,name="2 Phut Hon"},{id=115810068374896,name="Garry Dance 2"},{id=116770268279002,name="Teto Birdbrain"},
-        {id=117301403779781,name="Talm Bout Innit"},{id=117450501566142,name="Hidden Box"},{id=117734400993750,name="Virtual Singer"},
-        {id=119431985170060,name="Helicopter"},{id=119454955259757,name="Caramel Hip Sway"},{id=119746055344304,name="Plane"},
-        {id=120224229260879,name="Cute Crouch"},{id=120377619472998,name="Macarena"},{id=120437019363089,name="Peter Griffin Death"},
-        {id=120642514156293,name="Secret Handshake"},{id=120896030393583,name="Get Sturdy"},{id=121067808279598,name="Parrot Party"},
-        {id=121167704249654,name="Hide"},{id=121259524934987,name="Xavier Jig"},{id=122899100558551,name="Its TV Time"},
-        {id=122949892043249,name="Sit Idle"},{id=123015710605336,name="Onion"},{id=124305244640379,name="Shattered"},
-        {id=124754178569693,name="Die Lit"},{id=124828909173982,name="Skibidi"},{id=124935873390035,name="Hiding Human Box"},
-        {id=125032357496729,name="Fake Death Best"},{id=12507097350,name="Lotus Position"},{id=126614732606871,name="Sit"},
-        {id=127271798262177,name="M3GAN Dance"},{id=127562607220778,name="Gangnam Style 4"},{id=128658037413893,name="Going To Die Here"},
-        {id=128792127841374,name="Watching Videos"},{id=128972617664804,name="Fortnite Default"},{id=129132611803602,name="Helicopter 2"},
-        {id=129149402922241,name="Griddy"},{id=129916107176034,name="Discombobulated"},{id=130245358716273,name="Starboy Strut"},
-        {id=130641944883645,name="Jinu Pose"},{id=130726889233022,name="Rolling Crybaby"},{id=130998336536045,name="Gangnam Style 2"},
-        {id=131221550165951,name="Heart Hands"},{id=131544122623505,name="Become A Car"},{id=131763631172236,name="Xaviersobased"},
-        {id=132074413582912,name="California Girl"},{id=132382355371060,name="Tank Transformation"},{id=132384701706046,name="MM2 Fake Dead"},
-        {id=132508867759412,name="Xavier Based Emote"},{id=133142324349281,name="Flopping Fish"},{id=133477296392756,name="Rasputin"},
-        {id=133596366979822,name="Biblically Accurate"},{id=133600250245899,name="Soda Pop"},{id=133765015173412,name="Ariana"},
-        {id=134311528115559,name="Hit Every Beat"},{id=134615135651900,name="Head Spin Squid Game"},{id=135489824748823,name="Magical Pose"},
-        {id=136055001302601,name="Headless 1"},{id=136740085081295,name="Hidden Animation"},{id=137006085779408,name="Speed Glitch Plus"},
-        {id=137261874619072,name="Sponge Dance"},{id=137873580964093,name="Human Spinner"},{id=13823339506,name="Archer"},
-        {id=139021427684680,name="Touch"},{id=139271706064778,name="Hip Bounce"},{id=139830733782518,name="Phut On"},
-        {id=139859849852362,name="Dead"},{id=140037329261678,name="Caramel Dance"},{id=140466682449054,name="Head Spin"},
-        {id=14353417553,name="Air Guitar"},{id=14353419229,name="Dramatic Bow"},{id=14353421343,name="Face Frame"},
-        {id=14353425085,name="Strut"},{id=14900151704,name="Likey"},{id=14900153406,name="Feel Special"},
-        {id=15123050663,name="Bone Chillin Bop"},{id=15392927897,name="Sliving Groove"},{id=15392932768,name="IT-Grrrl"},
-        {id=15392937495,name="Checking Angles"},{id=15506496093,name="Rock n Roll"},{id=15506503658,name="Victory Dance"},
-        {id=15506506103,name="Flex Walk"},{id=15554010118,name="Head Bop"},{id=15554016057,name="Fall Back Float"},
-        {id=15571538346,name="Boom Boom Boom"},{id=15571540519,name="Starships"},{id=15610015346,name="Yungblud Jump"},
-        {id=15679955281,name="Festive Dance"},{id=15694504637,name="Backflip"},{id=15698511500,name="Levitate"},
-        {id=16126526506,name="Paris Sanasa"},{id=16276506814,name="Samba"},{id=16303091119,name="Beauty Touchdown"},
-        {id=16553249658,name="Piano Hands"},{id=16572756230,name="Hipmotion"},{id=17000058939,name="Mini Kong"},
-        {id=17360720445,name="Lets Drive"},{id=17746270218,name="Sturdy Dance"},{id=17748346932,name="Heart Shuffle"},
-        {id=1824359982,name="Old School"},{id=3360686498,name="Stadium"},{id=3360687722,name="Radio Tuning"},
-        {id=3360689775,name="Salute"},{id=3360692915,name="Tilt"},{id=3576686446,name="Point"},
-        {id=3576717965,name="Shy"},{id=3576823880,name="Point2"},{id=3576968026,name="Shrug"},
-        {id=3716636630,name="Monkey"},{id=3762654854,name="Greatest"},{id=3823158750,name="Godlike"},
-        {id=3934986896,name="Dizzy"},{id=3994130516,name="Bodybuilder"},{id=4049646104,name="Line Dance"},
-        {id=4102315500,name="Haha"},{id=4212496830,name="Zombie"},{id=4272351660,name="Fast Hands"},
-        {id=4272484885,name="Baby Dance"},{id=4555808220,name="Elephant"},{id=4646306583,name="Curtsy"},
-        {id=4689362868,name="Sleep"},{id=4849497510,name="Power Blast"},{id=4849499887,name="Happy"},
-        {id=4940597758,name="Cower"},{id=4940602656,name="Jumping Wave"},{id=5104377791,name="Hero Landing"},
-        {id=5230615437,name="Beckon"},{id=5230661597,name="Bored"},{id=5915776835,name="High Wave"},
-        {id=5915779043,name="Applaud"},{id=5917570207,name="Floss Dance"},{id=5938365243,name="Dolphin Dance"},
-        {id=616006778,name="Levitation Idle"},{id=616008087,name="Levitation Idle 2"},{id=616008936,name="Levitation Jump"},
-        {id=616010382,name="Levitation Walk"},{id=616013216,name="Levitation Run"},{id=616088211,name="Robot Idle"},
-        {id=616089559,name="Robot Idle 2"},{id=616090089,name="Robot Jump"},{id=616091570,name="Robot Run"},
-        {id=616093864,name="Robot Swim"},{id=616095330,name="Robot Walk"},{id=616104706,name="Hero Climb"},
-        {id=616108001,name="Hero Fall"},{id=616111295,name="Hero Idle"},{id=616112897,name="Hero Swim"},
-        {id=616113536,name="Hero Idle 2"},{id=616115533,name="Hero Jump"},{id=616117076,name="Hero Run"},
-        {id=616122287,name="Hero Walk"},{id=616156119,name="Zombie Climb"},{id=616157476,name="Zombie Fall"},
-        {id=616158929,name="Zombie Idle"},{id=616159314,name="Zombie Swim"},{id=616160636,name="Zombie Idle 2"},
-        {id=616161997,name="Zombie Jump"},{id=616163682,name="Zombie Run"},{id=616168032,name="Zombie Walk"},
-        {id=656114359,name="Ninja Climb"},{id=656115606,name="Ninja Fall"},{id=656116322,name="Ninja Swim"},
-        {id=656117400,name="Ninja Idle"},{id=656117878,name="Ninja Jump"},{id=656118341,name="Ninja Idle 2"},
-        {id=656118852,name="Ninja Run"},{id=656121766,name="Ninja Walk"},{id=657552124,name="Knight Walk"},
-        {id=657564596,name="Knight Run"},{id=657568135,name="Knight Idle 2"},{id=657582909,name="Knight Swim"},
-        {id=657595757,name="Knight Idle"},{id=657600338,name="Knight Fall"},{id=658360781,name="Knight Climb"},
-        {id=658409194,name="Knight Jump"},{id=707826056,name="Mage Climb"},{id=707829716,name="Mage Fall"},
-        {id=707843699,name="Mage Swim"},{id=707853694,name="Mage Jump"},{id=707855907,name="Mage Idle 2"},
-        {id=707861613,name="Mage Run"},{id=707897309,name="Mage Walk"},{id=707742142,name="Mage Idle"},
-        {id=71302743123422,name="Popular"},{id=71363859760586,name="Golden Freddy"},{id=71787387963141,name="Worm Dance"},
-        {id=7202896732,name="Boxing Punch"},{id=7202898984,name="Show Dem Wrists"},{id=7202900159,name="Wake Up Call"},
-        {id=73556976257737,name="Saja Boy Pose"},{id=73683655527605,name="Fashion Roadkill"},{id=73796726960568,name="Nyan Nyan"},
-        {id=742636889,name="Cartoon Climb"},{id=742637151,name="Cartoon Fall"},{id=742637544,name="Cartoon Idle"},
-        {id=742637942,name="Cartoon Jump"},{id=742638209,name="Cartoon Swim"},{id=742638445,name="Cartoon Idle 2"},
-        {id=742638842,name="Cartoon Run"},{id=742640026,name="Cartoon Walk"},{id=74646784680842,name="Ishowspeed Shake"},
-        {id=7466046574,name="Quiet Waves"},{id=75017857395637,name="TV Time"},{id=750779899,name="Pirate Climb"},
-        {id=750780242,name="Pirate Fall"},{id=750781874,name="Pirate Idle"},{id=750782230,name="Pirate Jump"},
-        {id=750782770,name="Pirate Idle 2"},{id=750783107,name="Pirate Swim"},{id=750783738,name="Pirate Run"},
-        {id=750785693,name="Pirate Walk"},{id=75528418031928,name="Rambunctious 2"},{id=75703899901487,name="6 7 Transform"},
-        {id=75842745124834,name="Human Snake"},{id=76700167742736,name="Belly Dance"},{id=782841498,name="Toy Idle"},
-        {id=782842708,name="Toy Run"},{id=782843345,name="Toy Walk"},{id=782843869,name="Toy Climb"},
-        {id=782844417,name="Toy Swim"},{id=782845736,name="Toy Idle 2"},{id=782846423,name="Toy Fall"},
-        {id=782847020,name="Toy Jump"},{id=78459263478161,name="Family Man Death"},{id=78620443286892,name="Cute Laying Down"},
-        {id=78758922757947,name="Kicking Feet Sit"},{id=79127989560307,name="Moon Walk"},{id=79312439851071,name="Hot To Go"},
-        {id=79752538807060,name="Griddy 2"},{id=80422524668416,name="Dreamer"},{id=80436375269036,name="Headless Hooper"},
-        {id=80544397800234,name="Helicopter 3"},{id=80877772569772,name="Default Dance OG"},{id=81177294287826,name="Hug"},
         {id=81390693780805,name="Proxima"},{id=82217023310738,name="Thanos Jump"},{id=82345302788133,name="Dia Delicia"},
         {id=82739386299071,name="Jackpot Groove"},{id=83018514370428,name="Stargazing"},{id=84052327668385,name="Floating 2"},
         {id=84067050907557,name="Pickle Rick"},{id=84195923658292,name="Jojo"},{id=84511772437190,name="Spinning Robloxian"},
