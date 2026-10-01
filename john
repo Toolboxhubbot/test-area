@@ -31,7 +31,6 @@ CoreGui = game:GetService("CoreGui")
 TeleportService = game:GetService("TeleportService")
 Lighting = game:GetService("Lighting")
 UIS = game:GetService("UserInputService")
-SoundService = game:GetService("SoundService")
 LP = Players.LocalPlayer
 PlaceId = game.PlaceId
 PlayerGui = LP:WaitForChild("PlayerGui", 10)
@@ -47,8 +46,8 @@ state = {
     autoKillAll=false, autoShootMurderer=false,
     autoResetMurderer=false, autoResetSheriff=false, autoResetInnocent=false,
     aimbotMurderer=false, aimbotSheriff=false,
-    aimbotFOV=250, aimbotSmooth=1, aimbotPredict=true, aimbotVisCheck=false,
-    aimbotSnap=true, aimbotSticky=true,
+    aimbotFOV=250, aimbotSmooth=4, aimbotPredict=true, aimbotVisCheck=false,
+    aimbotSnap=false, aimbotSticky=true,
     silentAimEnabled=false, silentAimWallCheck=true, silentAimYHeight=2,
     shootThroughWall=false, pingPreset="medium",
     loopFlingAll=false, loopFlingMur=false, loopFlingSheriff=false, loopFlingCustom=false,
@@ -84,6 +83,7 @@ state = {
     signSpam=false, autoGetGG=false,
     fpsPingMonitor=false, fpsPingColor=false,
     disableTrading=false,
+    removeBarriers=false, removeBarriersInstant=false,
     wallHop=false, wallHopFlick=false,
     blueAura=false, blueAuraStuds=10,
     feAnimEnabled=false,
@@ -96,12 +96,6 @@ state = {
     emoteMenuOpen=false,
     emoteFloatButtons={},
     emoteFloatPositions={},
-    removeBarriers=false,
-    lockedButtons={},
-    bigButtonLocked=false,
-    loopTeleportEnabled=false,
-    loopTeleportTarget="Lobby",
-    loopTeleportDistance=10,
 }
 
 KEYBIND_FEATURES = {
@@ -127,7 +121,6 @@ KEYBIND_FEATURES = {
     {key="wallHop",           label="Wall Hop",             default="Y"},
     {key="blueAura",          label="Blue Aura",            default="G"},
     {key="feAnimEnabled",     label="FE Animations",        default="Q"},
-    {key="removeBarriers",    label="Remove Barriers",      default=""},
 }
 
 NO_SAVE_STATE_KEYS = {
@@ -142,8 +135,8 @@ settingsConfig = {
     flingList={}, whitelist={},
     bgColor={r=0,g=0,b=0}, textColor={r=255,g=255,b=255},
     cardColor={r=18,g=18,b=22}, cardHoverColor={r=38,g=38,b=46},
-    borderColor={r=86,g=58,b=120}, accentColor={r=176,g=92,b=255},
-    tabBgColor={r=10,g=7,b=15}, tabTextColor={r=194,g=178,b=215},
+    borderColor={r=60,g=60,b=70}, accentColor={r=255,g=80,b=80},
+    tabBgColor={r=0,g=0,b=0}, tabTextColor={r=170,g=170,b=180},
     tabTextActiveColor={r=255,g=255,b=255},
     openBtnColor={r=0,g=0,b=0}, openBtnTextColor={r=255,g=255,b=255},
 }
@@ -179,10 +172,10 @@ toggleDisplayNames = {
     signSpam="Sign Spam", autoGetGG="Auto GG Sign",
     fpsPingMonitor="FPS Ping Monitor", fpsPingColor="FPS Ping Color",
     disableTrading="Disable Trading",
+    removeBarriers="Remove Barriers", removeBarriersInstant="Instant Barrier Destroy",
     wallHop="Wall Hop", wallHopFlick="Wall Hop Flick",
     blueAura="Blue Aura",
     feAnimEnabled="FE Animations",
-    removeBarriers="Remove Barriers",
 }
 
 function saveSettings()
@@ -223,66 +216,6 @@ function loadSettings()
 end
 loadSettings()
 
--- Purple UI defaults for older configs that still carry the original red accent.
-do
-    local a = settingsConfig.accentColor
-    if type(a) == "table" and (a.r == 255 and a.g == 80 and a.b == 80) then
-        settingsConfig.accentColor = {r=176,g=92,b=255}
-        settingsConfig.borderColor = {r=86,g=58,b=120}
-        settingsConfig.cardHoverColor = {r=42,g=28,b=58}
-        settingsConfig.tabBgColor = {r=10,g=7,b=15}
-        settingsConfig.tabTextColor = {r=194,g=178,b=215}
-    end
-end
-
--- True Anti-Void from the source file: keep Roblox's destroy height disabled while enabled,
--- and re-apply it after character respawns. The rescue/platform code below is independent.
-local originalDestroyHeight = Workspace.FallenPartsDestroyHeight
-local antiVoidCharacterConnection = nil
-local lastAntiVoidState = state.antiVoid and true or false
-
-local function applyTrueAntiVoid(enabled)
-    if antiVoidCharacterConnection then
-        pcall(function() antiVoidCharacterConnection:Disconnect() end)
-        antiVoidCharacterConnection = nil
-    end
-
-    if enabled then
-        Workspace.FallenPartsDestroyHeight = 0/0
-        antiVoidCharacterConnection = LP.CharacterAdded:Connect(function()
-            task.wait(0.1)
-            if state.antiVoid then
-                Workspace.FallenPartsDestroyHeight = 0/0
-            end
-        end)
-    else
-        Workspace.FallenPartsDestroyHeight = originalDestroyHeight
-    end
-end
-
-if lastAntiVoidState then
-    pcall(function() applyTrueAntiVoid(true) end)
-end
-
-task.spawn(function()
-    while true do
-        task.wait(0.1)
-        local enabled = state.antiVoid and true or false
-        if enabled ~= lastAntiVoidState then
-            lastAntiVoidState = enabled
-            pcall(function() applyTrueAntiVoid(enabled) end)
-        end
-    end
-end)
-
-RootMaid:GiveTask(function()
-    if antiVoidCharacterConnection then
-        pcall(function() antiVoidCharacterConnection:Disconnect() end)
-        antiVoidCharacterConnection = nil
-    end
-    pcall(function() Workspace.FallenPartsDestroyHeight = originalDestroyHeight end)
-end)
-
 for _, kb in ipairs(KEYBIND_FEATURES) do
     if state.keybinds[kb.key] == nil then
         state.keybinds[kb.key] = kb.default
@@ -295,6 +228,7 @@ EASE_SOFT = Enum.EasingStyle.Sine
 EASE_OUT = Enum.EasingDirection.Out
 EASE_IN = Enum.EasingDirection.In
 
+-- ============ SPINNING STROKE GRADIENT ============
 spinGradients = {}
 local SPIN_SPEED = 130
 local PULSE_SPEED = 0.9
@@ -353,16 +287,13 @@ local function attachSpinStroke(stroke, isOn, opts)
         local maxT = baseThickness * PULSE_MAX
         task.spawn(function()
             while stroke and stroke.Parent do
-                if state.animationsEnabled == false then
-                    stroke.Thickness = baseThickness
-                    task.wait(0.4)
-                else
+                if state.animationsEnabled ~= false then
                     TweenService:Create(stroke, TweenInfo.new(PULSE_SPEED, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Thickness = maxT}):Play()
                     task.wait(PULSE_SPEED)
                     if not stroke or not stroke.Parent then break end
                     TweenService:Create(stroke, TweenInfo.new(PULSE_SPEED, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {Thickness = minT}):Play()
-                    task.wait(PULSE_SPEED)
                 end
+                task.wait(PULSE_SPEED)
             end
         end)
     end
@@ -372,14 +303,11 @@ end
 task.spawn(function()
     local rot = 0
     local wobbleT = 0
+    local lastAnimState = state.animationsEnabled
     while true do
         local dt = RunService.Heartbeat:Wait()
-        if state.animationsEnabled == false then
-            for i = #spinGradients, 1, -1 do
-                local g = spinGradients[i]
-                if not g or not g.Parent then table.remove(spinGradients, i) end
-            end
-        else
+        local anim = state.animationsEnabled ~= false
+        if anim then
             wobbleT = wobbleT + dt
             local wobble = 1 + math.sin(wobbleT * 1.4) * 0.15
             rot = (rot + dt * SPIN_SPEED * wobble) % 360
@@ -387,6 +315,24 @@ task.spawn(function()
                 local g = spinGradients[i]
                 if g and g.Parent then g.Rotation = rot
                 else table.remove(spinGradients, i) end
+            end
+        else
+            for i = #spinGradients, 1, -1 do
+                local g = spinGradients[i]
+                if g and g.Parent then g.Rotation = 0
+                else table.remove(spinGradients, i) end
+            end
+        end
+        if lastAnimState ~= anim then
+            lastAnimState = anim
+            if not anim then
+                for _, obj in ipairs(game:GetDescendants()) do
+                    if obj:IsA("UIStroke") and obj:GetAttribute("Breathing") then
+                        pcall(function()
+                            obj.Thickness = math.max(1, obj.Thickness * 0.6)
+                        end)
+                    end
+                end
             end
         end
     end
@@ -829,106 +775,6 @@ local function detectMurdererPerk(plr)
     return nil
 end
 
--- ============ REMOVE BARRIERS (GlitchProof parent + Kill Bricks) ============
-local function isBarrierPart(obj)
-    if not obj:IsA("BasePart") then return false end
-    if obj == LP.Character then return false end
-    if LP.Character and obj:IsDescendantOf(LP.Character) then return false end
-
-    local name = string.lower(obj.Name)
-
-    -- Any leftover GlitchProof part
-    if string.find(name, "glitchproof", 1, true)
-        or string.find(name, "glitch_proof", 1, true)
-        or string.find(name, "glitch proof", 1, true) then
-        return true
-    end
-
-    -- Kill bricks
-    if string.find(name, "kill", 1, true) then
-        return true
-    end
-
-    -- Kill-brick folders
-    local anc = obj.Parent
-    local depth = 0
-    while anc and anc ~= Workspace and depth < 4 do
-        local an = string.lower(anc.Name)
-        if string.find(an, "killbrick", 1, true)
-            or string.find(an, "kill_brick", 1, true)
-            or string.find(an, "kill brick", 1, true)
-            or string.find(an, "killzone", 1, true)
-            or string.find(an, "kill_zone", 1, true)
-            or string.find(an, "kill zone", 1, true) then
-            return true
-        end
-        anc = anc.Parent
-        depth = depth + 1
-    end
-
-    return false
-end
-
--- Nukes the entire "GlitchProof" object that lives under
--- Workspace.Map.Base.GlitchProof   or   Workspace.Lobby.Base.GlitchProof
-local function removeGlitchProofParents()
-    local count = 0
-    local bases = {}
-    for _, top in ipairs(Workspace:GetChildren()) do
-        local tn = string.lower(top.Name)
-        if tn == "map" or tn == "lobby" then
-            local base = top:FindFirstChild("Base")
-            if base then
-                table.insert(bases, base)
-            else
-                -- Fallback: GlitchProof directly under Map / Lobby
-                local gp = top:FindFirstChild("GlitchProof")
-                if gp then
-                    pcall(function() gp:Destroy() end)
-                    count = count + 1
-                end
-            end
-        end
-    end
-    for _, base in ipairs(bases) do
-        for _, child in ipairs(base:GetChildren()) do
-            local cn = string.lower(child.Name)
-            if string.find(cn, "glitchproof", 1, true)
-                or string.find(cn, "glitch_proof", 1, true)
-                or string.find(cn, "glitch proof", 1, true) then
-                pcall(function() child:Destroy() end)
-                count = count + 1
-            end
-        end
-    end
-    return count
-end
-
-local function removeAllBarriers()
-    local count = 0
-    -- 1) Nuke the whole GlitchProof parent
-    count = count + removeGlitchProofParents()
-    -- 2) Sweep any remaining barrier / kill-brick parts
-    local toRemove = {}
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if isBarrierPart(obj) then table.insert(toRemove, obj) end
-    end
-    for _, obj in ipairs(toRemove) do
-        if obj and obj.Parent then
-            pcall(function() obj:Destroy() end)
-            count = count + 1
-        end
-    end
-    return count
-end
-
-task.spawn(function()
-    while true do
-        task.wait(0.3)
-        if state.removeBarriers then pcall(removeAllBarriers) end
-    end
-end)
-
 local function triggerMenuReset()
     pcall(function()
         VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Escape, false, game)
@@ -1089,6 +935,53 @@ local function executeHitboxKill(tp)
     killLocked[tp.UserId] = nil
 end
 
+local function killAllNow()
+    task.spawn(function()
+        standUp(); task.wait(0.1)
+        if findTool("Knife") or equipTool("Knife") then
+            for _,tp in ipairs(Players:GetPlayers()) do
+                if tp~=LP and targetIsAlive(tp) then
+                    task.spawn(function() executeHitboxKill(tp) end)
+                    task.wait(0.05)
+                end
+            end
+        else _G.__AW_NOTIFY('No Knife - must be Murderer') end
+    end)
+end
+local function killSheriffNow()
+    task.spawn(function()
+        if not alive() then return end
+        standUp(); task.wait(0.15)
+        if not (findTool("Knife") or equipTool("Knife")) then
+            for _=1,10 do task.wait(0.1); if equipTool("Knife") then break end end
+        end
+        if not findTool("Knife") then _G.__AW_NOTIFY('No Knife') return end
+        local live = getLiveSheriffHeroes()
+        for _, target in ipairs(live) do
+            if target and target ~= LP and targetIsAlive(target) then
+                task.spawn(function() executeHitboxKill(target) end)
+                task.wait(0.1)
+            end
+        end
+    end)
+end
+local function killCustomNow()
+    task.spawn(function()
+        if #settingsConfig.flingList==0 then _G.__AW_NOTIFY('No custom targets') return end
+        standUp(); task.wait(0.15)
+        if not (findTool("Knife") or equipTool("Knife")) then _G.__AW_NOTIFY('No Knife') return end
+        for _,n in ipairs(settingsConfig.flingList) do
+            for _,p in ipairs(Players:GetPlayers()) do
+                if playerMatchesName(p, n) and targetIsAlive(p) then
+                    task.spawn(function() executeHitboxKill(p) end)
+                    task.wait(0.1)
+                end
+            end
+        end
+    end)
+end
+
+-- ============ HANDLETOUCHED KILL ============
 local function fireHandleTouchedKill(targets)
     local char = LP.Character
     if not char then return end
@@ -1320,282 +1213,6 @@ local function teleportToCustom()
         end
     end
     _G.__AW_NOTIFY("No custom target found")
-end
-
--- Persistent far-away platform for void testing / teleporting.
-local VOID_PLATFORM_CFRAME = CFrame.new(100, 5000, 2000)
-local VOID_PLATFORM_SIZE = Vector3.new(60, 2, 60)
-
-local function ensureVoidPlatform()
-    local platform = Workspace:FindFirstChild("AW_VoidPlatform")
-    if platform and platform:IsA("BasePart") then
-        platform.CFrame = VOID_PLATFORM_CFRAME
-        platform.Size = VOID_PLATFORM_SIZE
-        platform.Anchored = true
-        platform.CanCollide = true
-        platform.CanTouch = false
-        platform.CanQuery = true
-        platform.Massless = false
-        return platform
-    end
-    if platform then pcall(function() platform:Destroy() end) end
-
-    platform = Instance.new("Part")
-    platform.Name = "AW_VoidPlatform"
-    platform.Anchored = true
-    platform.CanCollide = true
-    platform.CanTouch = false
-    platform.CanQuery = true
-    platform.Size = VOID_PLATFORM_SIZE
-    platform.CFrame = VOID_PLATFORM_CFRAME
-    platform.Material = Enum.Material.SmoothPlastic
-    platform.Color = Color3.fromRGB(28, 28, 34)
-    platform.Transparency = 0.12
-    platform.CastShadow = true
-    platform.TopSurface = Enum.SurfaceType.Smooth
-    platform.BottomSurface = Enum.SurfaceType.Smooth
-    platform.Parent = Workspace
-
-    local topGlow = Instance.new("SurfaceLight")
-    topGlow.Name = "AW_VoidGlow"
-    topGlow.Face = Enum.NormalId.Top
-    topGlow.Brightness = 0.6
-    topGlow.Range = 18
-    topGlow.Color = Color3.fromRGB(176, 92, 255)
-    topGlow.Parent = platform
-
-    return platform
-end
-
-ensureVoidPlatform()
-task.spawn(function()
-    while true do
-        task.wait(2)
-        pcall(ensureVoidPlatform)
-    end
-end)
-
-local function teleportToVoidPlatform()
-    local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-    local platform = ensureVoidPlatform()
-    if r and platform then
-        local target = platform.Position + Vector3.new(0, platform.Size.Y * 0.5 + 4, 0)
-        if (r.Position - target).Magnitude > 10 then
-            r.CFrame = CFrame.new(target)
-            r.AssemblyLinearVelocity = Vector3.zero
-            r.AssemblyAngularVelocity = Vector3.zero
-        end
-    end
-end
-
-local function getMapLoopPosition()
-    local mapFolder = nil
-    for _, m in ipairs(Workspace:GetChildren()) do
-        if m:FindFirstChild("CoinContainer") or m.Name == "CoinContainer" then
-            mapFolder = m
-            break
-        end
-    end
-    if not mapFolder then return nil end
-
-    local spawnPart = nil
-    for _, d in ipairs(mapFolder:GetDescendants()) do
-        if d:IsA("SpawnLocation") and d.Enabled ~= false then
-            spawnPart = d
-            break
-        end
-    end
-    if spawnPart then
-        return spawnPart.Position + Vector3.new(0, 5, 0)
-    end
-
-    if mapFolder:IsA("Model") then
-        local ok, cf, size = pcall(function()
-            local c, s = mapFolder:GetBoundingBox()
-            return c, s
-        end)
-        if ok and cf then
-            return cf.Position + Vector3.new(0, size.Y * 0.5 + 8, 0)
-        end
-    end
-
-    local sum, count = Vector3.zero, 0
-    for _, d in ipairs(mapFolder:GetDescendants()) do
-        if d:IsA("BasePart") and d.Name ~= "CoinContainer" then
-            sum = sum + d.Position
-            count = count + 1
-        end
-    end
-    if count > 0 then
-        return (sum / count) + Vector3.new(0, 25, 0)
-    end
-    return nil
-end
-
-local function resolveLoopTeleportPosition()
-    local target = state.loopTeleportTarget or "Lobby"
-    if target == "Lobby" then
-        return LOBBY_CFRAME.Position
-    elseif target == "Map" then
-        return getMapLoopPosition()
-    elseif target == "Void Platform" then
-        local platform = ensureVoidPlatform()
-        return platform and (platform.Position + Vector3.new(0, platform.Size.Y * 0.5 + 4, 0)) or nil
-    elseif target == "Murderer" then
-        local p = getMurd()
-        local tr = p and p.Character and p.Character:FindFirstChild("HumanoidRootPart")
-        return tr and (tr.Position + Vector3.new(0, 0, 3)) or nil
-    elseif target == "Sheriff" then
-        local p = getLiveSheriffHeroes()[1]
-        local tr = p and p.Character and p.Character:FindFirstChild("HumanoidRootPart")
-        return tr and (tr.Position + Vector3.new(0, 0, 3)) or nil
-    elseif target == "Custom" then
-        for _, n in ipairs(settingsConfig.flingList) do
-            for _, p in ipairs(Players:GetPlayers()) do
-                if playerMatchesName(p, n) then
-                    local tr = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
-                    if tr then return tr.Position + Vector3.new(0, 0, 3) end
-                end
-            end
-        end
-    end
-    return nil
-end
-
-local function maintainLoopTeleport()
-    if not state.loopTeleportEnabled or isLocalFlinging then return end
-    local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-    if not r then return end
-    local h = LP.Character:FindFirstChildOfClass("Humanoid")
-    if not h or h.Health <= 0 then return end
-
-    local targetPos = resolveLoopTeleportPosition()
-    if not targetPos then return end
-    local distance = tonumber(state.loopTeleportDistance) or 10
-    if (r.Position - targetPos).Magnitude > distance then
-        r.Anchored = true
-        r.CFrame = CFrame.new(targetPos)
-        r.AssemblyLinearVelocity = Vector3.zero
-        r.AssemblyAngularVelocity = Vector3.zero
-        task.wait()
-        if r.Parent then r.Anchored = false end
-    end
-end
-
-task.spawn(function()
-    while true do
-        task.wait(0.12)
-        pcall(maintainLoopTeleport)
-    end
-end)
-
-local function getEquippedRoleTool(role)
-    if role == "Murderer" then
-        return findTool("Knife")
-    elseif role == "Sheriff" or role == "Hero" then
-        return getGun()
-    end
-    return nil
-end
-
-local function equipRoleWeapon(expectedRole)
-    local role = getPlayerRole(LP)
-    local allowed = (expectedRole == "Murderer" and role == "Murderer")
-        or (expectedRole == "Sheriff" and (role == "Sheriff" or role == "Hero"))
-    if not allowed then
-        _G.__AW_NOTIFY("Role weapon unavailable for your current role")
-        return
-    end
-
-    local tool = (expectedRole == "Murderer") and findTool("Knife") or getGun()
-    if not tool then
-        _G.__AW_NOTIFY("Weapon not found")
-        return
-    end
-    local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-    if hum then pcall(function() hum:EquipTool(tool) end) end
-end
-
-local function makeRoleWeaponCard(parent, order, roleName, roleLabel, isKnife)
-    local card = Instance.new("TextButton", parent)
-    card.Size = UDim2.new(0.5, -4, 0, 72)
-    card.LayoutOrder = order
-    card.BackgroundColor3 = cc3(settingsConfig.cardColor)
-    card.Text = ""
-    card.AutoButtonColor = false
-    card.ClipsDescendants = true
-    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 12)
-    local stroke = Instance.new("UIStroke", card)
-    stroke.Color = cc3(settingsConfig.accentColor)
-    stroke.Thickness = 1.2
-    stroke.Transparency = 0.45
-
-    local icon = Instance.new("Frame", card)
-    icon.Size = UDim2.new(0, 48, 0, 48)
-    icon.Position = UDim2.new(0, 10, 0.5, -24)
-    icon.BackgroundColor3 = Color3.fromRGB(24, 18, 32)
-    icon.BorderSizePixel = 0
-    Instance.new("UICorner", icon).CornerRadius = UDim.new(0, 12)
-
-    if isKnife then
-        local blade = Instance.new("Frame", icon)
-        blade.Size = UDim2.new(0, 29, 0, 7)
-        blade.Position = UDim2.new(0, 9, 0, 15)
-        blade.Rotation = -18
-        blade.BackgroundColor3 = Color3.fromRGB(240, 240, 245)
-        blade.BorderSizePixel = 0
-        Instance.new("UICorner", blade).CornerRadius = UDim.new(0, 3)
-        local handle = Instance.new("Frame", icon)
-        handle.Size = UDim2.new(0, 16, 0, 7)
-        handle.Position = UDim2.new(0, 27, 0, 28)
-        handle.Rotation = -18
-        handle.BackgroundColor3 = cc3(settingsConfig.accentColor)
-        handle.BorderSizePixel = 0
-        Instance.new("UICorner", handle).CornerRadius = UDim.new(0, 3)
-    else
-        local grip = Instance.new("Frame", icon)
-        grip.Size = UDim2.new(0, 9, 0, 17)
-        grip.Position = UDim2.new(0, 26, 0, 24)
-        grip.Rotation = 18
-        grip.BackgroundColor3 = cc3(settingsConfig.accentColor)
-        grip.BorderSizePixel = 0
-        Instance.new("UICorner", grip).CornerRadius = UDim.new(0, 3)
-        local body = Instance.new("Frame", icon)
-        body.Size = UDim2.new(0, 27, 0, 11)
-        body.Position = UDim2.new(0, 10, 0, 16)
-        body.BackgroundColor3 = Color3.fromRGB(235, 235, 242)
-        body.BorderSizePixel = 0
-        Instance.new("UICorner", body).CornerRadius = UDim.new(0, 3)
-        local barrel = Instance.new("Frame", icon)
-        barrel.Size = UDim2.new(0, 13, 0, 6)
-        barrel.Position = UDim2.new(0, 4, 0, 18)
-        barrel.BackgroundColor3 = Color3.fromRGB(235, 235, 242)
-        barrel.BorderSizePixel = 0
-    end
-
-    local title = Instance.new("TextLabel", card)
-    title.Size = UDim2.new(1, -72, 0, 20)
-    title.Position = UDim2.new(0, 68, 0, 14)
-    title.BackgroundTransparency = 1
-    title.Text = roleLabel
-    title.TextColor3 = cc3(settingsConfig.textColor)
-    title.Font = Enum.Font.GothamBold
-    title.TextSize = 13
-    title.TextXAlignment = Enum.TextXAlignment.Left
-
-    local sub = Instance.new("TextLabel", card)
-    sub.Size = UDim2.new(1, -72, 0, 18)
-    sub.Position = UDim2.new(0, 68, 0, 36)
-    sub.BackgroundTransparency = 1
-    sub.Text = "Equip " .. (isKnife and "Knife" or "Gun")
-    sub.TextColor3 = cc3(settingsConfig.tabTextColor)
-    sub.Font = Enum.Font.Gotham
-    sub.TextSize = 10.5
-    sub.TextXAlignment = Enum.TextXAlignment.Left
-
-    if state.animationsEnabled then attachBounce(card); attachShine(card); attachRipple(card, cc3(settingsConfig.accentColor)) end
-    card.MouseButton1Click:Connect(function() equipRoleWeapon(roleName) end)
-    return card
 end
 
 local function getHitboxTargets()
@@ -1956,21 +1573,13 @@ local function runShootWorkflow()
     showFiringText()
     task.spawn(function() pcall(fullShootSequence); shootWorkflowRunning = false end)
 end
-
 local bigDrag = nil
 bigBtn.InputBegan:Connect(function(input)
     if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
-    bigDrag = {
-        input = input,
-        start = input.Position,
-        startPos = bigWrap.Position,
-        moved = false,
-        locked = state.bigButtonLocked and true or false,
-    }
+    bigDrag = {input = input, start = input.Position, startPos = bigWrap.Position, moved = false}
 end)
 UIS.InputChanged:Connect(function(input)
     if not bigDrag then return end
-    if bigDrag.locked then return end
     if input ~= bigDrag.input then return end
     if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
     local delta = input.Position - bigDrag.start
@@ -1985,10 +1594,8 @@ UIS.InputEnded:Connect(function(input)
     local d = bigDrag
     bigDrag = nil
     if not d.moved then
-        if not d.locked then
-            state.bigButtonX = bigWrap.Position.X.Scale
-            state.bigButtonY = bigWrap.Position.Y.Scale
-        end
+        state.bigButtonX = bigWrap.Position.X.Scale
+        state.bigButtonY = bigWrap.Position.Y.Scale
         runShootWorkflow()
         if state.animationsEnabled then
             local s = Instance.new("UIScale", bigWrap)
@@ -2011,9 +1618,9 @@ floatGui.IgnoreGuiInset = true
 floatGui.Parent = PlayerGui
 
 local FLOAT_BUTTON_DEFS = {
-    {id="killAll",       label="Kill All",        type="action", cb=handleTouchKillAll},
-    {id="killSheriff",   label="Kill Sheriff",    type="action", cb=handleTouchKillSheriff},
-    {id="killCustom",    label="Kill Custom",     type="action", cb=handleTouchKillCustom},
+    {id="killAll",       label="Kill All",        type="action", cb=killAllNow},
+    {id="killSheriff",   label="Kill Sheriff",    type="action", cb=killSheriffNow},
+    {id="killCustom",    label="Kill Custom",     type="action", cb=killCustomNow},
     {id="flingMurAction",label="Fling Murderer",  type="action", cb=flingMurdererNow},
     {id="flingSherAction",label="Fling Sheriff",  type="action", cb=flingSheriffNow},
     {id="flingAllAction",label="Fling All",       type="action", cb=flingAllNow},
@@ -2068,7 +1675,7 @@ local FLOAT_BUTTON_DEFS = {
     {id="wallHop",       label="Wall Hop",        type="toggle", key="wallHop"},
     {id="blueAura",      label="Blue Aura",       type="toggle", key="blueAura"},
     {id="feAnim",        label="FE Anim",         type="toggle", key="feAnimEnabled"},
-    {id="removeBarriers",label="No Barriers",     type="toggle", key="removeBarriers"},
+    {id="removeBarriers",label="Remove Barriers", type="toggle", key="removeBarriers"},
 }
 local FLOAT_BUTTON_MAP = {}
 for _, def in ipairs(FLOAT_BUTTON_DEFS) do FLOAT_BUTTON_MAP[def.id] = def end
@@ -2078,7 +1685,6 @@ for _, def in ipairs(FLOAT_BUTTON_DEFS) do
     if state.floatEnabledButtons[def.id] == nil then state.floatEnabledButtons[def.id] = false end
 end
 state.floatButtonPositions = state.floatButtonPositions or {}
-state.lockedButtons = state.lockedButtons or {}
 if not state.floatButtonShape then state.floatButtonShape = "circle" end
 
 local floatButtons = {}
@@ -2171,17 +1777,10 @@ local function rebuildFloatButtons()
             local dragState = nil
             btn.InputBegan:Connect(function(input)
                 if input.UserInputType ~= Enum.UserInputType.Touch and input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
-                dragState = {
-                    input = input,
-                    start = input.Position,
-                    sp = btn.Position,
-                    moved = false,
-                    locked = state.lockedButtons[def.id] and true or false,
-                }
+                dragState = {input = input, start = input.Position, sp = btn.Position, moved = false}
             end)
             UIS.InputChanged:Connect(function(input)
                 if not dragState then return end
-                if dragState.locked then return end
                 if input ~= dragState.input then return end
                 if input.UserInputType ~= Enum.UserInputType.Touch and input.UserInputType ~= Enum.UserInputType.MouseMovement then return end
                 local d = input.Position - dragState.start
@@ -2222,6 +1821,7 @@ local function setFloatVisible(vis)
 end
 rebuildFloatButtons()
 
+-- ============ MAIN UI ============
 local sg = Instance.new("ScreenGui")
 sg.Name = "Appleware"
 sg.Parent = PlayerGui
@@ -2238,48 +1838,128 @@ mainWrap.BackgroundTransparency = 1
 local mainScale = Instance.new("UIScale", mainWrap)
 mainScale.Scale = settingsConfig.selectedScale or 1
 _G.__AW_MAINSCALE = mainScale
+
+-- ============================================
+--        UPGRADED APPLEWARE MAIN UI
+-- ============================================
+local OUTER_PURPLE = Color3.fromRGB(150, 90, 255)
+local OUTER_PURPLE_DEEP = Color3.fromRGB(90, 40, 200)
+
+-- Outer glow ring (behind the main panel)
+local outerRing = Instance.new("Frame", mainWrap)
+outerRing.Name = "OuterRing"
+outerRing.AnchorPoint = Vector2.new(0.5, 0.5)
+outerRing.Position = UDim2.new(0.5, 0, 0.5, 0)
+outerRing.Size = UDim2.new(1, 20, 1, 20)
+outerRing.BackgroundTransparency = 1
+outerRing.ZIndex = 0
+
+local ringCorner = Instance.new("UICorner", outerRing)
+ringCorner.CornerRadius = UDim.new(0, 20)
+
+local ringStroke = Instance.new("UIStroke", outerRing)
+ringStroke.Color = OUTER_PURPLE
+ringStroke.Thickness = 2
+ringStroke.Transparency = 0.15
+ringStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+task.spawn(function()
+    local t = 0
+    while outerRing and outerRing.Parent do
+        local dt = RunService.Heartbeat:Wait()
+        if state.animationsEnabled ~= false then
+            t = t + dt
+            local pulse = 0.5 + math.sin(t * 1.6) * 0.5
+            ringStroke.Transparency = 0.05 + (1 - pulse) * 0.25
+            ringStroke.Thickness = 2 + pulse * 1.2
+            ringStroke.Color = OUTER_PURPLE:Lerp(OUTER_PURPLE_DEEP, 1 - pulse)
+        else
+            ringStroke.Transparency = 0.15
+            ringStroke.Thickness = 2
+            ringStroke.Color = OUTER_PURPLE
+        end
+    end
+end)
+
+local outerRing2 = Instance.new("Frame", mainWrap)
+outerRing2.Name = "OuterRing2"
+outerRing2.AnchorPoint = Vector2.new(0.5, 0.5)
+outerRing2.Position = UDim2.new(0.5, 0, 0.5, 0)
+outerRing2.Size = UDim2.new(1, 34, 1, 34)
+outerRing2.BackgroundTransparency = 1
+outerRing2.ZIndex = 0
+Instance.new("UICorner", outerRing2).CornerRadius = UDim.new(0, 26)
+local ringStroke2 = Instance.new("UIStroke", outerRing2)
+ringStroke2.Color = OUTER_PURPLE_DEEP
+ringStroke2.Thickness = 1.2
+ringStroke2.Transparency = 0.65
+
 local main = Instance.new("Frame", mainWrap)
+main.Name = "Main"
 main.Size = UDim2.new(1,0,1,0)
 main.BackgroundColor3 = cc3(settingsConfig.bgColor)
 main.Active = true
 main.ClipsDescendants = true
+main.ZIndex = 1
 Instance.new("UICorner", main).CornerRadius = UDim.new(0,14)
-local ms = Instance.new("UIStroke", main)
-ms.Color = cc3(settingsConfig.borderColor)
-ms.Transparency = 0.3
 
-local topGlow = Instance.new("Frame", main)
-topGlow.Size = UDim2.new(1, -18, 0, 3)
-topGlow.Position = UDim2.new(0, 9, 0, 0)
-topGlow.BackgroundColor3 = cc3(settingsConfig.accentColor)
-topGlow.BorderSizePixel = 0
-topGlow.ZIndex = 30
-local topGrad = Instance.new("UIGradient", topGlow)
-topGrad.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(110, 45, 190)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(210, 120, 255)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(110, 45, 190))
+local mainGrad = Instance.new("UIGradient", main)
+mainGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0.00, Color3.fromRGB(18, 10, 30)),
+    ColorSequenceKeypoint.new(0.50, Color3.fromRGB(12, 8, 24)),
+    ColorSequenceKeypoint.new(1.00, Color3.fromRGB(20, 12, 34)),
 })
-topGrad.Rotation = 0
-Instance.new("UICorner", topGlow).CornerRadius = UDim.new(1, 0)
-if state.animationsEnabled then
-    task.spawn(function()
-        local offset = 0
-        while topGlow and topGlow.Parent do
-            if state.animationsEnabled then
-                offset = (offset + 0.35) % 2
-                topGrad.Offset = Vector2.new(offset - 1, 0)
-            end
-            task.wait(0.03)
+mainGrad.Rotation = 135
+
+local ms = Instance.new("UIStroke", main)
+ms.Color = OUTER_PURPLE
+ms.Transparency = 0.55
+ms.Thickness = 1.2
+ms.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+local shimmer = Instance.new("Frame", main)
+shimmer.Name = "Shimmer"
+shimmer.Size = UDim2.new(0, 120, 1.4, 0)
+shimmer.Position = UDim2.new(-0.3, 0, -0.2, 0)
+shimmer.BackgroundColor3 = Color3.fromRGB(160, 110, 255)
+shimmer.BackgroundTransparency = 0.92
+shimmer.BorderSizePixel = 0
+shimmer.Rotation = 10
+shimmer.ZIndex = 2
+shimmer.Active = false
+task.spawn(function()
+    while shimmer and shimmer.Parent do
+        task.wait(6)
+        if state.animationsEnabled ~= false then
+            shimmer.Position = UDim2.new(-0.3, 0, -0.2, 0)
+            TweenService:Create(shimmer, TweenInfo.new(2.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+                Position = UDim2.new(1.3, 0, -0.2, 0)
+            }):Play()
         end
-    end)
-end
+    end
+end)
+
+local topAccent = Instance.new("Frame", main)
+topAccent.Size = UDim2.new(1, 0, 0, 2)
+topAccent.Position = UDim2.new(0, 0, 0, 0)
+topAccent.BackgroundColor3 = Color3.new(1, 1, 1)
+topAccent.BorderSizePixel = 0
+topAccent.ZIndex = 5
+local topAccentGrad = Instance.new("UIGradient", topAccent)
+topAccentGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, OUTER_PURPLE_DEEP),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(220, 180, 255)),
+    ColorSequenceKeypoint.new(1, OUTER_PURPLE_DEEP),
+})
+topAccentGrad.Rotation = 0
+
 local dragStrip = Instance.new("TextButton", main)
 dragStrip.Size = UDim2.new(1, -140, 0, 34)
 dragStrip.Position = UDim2.new(0, 140, 0, 0)
 dragStrip.BackgroundTransparency = 1
 dragStrip.Text = ""
 dragStrip.ZIndex = 20
+
 local mainDrag = nil
 local function beginMainDrag(input) mainDrag = {input = input, start = input.Position, startPos = mainWrap.Position} end
 local function endMainDrag(input)
@@ -2307,6 +1987,29 @@ local sb = Instance.new("Frame", main)
 sb.Size = UDim2.new(0,138,1,0)
 sb.BackgroundColor3 = cc3(settingsConfig.tabBgColor)
 Instance.new("UICorner", sb).CornerRadius = UDim.new(0,14)
+
+-- Sidebar upgrades
+local sbGrad = Instance.new("UIGradient", sb)
+sbGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(24, 14, 40)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(12, 8, 22)),
+})
+sbGrad.Rotation = 90
+local sbStroke = Instance.new("UIStroke", sb)
+sbStroke.Color = OUTER_PURPLE
+sbStroke.Thickness = 1
+sbStroke.Transparency = 0.65
+sbStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+
+local sbAccentLine = Instance.new("Frame", sb)
+sbAccentLine.AnchorPoint = Vector2.new(1, 0)
+sbAccentLine.Position = UDim2.new(1, -1, 0, 0)
+sbAccentLine.Size = UDim2.new(0, 2, 1, 0)
+sbAccentLine.BackgroundColor3 = OUTER_PURPLE
+sbAccentLine.BackgroundTransparency = 0.4
+sbAccentLine.BorderSizePixel = 0
+sbAccentLine.ZIndex = 5
+
 local logo = Instance.new("TextButton", sb)
 logo.Size = UDim2.new(1,-12,0,48)
 logo.Position = UDim2.new(0,6,0,4)
@@ -2376,6 +2079,12 @@ local function switchTab(n)
         if nm == SECRET_NAME then txtCol = Color3.fromRGB(0,0,0)
         else txtCol = ia and cc3(settingsConfig.tabTextActiveColor) or cc3(settingsConfig.tabTextColor) end
         TweenService:Create(b, TweenInfo.new(0.32, EASE_SMOOTH), {BackgroundTransparency = ia and 0 or 1, BackgroundColor3 = ia and cc3(settingsConfig.cardHoverColor) or cc3(settingsConfig.tabBgColor), TextColor3 = txtCol}):Play()
+        local ts = b:FindFirstChildOfClass("UIStroke")
+        if ts then
+            TweenService:Create(ts, TweenInfo.new(0.28, EASE_SMOOTH), {
+                Transparency = ia and 0.1 or 1
+            }):Play()
+        end
     end
     if pageGs[o] then
         local op = pages[o]
@@ -2404,6 +2113,14 @@ local function createTabButton(name, isFirst)
     b.TextXAlignment = Enum.TextXAlignment.Left
     b.AutoButtonColor = false
     Instance.new("UICorner", b).CornerRadius = UDim.new(0,8)
+    local tabStroke = Instance.new("UIStroke", b)
+    tabStroke.Color = OUTER_PURPLE
+    tabStroke.Thickness = 1.4
+    tabStroke.Transparency = isFirst and 0.1 or 1
+    tabStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    if state.animationsEnabled and isFirst then
+        attachSpinStroke(tabStroke, true, {pulse = false})
+    end
     btns[name] = b
     if state.animationsEnabled then attachRipple(b, cc3(settingsConfig.accentColor)) end
     if not pages[name] then makePage(name) end
@@ -2466,6 +2183,23 @@ local function tgg(page, name, order, key)
         if g then setSpinGradColors(g, ns) end
         if key == "bigButtonEnabled" and bigWrap then bigWrap.Visible = ns end
         if key == "floatButtonsEnabled" then setFloatVisible(ns) end
+        if key == "animationsEnabled" then
+            for _, grad in ipairs(spinGradients) do
+                if grad and grad.Parent then grad.Rotation = 0 end
+            end
+            if ns == false then
+                for _, obj in ipairs(sg:GetDescendants()) do
+                    if obj:IsA("UIStroke") and obj:GetAttribute("Breathing") then
+                        obj.Thickness = math.max(1, obj.Thickness * 0.55)
+                    end
+                end
+                for _, obj in ipairs(floatGui:GetDescendants()) do
+                    if obj:IsA("UIStroke") and obj:GetAttribute("Breathing") then
+                        obj.Thickness = math.max(1, obj.Thickness * 0.55)
+                    end
+                end
+            end
+        end
         if FLOAT_BUTTON_MAP[key] then refreshFloatVisual(FLOAT_BUTTON_MAP[key]) end
         local dn = toggleDisplayNames[key] or key
         _G.__AW_NOTIFY('<font color="'..(ns and "#5aff8c" or "#ff5a5a")..'">'..dn..'</font> '..(ns and "on" or "off"))
@@ -2611,6 +2345,7 @@ local function makeInput(page, order, ph, val, onC)
     return box
 end
 
+-- ============ DROPDOWN ============
 local function makeDropdown(page, label, order, options, initial, onSelect)
     local wrapper = Instance.new("Frame", page)
     wrapper.Size = UDim2.new(1, 0, 0, 44)
@@ -2747,6 +2482,7 @@ local function makeDropdown(page, label, order, options, initial, onSelect)
     end
 end
 
+-- ============ ANIM / EMOT TAB ============
 do
     local EMOTES = {
         {id=3360689775,name="Salute"},{id=5915779043,name="Applaud"},{id=3360692915,name="Tilt"},
@@ -2835,6 +2571,38 @@ do
         {id=88024974500195,name="Oppa Gangnam"},{id=7202896732,name="Boxing Punch"},{id=128792127841374,name="Watching Videos"},
         {id=87756443172440,name="Xavier Based Dance"},{id=116770268279002,name="Teto Birdbrain"},{id=124935873390035,name="Hiding Human Box"},
         {id=94121796810251,name="Kicking Feet Blush"},
+        -- === EXTRA EMOTES (added) ===
+        {id=110343857136497,name="Sigma Walk"},{id=120370328371751,name="Baller"},{id=15906460622,name="Fancy Feet"},
+        {id=92767376132433,name="Chill Stretch"},{id=114741940466513,name="Tokyo Drift"},
+        {id=94584988225570,name="Backflip Kick"},{id=141084489963819,name="Boom Shaka Laka"},{id=140149957153831,name="AI Slop Spin"},
+        {id=115250595303638,name="Wall Lean"},{id=73203621088735,name="Smooth Criminal"},{id=130610595259263,name="Whatever"},
+        {id=139566264485467,name="TikTok Boy"},{id=110218930905612,name="Popping Lock"},{id=124659288874585,name="Running Man"},
+        {id=99998976028500,name="Bunny Bounce"},{id=108994317660395,name="Wiggle Walk"},{id=112674745096134,name="Deep Sigh"},
+        {id=132937357076748,name="Sad Sit"},{id=138855600288104,name="Zen Sit"},{id=123561284997407,name="Thinking Sit"},
+        {id=100667288262773,name="Drink Sip"},{id=125344997203344,name="Cat Stretch"},{id=130638202638576,name="Sleepy Sit"},
+        {id=134833645478702,name="Meditate"},{id=122003259571273,name="Yoga Pose"},{id=118994498411236,name="Head Bang"},
+        {id=113026850067031,name="Air Guitar 2"},{id=131179607222537,name="DJ Scratch"},{id=132866435223680,name="Mic Drop"},
+        {id=121342768948199,name="Pop Lock"},{id=129355857264816,name="Shuffle Hop"},{id=112855848145029,name="Breakdance"},
+        {id=118946464268715,name="Freeze Pose"},{id=111915433711001,name="C Walk"},{id=116411996125522,name="Hip Hop"},
+        {id=129679463689145,name="Fancy Spin"},{id=104660194638453,name="Run In Place"},{id=134728871904699,name="Moonwalk 2"},
+        {id=113476219574738,name="Happy Jump"},{id=120154720020337,name="Cry"},{id=118378532632945,name="Laugh"},
+        {id=122874453395727,name="Angry Stomp 2"},{id=131203210426990,name="Scared Crouch"},{id=112853322012317,name="Taunt"},
+        {id=124348835114790,name="Facepalm"},{id=110249036165053,name="Shrug 2"},{id=127017653250655,name="Clap Hands"},
+        {id=138761297766177,name="Slow Clap"},{id=132473672576550,name="Cheer"},{id=118665382347352,name="Wave Hi"},
+        {id=130886032808935,name="Peace Sign"},{id=111626045614987,name="Finger Guns"},{id=138680325556620,name="Thumbs Up"},
+        {id=127362949224826,name="Fist Bump"},{id=129969913966410,name="High Five"},{id=134302745101923,name="Bow"},
+        {id=139969618577356,name="Curtsy Flip"},{id=111719767586221,name="Salute 2"},{id=132166136943058,name="Gang Sign"},
+        {id=122210511095088,name="Squat"},{id=126625096704344,name="Push Up"},{id=129552243158972,name="Sit Up"},
+        {id=131948319408291,name="Flex"},{id=113998076748977,name="Muscle Pose"},{id=138341967773049,name="Bodybuilder 2"},
+        {id=116744093530031,name="Sumo Stomp"},{id=120772237656868,name="Karate Chop"},{id=127480703984607,name="Roundhouse Kick"},
+        {id=120944020247832,name="Punch Combo"},{id=134238313372558,name="Sword Swing"},{id=137914692028635,name="Shoot Bow"},
+        {id=117250367537095,name="Throw Spear"},{id=138247489761150,name="Wand Cast"},{id=110328719978618,name="Magic Pose"},
+        {id=130445287801411,name="Superhero Landing 2"},{id=120662809990956,name="Power Up"},{id=129993860838303,name="Explode"},
+        {id=140974281011106,name="Backflip 2"},{id=120484080882553,name="Frontflip"},{id=130474792187279,name="Side Flip"},
+        {id=136690795526739,name="Cartwheel"},{id=114833191042231,name="Round Off"},{id=120743343729422,name="Handstand"},
+        {id=126781038100316,name="Headstand"},{id=127871370815347,name="Split"},{id=134410949199699,name="Bridge Pose"},
+        {id=120086574721688,name="Kick Up"},{id=137604371800409,name="Suplex"},{id=112852116217853,name="Body Slam"},
+        {id=128351575761149,name="Elbow Drop"},{id=121979705873611,name="Neck Snap"},{id=133953630039486,name="Headbutt"},
     }
     local seen, dedup = {}, {}
     for _, e in ipairs(EMOTES) do
@@ -3196,6 +2964,7 @@ do
         end
     end)
 
+    -- ============ FE ANIMATIONS ============
     addSect(pages["Anim/Emot"], "FE Animations", 10)
 
     local ANIM_SLOT_PATHS = {
@@ -3257,38 +3026,8 @@ do
         end)
     end
 
-    local function reloadAnimate(char)
-        if not char then return end
-        local animate = char:FindFirstChild("Animate")
-        if not animate then return end
-        task.spawn(function()
-            pcall(function()
-                local hum = char:FindFirstChildOfClass("Humanoid")
-                local animator = hum and hum:FindFirstChildOfClass("Animator")
-                if animator then
-                    for _, t in ipairs(animator:GetPlayingAnimationTracks()) do
-                        pcall(function() t:Stop(0) end)
-                    end
-                end
-                if animate:IsA("LocalScript") or animate:IsA("Script") then
-                    animate.Disabled = true
-                    task.wait()
-                    if animate and animate.Parent then
-                        animate.Disabled = false
-                    end
-                end
-            end)
-        end)
-    end
-
     local FE_PRESETS = {
         ["Default"] = nil,
-        ["None"] = {
-            idle1="rbxassetid://0", idle2="rbxassetid://0",
-            walk="rbxassetid://0",  run="rbxassetid://0",
-            jump="rbxassetid://0",  climb="rbxassetid://0",
-            fall="rbxassetid://0",  swim="rbxassetid://0",
-        },
         ["R6 Animation Pack"] = {
             idle1="rbxassetid://180435571", idle2="rbxassetid://180435792",
             walk="rbxassetid://180426354", run="rbxassetid://180426354",
@@ -3324,6 +3063,21 @@ do
         ["Kawaii"] = {idle1="rbxassetid://782841498",idle2="rbxassetid://782845736",walk="rbxassetid://782843345",run="rbxassetid://782842708",jump="rbxassetid://782847020",climb="rbxassetid://782843869",fall="rbxassetid://782846423",swim="rbxassetid://782844417"},
         ["Cowboy"] = {idle1="rbxassetid://750781874",idle2="rbxassetid://750782770",walk="rbxassetid://750785693",run="rbxassetid://750783738",jump="rbxassetid://750782230",climb="rbxassetid://750779899",fall="rbxassetid://750780242",swim="rbxassetid://750783107"},
         ["Ghost"] = {idle1="rbxassetid://616006778",idle2="rbxassetid://616008087",walk="rbxassetid://616010382",run="rbxassetid://616013216",jump="rbxassetid://616008936",climb="rbxassetid://616003713",fall="rbxassetid://616005863",swim="rbxassetid://616007791"},
+        -- === EXTRA ANIMATION PACKS (added) ===
+        ["Slender"] = {idle1="rbxassetid://1046189766",idle2="rbxassetid://1046190221",walk="rbxassetid://1046192109",run="rbxassetid://1046189889",jump="rbxassetid://1046191577",climb="rbxassetid://1046184345",fall="rbxassetid://1046190840",swim="rbxassetid://1046192742"},
+        ["Superhero 2"] = {idle1="rbxassetid://1092134286",idle2="rbxassetid://1092135824",walk="rbxassetid://1092137495",run="rbxassetid://1092139387",jump="rbxassetid://1092135127",climb="rbxassetid://1092132761",fall="rbxassetid://1092133434",swim="rbxassetid://1092138203"},
+        ["Werewolf 2"] = {idle1="rbxassetid://1092142723",idle2="rbxassetid://1092144262",walk="rbxassetid://1092146253",run="rbxassetid://1092147988",jump="rbxassetid://1092144567",climb="rbxassetid://1092141923",fall="rbxassetid://1092143068",swim="rbxassetid://1092146554"},
+        ["Ninja 2"] = {idle1="rbxassetid://1083452164",idle2="rbxassetid://1083454191",walk="rbxassetid://1083455211",run="rbxassetid://1083456373",jump="rbxassetid://1083454378",climb="rbxassetid://1083451625",fall="rbxassetid://1083452634",swim="rbxassetid://1083455585"},
+        ["Zombie 2"] = {idle1="rbxassetid://1059916604",idle2="rbxassetid://1059917385",walk="rbxassetid://1059917993",run="rbxassetid://1059918715",jump="rbxassetid://1059917044",climb="rbxassetid://1059916210",fall="rbxassetid://1059916612",swim="rbxassetid://1059917792"},
+        ["Cartoon 2"] = {idle1="rbxassetid://1252329533",idle2="rbxassetid://1252330915",walk="rbxassetid://1252331652",run="rbxassetid://1252333016",jump="rbxassetid://1252331175",climb="rbxassetid://1252328643",fall="rbxassetid://1252329188",swim="rbxassetid://1252332451"},
+        ["Toy 2"] = {idle1="rbxassetid://1252342215",idle2="rbxassetid://1252343347",walk="rbxassetid://1252344279",run="rbxassetid://1252345276",jump="rbxassetid://1252343636",climb="rbxassetid://1252341489",fall="rbxassetid://1252341921",swim="rbxassetid://1252344651"},
+        ["Old School"] = {idle1="rbxassetid://180435571",idle2="rbxassetid://180435792",walk="rbxassetid://180426354",run="rbxassetid://180426354",jump="rbxassetid://125750702",climb="rbxassetid://180436334",fall="rbxassetid://180436148",swim="rbxassetid://180426354"},
+        ["Elder 2"] = {idle1="rbxassetid://1059952612",idle2="rbxassetid://1059953377",walk="rbxassetid://1059954013",run="rbxassetid://1059954682",jump="rbxassetid://1059952911",climb="rbxassetid://1059952258",fall="rbxassetid://1059952536",swim="rbxassetid://1059954359"},
+        ["Bubbly 2"] = {idle1="rbxassetid://125750702",idle2="rbxassetid://125750780",walk="rbxassetid://125750859",run="rbxassetid://125750952",jump="rbxassetid://125750723",climb="rbxassetid://125750628",fall="rbxassetid://125750678",swim="rbxassetid://125750905"},
+        ["Mage 2"] = {idle1="rbxassetid://1148187526",idle2="rbxassetid://1148188137",walk="rbxassetid://1148188774",run="rbxassetid://1148189481",jump="rbxassetid://1148187871",climb="rbxassetid://1148187012",fall="rbxassetid://1148187345",swim="rbxassetid://1148188638"},
+        ["Knight 2"] = {idle1="rbxassetid://1148192367",idle2="rbxassetid://1148192998",walk="rbxassetid://1148193612",run="rbxassetid://1148194241",jump="rbxassetid://1148192687",climb="rbxassetid://1148191834",fall="rbxassetid://1148192111",swim="rbxassetid://1148193345"},
+        ["Pirate 2"] = {idle1="rbxassetid://1148212098",idle2="rbxassetid://1148212721",walk="rbxassetid://1148213387",run="rbxassetid://1148214015",jump="rbxassetid://1148212412",climb="rbxassetid://1148211572",fall="rbxassetid://1148211855",swim="rbxassetid://1148213054"},
+        ["Robot 2"] = {idle1="rbxassetid://1148224587",idle2="rbxassetid://1148225219",walk="rbxassetid://1148225873",run="rbxassetid://1148226512",jump="rbxassetid://1148224901",climb="rbxassetid://1148224068",fall="rbxassetid://1148224331",swim="rbxassetid://1148225541"},
     }
 
     local presetOptions = {}
@@ -3333,13 +3087,10 @@ do
         if name == "Default" then table.remove(presetOptions, i); table.insert(presetOptions, 1, "Default"); break end
     end
     for i, name in ipairs(presetOptions) do
-        if name == "None" then table.remove(presetOptions, i); table.insert(presetOptions, 2, "None"); break end
+        if name == "R6 Animation Pack" then table.remove(presetOptions, i); table.insert(presetOptions, 2, "R6 Animation Pack"); break end
     end
     for i, name in ipairs(presetOptions) do
-        if name == "R6 Animation Pack" then table.remove(presetOptions, i); table.insert(presetOptions, 3, "R6 Animation Pack"); break end
-    end
-    for i, name in ipairs(presetOptions) do
-        if name == "R15 Default" then table.remove(presetOptions, i); table.insert(presetOptions, 4, "R15 Default"); break end
+        if name == "R15 Default" then table.remove(presetOptions, i); table.insert(presetOptions, 3, "R15 Default"); break end
     end
 
     local DEFAULT_ANIMS = nil
@@ -3381,7 +3132,6 @@ do
             end
         end
         resetAnimateScript(char)
-        reloadAnimate(char)
     end
 
     local function reapplyAll()
@@ -3464,8 +3214,6 @@ do
             elseif rig == "R6" then
                 _G.__AW_NOTIFY("R6 pack applied")
             end
-        elseif name == "None" then
-            _G.__AW_NOTIFY("All animations removed (plain)")
         else
             _G.__AW_NOTIFY("All anims → " .. name)
         end
@@ -3624,6 +3372,7 @@ do
     end)
 end
 
+-- ============ SECRET TAB ============
 addSect(pages[SECRET_NAME], "Hitbox Expander", 1)
 tgg(pages[SECRET_NAME], "Hitbox Expander", 2, "hitboxExpander")
 makeSlider(pages[SECRET_NAME], "Hitbox Size", 3, state.hitboxExpanderSize or 15, 5, 60, "hitboxExpanderSize")
@@ -3686,6 +3435,7 @@ tgg(pages[SECRET_NAME], "Click Teleport", 57, "clickTP")
 tgg(pages[SECRET_NAME], "Freeze", 58, "freeze")
 
 addSect(pages[SECRET_NAME], "Combat Aura", 60)
+tgg(pages[SECRET_NAME], "Kill Aura", 61, "killAura")
 tgg(pages[SECRET_NAME], "Fling Aura", 62, "flingAura")
 tgg(pages[SECRET_NAME], "Auto Dodge", 63, "autoDodge")
 
@@ -3695,17 +3445,6 @@ addBtn(pages[SECRET_NAME], "Fling Custom Now", 72, flingCustomNow)
 
 addSect(pages[SECRET_NAME], "Touch Fling", 80)
 tgg(pages[SECRET_NAME], "Touch Fling (Walk into players)", 81, "touchFling")
-
-addSect(pages[SECRET_NAME], "Remove Barriers", 85)
-tgg(pages[SECRET_NAME], "Remove Barriers (GlitchProof + Kill Bricks)", 86, "removeBarriers")
-addBtn(pages[SECRET_NAME], "Remove All Barriers Now", 87, function()
-    local count = removeAllBarriers()
-    if count > 0 then
-        _G.__AW_NOTIFY('Removed <font color="#5aff8c">' .. count .. '</font> barrier(s)')
-    else
-        _G.__AW_NOTIFY('No barriers found')
-    end
-end)
 
 addSect(pages[SECRET_NAME], "Radio Abuse", 100)
 do
@@ -3777,41 +3516,7 @@ do
         if writefile then pcall(function() writefile(songFile, HttpService:JSONEncode(savedSongs)) end) end
     end
 
-    local mirrorSound = nil
-
-    local function stopMirror()
-        if mirrorSound then
-            pcall(function()
-                mirrorSound:Stop()
-                mirrorSound:Destroy()
-            end)
-            mirrorSound = nil
-        end
-    end
-
-    local startMirror
-    local firePlaySong
-
-    startMirror = function(idNum)
-        stopMirror()
-        local s = Instance.new("Sound")
-        s.SoundId = "rbxassetid://" .. tostring(idNum)
-        s.Volume = 0
-        s.Parent = SoundService
-        mirrorSound = s
-        s.Ended:Connect(function()
-            if mirrorSound ~= s then return end
-            if not state.radioAutoPlay then return end
-            if tostring(state.radioSelectedSongId or "") ~= tostring(idNum) then return end
-            task.wait(0.4)
-            firePlaySong(idNum, true, true)
-            task.wait(0.3)
-            startMirror(idNum)
-        end)
-        pcall(function() s:Play() end)
-    end
-
-    firePlaySong = function(rawId, tryAllFormats, skipMirror)
+    local function firePlaySong(rawId, tryAllFormats)
         if not PlaySong or not PlaySong.Parent then
             PlaySong = findPlaySong()
         end
@@ -3839,14 +3544,10 @@ do
             end)
             if i < #formats then task.wait(0.08) end
         end
-        if not skipMirror and state.radioAutoPlay then
-            startMirror(idNum)
-        end
         return true
     end
 
     local function stopAudio()
-        stopMirror()
         if not PlaySong or not PlaySong.Parent then
             PlaySong = findPlaySong()
         end
@@ -4163,21 +3864,6 @@ do
             firePlaySong(state.radioSelectedSongId, true)
         end
     end)
-
-    task.spawn(function()
-        local lastAuto = state.radioAutoPlay
-        while true do
-            task.wait(0.5)
-            if state.radioAutoPlay ~= lastAuto then
-                lastAuto = state.radioAutoPlay
-                if not lastAuto then
-                    stopMirror()
-                elseif state.radioSelectedSongId and state.radioSelectedSongId ~= "" then
-                    startMirror(state.radioSelectedSongId)
-                end
-            end
-        end
-    end)
 end
 
 addSect(pages[SECRET_NAME], "FE Headless", 120)
@@ -4458,6 +4144,7 @@ do
     creditBody.TextYAlignment = Enum.TextYAlignment.Top
 end
 
+-- ============ FARM TAB ============
 tgg(pages["Farm"], "Farm", 1, "farm")
 tgg(pages["Farm"], "XP Farm", 2, "xpFarm")
 makeSlider(pages["Farm"], "Tween Speed", 3, settingsConfig.tweenSpeed or 25, 1, 100, "tweenSpeed", function(v) settingsConfig.tweenSpeed = v end)
@@ -4465,6 +4152,7 @@ tgg(pages["Farm"], "Disable 3D Rendering", 4, "disable3d")
 tgg(pages["Farm"], "FPS Boost", 5, "fpsBoost")
 tgg(pages["Farm"], "Full Bag Gate", 6, "fullBagGate")
 
+-- ============ COMBAT TAB ============
 addSect(pages["Combat"], "Silent Aim", 1)
 tgg(pages["Combat"], "Silent Aim", 2, "silentAimEnabled")
 tgg(pages["Combat"], "Silent Aim Wall Check", 3, "silentAimWallCheck")
@@ -4473,64 +4161,7 @@ tgg(pages["Combat"], "Shoot Through Walls", 10, "shootThroughWall")
 tgg(pages["Combat"], "Auto Shoot Murderer", 11, "autoShootMurderer")
 addBtn(pages["Combat"], "Shoot Murderer Now", 12, fullShootSequence)
 addBtn(pages["Combat"], "Shoot Through Wall (Magic Bullet)", 13, fireThroughWall)
-addSect(pages["Combat"], "Role Arsenal", 15)
-do
-    local status = Instance.new("TextLabel", pages["Combat"])
-    status.Size = UDim2.new(1, 0, 0, 26)
-    status.LayoutOrder = 16
-    status.BackgroundTransparency = 1
-    status.Text = "Role: Detecting..."
-    status.TextColor3 = cc3(settingsConfig.tabTextColor)
-    status.Font = Enum.Font.GothamMedium
-    status.TextSize = 11.5
-    status.TextXAlignment = Enum.TextXAlignment.Left
-
-    local cards = Instance.new("Frame", pages["Combat"])
-    cards.Size = UDim2.new(1, 0, 0, 72)
-    cards.LayoutOrder = 17
-    cards.BackgroundTransparency = 1
-    local cl = Instance.new("UIListLayout", cards)
-    cl.FillDirection = Enum.FillDirection.Horizontal
-    cl.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    cl.VerticalAlignment = Enum.VerticalAlignment.Center
-    cl.Padding = UDim.new(0, 8)
-
-    makeRoleWeaponCard(cards, 1, "Sheriff", "SHERIFF", false)
-    makeRoleWeaponCard(cards, 2, "Murderer", "MURDERER", true)
-
-    task.spawn(function()
-        while status and status.Parent do
-            local r = getPlayerRole(LP)
-            status.Text = "Role: " .. tostring(r) .. "   •   Click a card to equip"
-            status.TextColor3 = roleColor(r)
-            task.wait(0.35)
-        end
-    end)
-end
-
-addSect(pages["Teleport"], "Loop Teleport", 6)
-local loopChoices = {"Lobby", "Map", "Void Platform", "Murderer", "Sheriff", "Custom"}
-makeDropdown(pages["Teleport"], "Loop Target", 7, loopChoices, state.loopTeleportTarget or "Lobby", function(v)
-    state.loopTeleportTarget = v
-    saveSettings()
-end)
-local loopButton = addBtn(pages["Teleport"], "Loop Teleport: OFF", 8, function() end)
-local function refreshLoopButton()
-    local textLabel = loopButton and loopButton:FindFirstChildOfClass("TextLabel")
-    if textLabel then
-        textLabel.Text = state.loopTeleportEnabled and ("Loop Teleport: " .. tostring(state.loopTeleportTarget or "Lobby")) or "Loop Teleport: OFF"
-        textLabel.TextColor3 = state.loopTeleportEnabled and cc3(settingsConfig.accentColor) or cc3(settingsConfig.textColor)
-    end
-end
-loopButton.MouseButton1Click:Connect(function()
-    state.loopTeleportEnabled = not state.loopTeleportEnabled
-    refreshLoopButton()
-    saveSettings()
-end)
-refreshLoopButton()
-addBtn(pages["Teleport"], "Teleport to Void Platform", 9, teleportToVoidPlatform)
-
-addSect(pages["Teleport"], "Locations", 10)
+addSect(pages["Combat"], "Auto Actions", 20)
 tgg(pages["Combat"], "Auto Kill All", 21, "autoKillAll")
 tgg(pages["Combat"], "Loop Fling All", 22, "loopFlingAll")
 tgg(pages["Combat"], "Loop Fling Murderer", 23, "loopFlingMur")
@@ -4539,24 +4170,28 @@ tgg(pages["Combat"], "Loop Fling Custom", 25, "loopFlingCustom")
 tgg(pages["Combat"], "Auto Reset: Murderer", 26, "autoResetMurderer")
 tgg(pages["Combat"], "Auto Reset: Sheriff", 27, "autoResetSheriff")
 tgg(pages["Combat"], "Auto Reset: Innocent", 28, "autoResetInnocent")
-addSect(pages["Combat"], "Manual Actions", 30)
-addBtn(pages["Combat"], "Kill All (HandleTouched)", 31, handleTouchKillAll)
-addBtn(pages["Combat"], "Kill Sheriff (HandleTouched)", 32, handleTouchKillSheriff)
-addBtn(pages["Combat"], "Kill Custom (HandleTouched)", 33, handleTouchKillCustom)
+addSect(pages["Combat"], "Manual Actions (Hitbox)", 30)
+addBtn(pages["Combat"], "Fling Murderer Now", 31, flingMurdererNow)
+addBtn(pages["Combat"], "Fling Sheriff Now", 32, flingSheriffNow)
+addBtn(pages["Combat"], "Fling All Now", 33, flingAllNow)
+addBtn(pages["Combat"], "Kill Sheriff Now", 34, killSheriffNow)
+addBtn(pages["Combat"], "Kill All Now", 35, killAllNow)
 addBtn(pages["Combat"], "Grab Gun Now", 36, grabGunNow)
-addBtn(pages["Combat"], "Fling Murderer Now", 37, flingMurdererNow)
-addBtn(pages["Combat"], "Fling Sheriff Now", 38, flingSheriffNow)
-addBtn(pages["Combat"], "Fling All Now", 39, flingAllNow)
+addSect(pages["Combat"], "Kill (HandleTouched)", 50)
+addBtn(pages["Combat"], "Kill All (HandleTouched)", 51, handleTouchKillAll)
+addBtn(pages["Combat"], "Kill Sheriff (HandleTouched)", 52, handleTouchKillSheriff)
+addBtn(pages["Combat"], "Kill Custom (HandleTouched)", 53, handleTouchKillCustom)
 addSect(pages["Combat"], "Aimbot", 60)
 tgg(pages["Combat"], "Aimbot: Murderer", 61, "aimbotMurderer")
 tgg(pages["Combat"], "Aimbot: Sheriff", 62, "aimbotSheriff")
 makeSlider(pages["Combat"], "Aimbot FOV", 63, state.aimbotFOV or 250, 30, 800, "aimbotFOV")
-makeSlider(pages["Combat"], "Aimbot Smoothness", 64, state.aimbotSmooth or 1, 1, 20, "aimbotSmooth")
+makeSlider(pages["Combat"], "Aimbot Smoothness", 64, state.aimbotSmooth or 4, 1, 20, "aimbotSmooth")
 tgg(pages["Combat"], "Aimbot Prediction", 65, "aimbotPredict")
 tgg(pages["Combat"], "Aimbot Visibility Check", 66, "aimbotVisCheck")
 tgg(pages["Combat"], "Aimbot Instant Snap", 67, "aimbotSnap")
 tgg(pages["Combat"], "Aimbot Sticky Target", 68, "aimbotSticky")
 
+-- ============ PLAYERS TAB ============
 addSect(pages["Players"], "Add Player (Type Name)", 1)
 makeInput(pages["Players"], 2, "Username or display name...", state.playerSearchText or "", function(t)
     state.playerSearchText = t
@@ -4780,22 +4415,27 @@ end)
 refreshCustomListUI()
 task.defer(refreshPlayerList)
 
-addBtn(pages["Teleport"], "Teleport to Lobby", 11, teleportToLobby)
-addBtn(pages["Teleport"], "Teleport to Map", 12, teleportToMap)
-addSect(pages["Teleport"], "Players", 13)
-addBtn(pages["Teleport"], "Teleport to Murderer", 14, teleportToMurderer)
-addBtn(pages["Teleport"], "Teleport to Sheriff", 15, teleportToSheriff)
-addBtn(pages["Teleport"], "Teleport to Custom", 16, teleportToCustom)
+-- ============ TELEPORT TAB ============
+addSect(pages["Teleport"], "Locations", 1)
+addBtn(pages["Teleport"], "Teleport to Lobby", 2, teleportToLobby)
+addBtn(pages["Teleport"], "Teleport to Map", 3, teleportToMap)
+addSect(pages["Teleport"], "Players", 4)
+addBtn(pages["Teleport"], "Teleport to Murderer", 5, teleportToMurderer)
+addBtn(pages["Teleport"], "Teleport to Sheriff", 6, teleportToSheriff)
+addBtn(pages["Teleport"], "Teleport to Custom", 7, teleportToCustom)
 
+-- ============ ESP TAB ============
 addSect(pages["ESP"], "Player ESP", 1)
 tgg(pages["ESP"], "Player ESP", 2, "espPlayers")
 tgg(pages["ESP"], "Team Colors (Red/Blue/Green)", 3, "espTeamColor")
 tgg(pages["ESP"], "Gun Drop ESP", 4, "espGunDrop")
 
+-- ============ WEBHOOK TAB ============
 tgg(pages["Webhook"], "Auto Send on Timer", 1, "sendOnFull")
 makeInput(pages["Webhook"], 3, "Webhook URL...", settingsConfig.webhookUrl, function(t) settingsConfig.webhookUrl = t saveSettings() end)
 makeInput(pages["Webhook"], 4, "Discord User ID...", settingsConfig.discordUserId, function(t) settingsConfig.discordUserId = t saveSettings() end)
 
+-- ============ MISC TAB ============
 tgg(pages["Misc"], "Anti AFK", 1, "afk")
 tgg(pages["Misc"], "Auto Grab Gun", 2, "gun")
 tgg(pages["Misc"], "Auto Rejoin", 3, "autoRejoin")
@@ -4807,6 +4447,62 @@ tgg(pages["Misc"], "Round Timer", 8, "showRoundTimerCountdown")
 tgg(pages["Misc"], "Murderer Predictor", 9, "murdererPredictor")
 tgg(pages["Misc"], "Murderer Perk Notify", 10, "murdererPerkNotify")
 
+-- ============ REMOVE BARRIERS ============
+do
+    local BARRIER_NAMES = {
+        ["Glitchproof Glitch"] = true,
+        ["THICC"] = true,
+        ["glitchproof glitch"] = true,
+        ["thicc"] = true,
+    }
+    _G.__AW_BARRIER_NAMES = BARRIER_NAMES
+    task.spawn(function()
+        while true do
+            task.wait(0.25)
+            if state.removeBarriers then
+                for _, obj in ipairs(Workspace:GetDescendants()) do
+                    local n = obj.Name
+                    if BARRIER_NAMES[n] then
+                        pcall(function()
+                            if obj:IsA("BasePart") then
+                                obj.CanCollide = false
+                                obj.Transparency = 1
+                                obj.CanQuery = false
+                                obj.CanTouch = false
+                                if state.removeBarriersInstant then obj:Destroy() end
+                            elseif obj:IsA("Model") then
+                                if state.removeBarriersInstant then obj:Destroy() end
+                            end
+                        end)
+                    end
+                end
+            end
+        end
+    end)
+end
+addSect(pages["Misc"], "Barriers", 20)
+tgg(pages["Misc"], "Remove Barriers (Glitchproof Glitch / THICC)", 21, "removeBarriers")
+tgg(pages["Misc"], "Instantly Destroy Barriers", 22, "removeBarriersInstant")
+addBtn(pages["Misc"], "Remove Barriers Now (one-shot)", 23, function()
+    local n = 0
+    local names = _G.__AW_BARRIER_NAMES or {}
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if names[obj.Name] then
+            pcall(function()
+                if obj:IsA("BasePart") then
+                    obj.CanCollide = false
+                    obj.Transparency = 1
+                    obj.CanQuery = false
+                    obj.CanTouch = false
+                end
+            end)
+            n = n + 1
+        end
+    end
+    _G.__AW_NOTIFY("Barriers cleared: " .. n)
+end)
+
+-- ============ VOTING TAB ============
 addSect(pages["Voting"], "Live Vote Map Names", 1)
 local voteMapLabels = {}
 for slot = 1, 3 do
@@ -4845,6 +4541,7 @@ task.spawn(function()
     end
 end)
 
+-- ============ BUTTON TAB ============
 addSect(pages["Button"], "Shoot Murderer Button", 1)
 tgg(pages["Button"], "Enable Shoot Murderer Button", 2, "bigButtonEnabled")
 makeSlider(pages["Button"], "Button Width", 3, state.bigButtonW or 230, 80, 400, "bigButtonW", function(v)
@@ -4864,78 +4561,6 @@ makeSlider(pages["Button"], "Button Size", 12, state.floatButtonSize or 68, 44, 
         if data.outer and data.outer.Parent then data.outer.Size = UDim2.new(0, v, 0, v) end
     end
 end)
-
-addSect(pages["Button"], "Lock System", 12.5)
-
-addBtn(pages["Button"], "Lock All Buttons (Drag Only — still clickable)", 12.6, function()
-    for _, def in ipairs(FLOAT_BUTTON_DEFS) do
-        state.lockedButtons[def.id] = true
-    end
-    state.bigButtonLocked = true
-    saveSettings()
-    _G.__AW_NOTIFY("All buttons locked in place (still clickable)")
-end)
-
-addBtn(pages["Button"], "Unlock All Buttons", 12.7, function()
-    state.lockedButtons = {}
-    state.bigButtonLocked = false
-    saveSettings()
-    _G.__AW_NOTIFY("All buttons unlocked")
-end)
-
-do
-    local lockOpts = {}
-    for _, def in ipairs(FLOAT_BUTTON_DEFS) do
-        if state.floatEnabledButtons[def.id] then table.insert(lockOpts, def.label) end
-    end
-    table.insert(lockOpts, "Shoot Murderer Button")
-    if #lockOpts == 1 then table.insert(lockOpts, "(no floating buttons enabled)") end
-
-    makeDropdown(pages["Button"], "Lock Specific Button", 12.8, lockOpts, "Pick to lock...", function(choice)
-        if choice == "Shoot Murderer Button" then
-            state.bigButtonLocked = true
-            saveSettings()
-            _G.__AW_NOTIFY("Locked: Shoot Murderer Button")
-            return
-        end
-        for _, def in ipairs(FLOAT_BUTTON_DEFS) do
-            if def.label == choice and state.floatEnabledButtons[def.id] then
-                state.lockedButtons[def.id] = true
-                saveSettings()
-                _G.__AW_NOTIFY("Locked: " .. def.label)
-                return
-            end
-        end
-    end)
-end
-
-do
-    local unlockOpts = {}
-    for id in pairs(state.lockedButtons) do
-        local def = FLOAT_BUTTON_MAP[id]
-        if def then table.insert(unlockOpts, def.label) end
-    end
-    if state.bigButtonLocked then table.insert(unlockOpts, "Shoot Murderer Button") end
-    if #unlockOpts == 0 then table.insert(unlockOpts, "(nothing locked)") end
-
-    makeDropdown(pages["Button"], "Unlock Specific Button", 12.9, unlockOpts, "Pick to unlock...", function(choice)
-        if choice == "Shoot Murderer Button" then
-            state.bigButtonLocked = false
-            saveSettings()
-            _G.__AW_NOTIFY("Unlocked: Shoot Murderer Button")
-            return
-        end
-        for _, def in ipairs(FLOAT_BUTTON_DEFS) do
-            if def.label == choice then
-                state.lockedButtons[def.id] = nil
-                saveSettings()
-                _G.__AW_NOTIFY("Unlocked: " .. def.label)
-                return
-            end
-        end
-    end)
-end
-
 addSect(pages["Button"], "Button Shape", 13)
 local shapeHolder = Instance.new("Frame", pages["Button"])
 shapeHolder.Size = UDim2.new(1, 0, 0, 40)
@@ -5039,6 +4664,7 @@ do
     refreshManagerFB("")
 end
 
+-- ============ KEYBINDS TAB ============
 addSect(pages["Keybinds"], "Instructions", 1)
 do
     local info = Instance.new("TextLabel", pages["Keybinds"])
@@ -5163,6 +4789,7 @@ UIS.InputBegan:Connect(function(input, gameProcessed)
     end
 end)
 
+-- ============ UI TAB ============
 addSect(pages["UI"], "UI Scale", 1)
 do
     local sr = Instance.new("Frame", pages["UI"])
@@ -5224,6 +4851,7 @@ addSect(pages["UI"], "Toggles", 4)
 tgg(pages["UI"], "Notification Sound", 6, "notifySound")
 tgg(pages["UI"], "Enable Animations", 7, "animationsEnabled")
 
+-- ============ OPEN/CLOSE BUTTON ============
 local fb = Instance.new("TextButton", sg)
 fb.Size = UDim2.new(0,78,0,34)
 fb.Position = UDim2.new(state.openX, 0, state.openY, 0)
@@ -5255,6 +4883,7 @@ fb.MouseButton1Click:Connect(function()
     fb.Text = isOpen and "Close" or "Open"
 end)
 
+-- ============ FLY ============
 local flyBV = nil
 local flyBG = nil
 local flyConnection = nil
@@ -5458,7 +5087,26 @@ UIS.InputBegan:Connect(function(inp, g)
         end
     end
 end)
--- Anti-Void is handled by the source-compatible True Anti-Void implementation above.
+task.spawn(function()
+    local lastTP = 0
+    while true do
+        task.wait(0.25)
+        if state.antiVoid and LP.Character then
+            local r = LP.Character:FindFirstChild("HumanoidRootPart")
+            local h = LP.Character:FindFirstChildOfClass("Humanoid")
+            if r and h and h.Health > 0 and r.Position.Y < -400 then
+                if tick() - lastTP > 3 then
+                    lastTP = tick()
+                    r.Anchored = true
+                    r.CFrame = LOBBY_CFRAME
+                    r.AssemblyLinearVelocity = Vector3.zero
+                    task.wait(0.1)
+                    if r.Parent then r.Anchored = false end
+                end
+            end
+        end
+    end
+end)
 task.spawn(function()
     local notifiedMurd = false
     local notifiedSheriff = false
@@ -5502,6 +5150,7 @@ task.spawn(function()
     end
 end)
 
+-- ============ HITBOX EXPANDER LOOP ============
 task.spawn(function()
     while true do
         task.wait(0.1)
@@ -5523,6 +5172,7 @@ task.spawn(function()
     end
 end)
 
+-- ============ SILENT LOOP REFRESH ============
 task.spawn(function()
     local wasInRound = false
     local LOOP_KEYS = {"loopFlingAll", "loopFlingMur", "loopFlingSheriff", "loopFlingCustom"}
@@ -5630,13 +5280,12 @@ task.spawn(function()
             if state.autoKillAll then
                 local knife = findTool("Knife")
                 if knife then
-                    local targets = {}
                     for _, p in ipairs(Players:GetPlayers()) do
                         if p ~= LP and targetIsAlive(p) and not isWhitelisted(p) then
-                            table.insert(targets, p)
+                            task.spawn(function() executeHitboxKill(p) end)
+                            task.wait(0.5)
                         end
                     end
-                    if #targets > 0 then fireHandleTouchedKill(targets) end
                 end
             end
         end
@@ -5720,6 +5369,7 @@ task.spawn(function()
     end
 end)
 
+-- ============ BLUE AURA LOOP ============
 task.spawn(function()
     while true do
         task.wait(0.5)
@@ -5748,6 +5398,7 @@ task.spawn(function()
     end
 end)
 
+-- ============ WALL HOP LOOP ============
 do
     local rayParams = RaycastParams.new()
     rayParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -5775,6 +5426,7 @@ do
     end)
 end
 
+-- ============ INVISIBILITY SYSTEM ============
 local INVIS_POSITION = Vector3.new(-25.95, 84, 3537.55)
 local invisSeat = nil
 local invisWeld = nil
@@ -5875,25 +5527,6 @@ LP.CharacterAdded:Connect(function()
     end
 end)
 
--- Silently refresh invisibility between rounds while preserving the user's enabled state.
-task.spawn(function()
-    local wasRound = isInRound()
-    while true do
-        task.wait(0.2)
-        local nowRound = isInRound()
-        if wasRound and not nowRound and state.invisibleEnabled then
-            state.invisibleEnabled = false
-            invisApplied = false
-            pcall(disableInvisibility)
-            task.wait(0.35)
-            if state.invisibleEnabled == false then
-                state.invisibleEnabled = true
-            end
-        end
-        wasRound = nowRound
-    end
-end)
-
 task.spawn(function()
     while true do
         task.wait(0.15)
@@ -5914,6 +5547,7 @@ task.spawn(function()
     end
 end)
 
+-- ============ TOUCH FLING ============
 task.spawn(function()
     if not ReplicatedStorage:FindFirstChild("juisdfj0i32i0eidsuf0iok") then
         local detection = Instance.new("Decal")
@@ -5946,147 +5580,72 @@ task.spawn(function()
     end
 end)
 
--- ============ AIMBOT (Sharper, Sticky, Always On Target) ============
+-- ============ AIMBOT ============
 local currentAimTarget = nil
-local lockedAimTarget = nil
-local lockedAimPart = nil
-
-task.spawn(function()
-    local lastM = state.aimbotMurderer
-    local lastS = state.aimbotSheriff
-    while true do
-        task.wait(0.1)
-        if state.aimbotMurderer ~= lastM or state.aimbotSheriff ~= lastS then
-            lastM = state.aimbotMurderer
-            lastS = state.aimbotSheriff
-            lockedAimTarget = nil
-            lockedAimPart = nil
-        end
-    end
-end)
-
 RunService.RenderStepped:Connect(function(dt)
-    if not alive() then
-        currentAimTarget = nil
-        lockedAimTarget = nil
-        lockedAimPart = nil
-        return
-    end
-    if not (state.aimbotMurderer or state.aimbotSheriff) then
-        currentAimTarget = nil
-        lockedAimTarget = nil
-        lockedAimPart = nil
-        return
-    end
+    if not alive() then currentAimTarget = nil; return end
+    if not (state.aimbotMurderer or state.aimbotSheriff) then currentAimTarget = nil; return end
     local cam = Workspace.CurrentCamera
     if not cam then return end
     local vps = cam.ViewportSize
     local center = Vector2.new(vps.X*0.5, vps.Y*0.5)
+    local candidates = {}
+    if state.aimbotMurderer then
+        local m = getMurd()
+        if m then table.insert(candidates, m) end
+    elseif state.aimbotSheriff then
+        for _, s in ipairs(getLiveSheriffHeroes()) do table.insert(candidates, s) end
+    end
+    if #candidates == 0 then currentAimTarget = nil; return end
     local fovR = state.aimbotFOV or 250
-
-    local keepLocked = false
-    if state.aimbotSticky and lockedAimTarget and lockedAimTarget.Parent then
-        local ch = lockedAimTarget.Character
+    local best, bestScore = nil, -math.huge
+    for _, tp in ipairs(candidates) do
+        local ch = tp.Character
         if ch then
             local hh = ch:FindFirstChildOfClass("Humanoid")
-            local tpart = ch:FindFirstChild("Head") or ch:FindFirstChild("HumanoidRootPart")
-            if hh and hh.Health > 0 and tpart then
-                local sp, onScreen = cam:WorldToViewportPoint(tpart.Position)
-                if onScreen and sp.Z > 0 then
-                    local sd = (Vector2.new(sp.X, sp.Y) - center).Magnitude
-                    if sd <= fovR * 1.35 then
-                        keepLocked = true
-                        lockedAimPart = tpart
-                    end
-                end
-            end
-        end
-    end
-
-    local target = nil
-    local targetPart = nil
-
-    if keepLocked then
-        target = lockedAimTarget
-        targetPart = lockedAimPart
-    else
-        local candidates = {}
-        if state.aimbotMurderer then
-            local m = getMurd()
-            if m then table.insert(candidates, m) end
-        elseif state.aimbotSheriff then
-            for _, s in ipairs(getLiveSheriffHeroes()) do table.insert(candidates, s) end
-        end
-        if #candidates == 0 then
-            lockedAimTarget = nil
-            lockedAimPart = nil
-            return
-        end
-
-        local best, bestScore = nil, -math.huge
-        local bestPart = nil
-        for _, tp in ipairs(candidates) do
-            local ch = tp.Character
-            if ch then
-                local hh = ch:FindFirstChildOfClass("Humanoid")
-                if hh and hh.Health > 0 then
-                    local tpart = ch:FindFirstChild("Head") or ch:FindFirstChild("HumanoidRootPart")
-                    if tpart then
-                        local sp, onScreen = cam:WorldToViewportPoint(tpart.Position)
-                        if onScreen and sp.Z > 0 then
-                            local sd = (Vector2.new(sp.X, sp.Y) - center).Magnitude
-                            if sd <= fovR then
-                                local score = -sd
-                                if tpart.Name == "Head" then score = score + 100 end
-                                if score > bestScore then
-                                    bestScore = score
-                                    best = tp
-                                    bestPart = tpart
-                                end
-                            end
+            if hh and hh.Health > 0 then
+                local tpart = ch:FindFirstChild("Head") or ch:FindFirstChild("HumanoidRootPart")
+                if tpart then
+                    local sp, onScreen = cam:WorldToViewportPoint(tpart.Position)
+                    if onScreen and sp.Z > 0 then
+                        local sd = (Vector2.new(sp.X, sp.Y) - center).Magnitude
+                        if sd <= fovR then
+                            local score = -sd
+                            if tpart.Name == "Head" then score = score + 50 end
+                            if score > bestScore then bestScore = score; best = tp end
                         end
                     end
                 end
             end
         end
-        target = best
-        targetPart = bestPart
-        if target and targetPart then
-            lockedAimTarget = target
-            lockedAimPart = targetPart
-        else
-            lockedAimTarget = nil
-            lockedAimPart = nil
-        end
     end
-
-    if not target or not targetPart then return end
-    currentAimTarget = target
-
-    local aimPos = targetPart.Position
+    if not best or not best.Character then currentAimTarget = nil; return end
+    currentAimTarget = best
+    local ch = best.Character
+    local tpart = ch:FindFirstChild("Head") or ch:FindFirstChild("HumanoidRootPart")
+    if not tpart then return end
+    local aimPos = tpart.Position
     if state.aimbotPredict then
-        local vel = targetPart.AssemblyLinearVelocity
+        local vel = tpart.AssemblyLinearVelocity
         if vel.Magnitude > 1 then
-            local dist = (targetPart.Position - cam.CFrame.Position).Magnitude
-            local t = dist / 1000
-            aimPos = targetPart.Position + vel * t
+            local dist = (tpart.Position - cam.CFrame.Position).Magnitude
+            local t = dist / 800
+            aimPos = tpart.Position + vel * t
         end
     end
     local desired = CFrame.new(cam.CFrame.Position, aimPos)
-
-    if state.aimbotSnap then
-        cam.CFrame = desired
+    if state.aimbotSnap then cam.CFrame = desired
     else
-        local smooth = state.aimbotSmooth or 1
-        if smooth <= 1 then
-            cam.CFrame = desired
+        local smooth = state.aimbotSmooth or 4
+        if smooth <= 1 then cam.CFrame = desired
         else
-            local alpha = math.clamp(1 - math.exp(-dt * (60 / smooth) * 0.9), 0.35, 1)
+            local alpha = math.clamp(1 - math.exp(-dt * (60 / smooth) * 0.15), 0.05, 1)
             cam.CFrame = cam.CFrame:Lerp(desired, alpha)
         end
     end
 end)
 
+-- ============ ESP ============
 local espF = nil
 local espCache, gunDropCache = {}, {}
 local function getOrCreateEspFolder()
@@ -6254,6 +5813,7 @@ task.spawn(function()
     end
 end)
 
+-- ============ FARM LOOP ============
 local HIDE_POS = CFrame.new(0,-300,0)
 local lastCoinFoundTime = tick()
 local NO_COIN_TIMEOUT = 12
