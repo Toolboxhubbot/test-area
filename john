@@ -84,6 +84,7 @@ state = {
     fpsPingMonitor=false, fpsPingColor=false,
     disableTrading=false,
     wallHop=false, wallHopFlick=false,
+    removeBarriers=false,
     blueAura=false, blueAuraStuds=10,
     feAnimEnabled=false,
     feAnimAll="Default",
@@ -95,7 +96,6 @@ state = {
     emoteMenuOpen=false,
     emoteFloatButtons={},
     emoteFloatPositions={},
-    removeBarriers=false,
 }
 
 KEYBIND_FEATURES = {
@@ -174,9 +174,9 @@ toggleDisplayNames = {
     fpsPingMonitor="FPS Ping Monitor", fpsPingColor="FPS Ping Color",
     disableTrading="Disable Trading",
     wallHop="Wall Hop", wallHopFlick="Wall Hop Flick",
+    removeBarriers="Remove Barriers",
     blueAura="Blue Aura",
     feAnimEnabled="FE Animations",
-    removeBarriers="Remove Barriers",
 }
 
 function saveSettings()
@@ -546,6 +546,7 @@ local function isWhitelisted(p)
     if not p then return false end
     for _,x in ipairs(settingsConfig.whitelist) do
         if string.lower(x)==string.lower(p.Name) then return true end
+        if p.DisplayName and string.lower(x)==string.lower(p.DisplayName) then return true end
     end
     return false
 end
@@ -869,6 +870,8 @@ end
 
 local function executeHitboxKill(tp)
     if not tp or not tp.Parent then return end
+    if tp == LP then return end
+    if isWhitelisted(tp) then return end -- LOCKED: skip entirely
     if killLocked[tp.UserId] then return end
     killLocked[tp.UserId] = true
     pcall(function()
@@ -892,6 +895,7 @@ local function executeHitboxKill(tp)
         local startTime = tick()
         while tick() - startTime < 0.5 do
             if not targetIsAlive(tp) then break end
+            if isWhitelisted(tp) then break end
             local kHandle = k:FindFirstChild("Handle")
             if kHandle and tr and tr.Parent then
                 pcall(function() k:Activate() end)
@@ -912,58 +916,54 @@ local function executeHitboxKill(tp)
     killLocked[tp.UserId] = nil
 end
 
--- Forward declaration so kill functions can call HandleTouched
-local fireHandleTouchedKill
-
 local function killAllNow()
     task.spawn(function()
-        if not (findTool("Knife") or equipTool("Knife")) then
-            _G.__AW_NOTIFY('No Knife - must be Murderer')
-            return
-        end
-        local targets = {}
-        for _, tp in ipairs(Players:GetPlayers()) do
-            if tp ~= LP and targetIsAlive(tp) and not isWhitelisted(tp) then
-                table.insert(targets, tp)
+        standUp(); task.wait(0.1)
+        if findTool("Knife") or equipTool("Knife") then
+            for _,tp in ipairs(Players:GetPlayers()) do
+                if tp~=LP and targetIsAlive(tp) and not isWhitelisted(tp) then
+                    task.spawn(function() executeHitboxKill(tp) end)
+                    task.wait(0.05)
+                end
             end
-        end
-        if #targets == 0 then _G.__AW_NOTIFY('No targets') return end
-        fireHandleTouchedKill(targets)
+        else _G.__AW_NOTIFY('No Knife - must be Murderer') end
     end)
 end
-
 local function killSheriffNow()
     task.spawn(function()
         if not alive() then return end
+        standUp(); task.wait(0.15)
         if not (findTool("Knife") or equipTool("Knife")) then
-            for _ = 1, 10 do task.wait(0.1); if equipTool("Knife") then break end end
+            for _=1,10 do task.wait(0.1); if equipTool("Knife") then break end end
         end
         if not findTool("Knife") then _G.__AW_NOTIFY('No Knife') return end
-        local targets = getLiveSheriffHeroes()
-        if #targets == 0 then _G.__AW_NOTIFY("No Sheriff / Hero") return end
-        fireHandleTouchedKill(targets)
+        local live = getLiveSheriffHeroes()
+        for _, target in ipairs(live) do
+            if target and target ~= LP and targetIsAlive(target) and not isWhitelisted(target) then
+                task.spawn(function() executeHitboxKill(target) end)
+                task.wait(0.1)
+            end
+        end
     end)
 end
-
 local function killCustomNow()
     task.spawn(function()
-        if #settingsConfig.flingList == 0 then _G.__AW_NOTIFY('No custom targets') return end
+        if #settingsConfig.flingList==0 then _G.__AW_NOTIFY('No custom targets') return end
+        standUp(); task.wait(0.15)
         if not (findTool("Knife") or equipTool("Knife")) then _G.__AW_NOTIFY('No Knife') return end
-        local targets = {}
-        for _, n in ipairs(settingsConfig.flingList) do
-            for _, p in ipairs(Players:GetPlayers()) do
-                if playerMatchesName(p, n) and targetIsAlive(p) then
-                    table.insert(targets, p)
+        for _,n in ipairs(settingsConfig.flingList) do
+            for _,p in ipairs(Players:GetPlayers()) do
+                if playerMatchesName(p, n) and targetIsAlive(p) and not isWhitelisted(p) then
+                    task.spawn(function() executeHitboxKill(p) end)
+                    task.wait(0.1)
                 end
             end
         end
-        if #targets == 0 then _G.__AW_NOTIFY("No custom targets in server") return end
-        fireHandleTouchedKill(targets)
     end)
 end
 
 -- ============ HANDLETOUCHED KILL ============
-fireHandleTouchedKill = function(targets)
+local function fireHandleTouchedKill(targets)
     local char = LP.Character
     if not char then return end
     local knife = char:FindFirstChild("Knife") or equipTool("Knife")
@@ -1006,14 +1006,17 @@ end
 local function handleTouchKillAll()
     local targets = {}
     for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LP and targetIsAlive(p) then table.insert(targets, p) end
+        if p ~= LP and targetIsAlive(p) and not isWhitelisted(p) then table.insert(targets, p) end
     end
     fireHandleTouchedKill(targets)
 end
 
 local function handleTouchKillSheriff()
-    local targets = getLiveSheriffHeroes()
-    if #targets == 0 then _G.__AW_NOTIFY("No Sheriff / Hero") return end
+    local targets = {}
+    for _, p in ipairs(getLiveSheriffHeroes()) do
+        if not isWhitelisted(p) then table.insert(targets, p) end
+    end
+    if #targets == 0 then _G.__AW_NOTIFY("No Sheriff / Hero (or all locked)") return end
     fireHandleTouchedKill(targets)
 end
 
@@ -1022,12 +1025,12 @@ local function handleTouchKillCustom()
     local targets = {}
     for _, n in ipairs(settingsConfig.flingList) do
         for _, p in ipairs(Players:GetPlayers()) do
-            if playerMatchesName(p, n) and targetIsAlive(p) then
+            if playerMatchesName(p, n) and targetIsAlive(p) and not isWhitelisted(p) then
                 table.insert(targets, p)
             end
         end
     end
-    if #targets == 0 then _G.__AW_NOTIFY("No custom targets in server") return end
+    if #targets == 0 then _G.__AW_NOTIFY("No custom targets in server (or all locked)") return end
     fireHandleTouchedKill(targets)
 end
 
@@ -1062,7 +1065,9 @@ end
 local function flingMurdererNow()
     task.spawn(function()
         local m = getMurd()
-        if m then task.spawn(function() reliableFling(m, true) end)
+        if m then
+            if isWhitelisted(m) then _G.__AW_NOTIFY("Murderer is locked") return end
+            task.spawn(function() reliableFling(m, true) end)
         else _G.__AW_NOTIFY('No Murderer') end
     end)
 end
@@ -1605,7 +1610,6 @@ local FLOAT_BUTTON_DEFS = {
     {id="flingMurAction",label="Fling Murderer",  type="action", cb=flingMurdererNow},
     {id="flingSherAction",label="Fling Sheriff",  type="action", cb=flingSheriffNow},
     {id="flingAllAction",label="Fling All",       type="action", cb=flingAllNow},
-    {id="flingCustomAction",label="Fling Custom", type="action", cb=flingCustomNow},
     {id="tpMap",         label="TP Map",          type="action", cb=teleportToMap},
     {id="tpLobby",       label="TP Lobby",        type="action", cb=teleportToLobby},
     {id="tpMur",         label="TP Murderer",     type="action", cb=teleportToMurderer},
@@ -1655,9 +1659,9 @@ local FLOAT_BUTTON_DEFS = {
     {id="notifySound",   label="Notify Sound",    type="toggle", key="notifySound"},
     {id="signSpam",      label="Sign Spam",       type="toggle", key="signSpam"},
     {id="wallHop",       label="Wall Hop",        type="toggle", key="wallHop"},
+    {id="removeBarriers",label="Remove Barriers", type="toggle", key="removeBarriers"},
     {id="blueAura",      label="Blue Aura",       type="toggle", key="blueAura"},
     {id="feAnim",        label="FE Anim",         type="toggle", key="feAnimEnabled"},
-    {id="removeBarriers",label="Remove Barriers", type="toggle", key="removeBarriers"},
 }
 local FLOAT_BUTTON_MAP = {}
 for _, def in ipairs(FLOAT_BUTTON_DEFS) do FLOAT_BUTTON_MAP[def.id] = def end
@@ -3948,15 +3952,10 @@ addSect(pages["Combat"], "Manual Actions (HandleTouched)", 30)
 addBtn(pages["Combat"], "Fling Murderer Now", 31, flingMurdererNow)
 addBtn(pages["Combat"], "Fling Sheriff Now", 32, flingSheriffNow)
 addBtn(pages["Combat"], "Fling All Now", 33, flingAllNow)
-addBtn(pages["Combat"], "Kill Sheriff Now", 34, killSheriffNow)
-addBtn(pages["Combat"], "Kill All Now", 35, killAllNow)
-addBtn(pages["Combat"], "Grab Gun Now", 36, grabGunNow)
-addBtn(pages["Combat"], "Kill Custom Now", 37, killCustomNow)
-addBtn(pages["Combat"], "Fling Custom Now", 38, flingCustomNow)
-addSect(pages["Combat"], "Kill (HandleTouched)", 50)
-addBtn(pages["Combat"], "Kill All (HandleTouched)", 51, handleTouchKillAll)
-addBtn(pages["Combat"], "Kill Sheriff (HandleTouched)", 52, handleTouchKillSheriff)
-addBtn(pages["Combat"], "Kill Custom (HandleTouched)", 53, handleTouchKillCustom)
+addBtn(pages["Combat"], "Kill All (HandleTouched)", 34, handleTouchKillAll)
+addBtn(pages["Combat"], "Kill Sheriff (HandleTouched)", 35, handleTouchKillSheriff)
+addBtn(pages["Combat"], "Kill Custom (HandleTouched)", 36, handleTouchKillCustom)
+addBtn(pages["Combat"], "Grab Gun Now", 37, grabGunNow)
 addSect(pages["Combat"], "Aimbot", 60)
 tgg(pages["Combat"], "Aimbot: Murderer", 61, "aimbotMurderer")
 tgg(pages["Combat"], "Aimbot: Sheriff", 62, "aimbotSheriff")
@@ -4191,121 +4190,6 @@ end)
 refreshCustomListUI()
 task.defer(refreshPlayerList)
 
--- ============ LOCK / UNLOCK PLAYERS ============
-addSect(pages["Players"], "Lock / Unlock Players (Whitelist)", 30)
-
-addBtn(pages["Players"], "Lock All Players", 31, function()
-    local added = 0
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LP then
-            local already = false
-            for _, x in ipairs(settingsConfig.whitelist) do
-                if string.lower(x) == string.lower(p.Name) then already = true break end
-            end
-            if not already then
-                table.insert(settingsConfig.whitelist, p.Name)
-                added = added + 1
-            end
-        end
-    end
-    saveSettings()
-    _G.__AW_NOTIFY("Locked " .. added .. " player(s)")
-end)
-
-addBtn(pages["Players"], "Unlock All Players", 32, function()
-    settingsConfig.whitelist = {}
-    saveSettings()
-    _G.__AW_NOTIFY("Unlocked all")
-end)
-
-addBtn(pages["Players"], "Lock Certain (from search box)", 33, function()
-    local t = state.playerSearchText or ""
-    t = t:gsub("^%s+", ""):gsub("%s+$", "")
-    if t == "" then _G.__AW_NOTIFY("Type a name in the search box first") return end
-    for _, x in ipairs(settingsConfig.whitelist) do
-        if string.lower(x) == string.lower(t) then _G.__AW_NOTIFY("Already locked") return end
-    end
-    table.insert(settingsConfig.whitelist, t)
-    saveSettings()
-    _G.__AW_NOTIFY("Locked: " .. t)
-end)
-
-addBtn(pages["Players"], "Unlock Certain (from search box)", 34, function()
-    local t = state.playerSearchText or ""
-    t = t:gsub("^%s+", ""):gsub("%s+$", "")
-    if t == "" then _G.__AW_NOTIFY("Type a name in the search box first") return end
-    for i, x in ipairs(settingsConfig.whitelist) do
-        if string.lower(x) == string.lower(t) then
-            table.remove(settingsConfig.whitelist, i)
-            saveSettings()
-            _G.__AW_NOTIFY("Unlocked: " .. t)
-            return
-        end
-    end
-    _G.__AW_NOTIFY("Not in lock list")
-end)
-
-addSect(pages["Players"], "Current Locked List", 40)
-local lockListContainer = Instance.new("Frame", pages["Players"])
-lockListContainer.Size = UDim2.new(1, 0, 0, 0)
-lockListContainer.AutomaticSize = Enum.AutomaticSize.Y
-lockListContainer.LayoutOrder = 41
-lockListContainer.BackgroundTransparency = 1
-local llLayout = Instance.new("UIListLayout", lockListContainer)
-llLayout.SortOrder = Enum.SortOrder.LayoutOrder
-llLayout.Padding = UDim.new(0, 4)
-
-local function refreshLockListUI()
-    for _, c in ipairs(lockListContainer:GetChildren()) do
-        if c:IsA("GuiObject") and c ~= llLayout then c:Destroy() end
-    end
-    if #settingsConfig.whitelist == 0 then
-        local empty = Instance.new("TextLabel", lockListContainer)
-        empty.Size = UDim2.new(1, 0, 0, 26)
-        empty.LayoutOrder = 1
-        empty.BackgroundColor3 = cc3(settingsConfig.cardColor)
-        empty.Text = "(nobody locked)"
-        empty.TextColor3 = cc3(settingsConfig.tabTextColor)
-        empty.Font = Enum.Font.Gotham
-        empty.TextSize = 11
-        Instance.new("UICorner", empty).CornerRadius = UDim.new(0, 6)
-        return
-    end
-    for i, n in ipairs(settingsConfig.whitelist) do
-        local row = Instance.new("Frame", lockListContainer)
-        row.Size = UDim2.new(1, 0, 0, 30)
-        row.LayoutOrder = i
-        row.BackgroundColor3 = cc3(settingsConfig.cardColor)
-        Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
-        local nl = Instance.new("TextLabel", row)
-        nl.Size = UDim2.new(1, -50, 1, 0)
-        nl.Position = UDim2.new(0, 10, 0, 0)
-        nl.BackgroundTransparency = 1
-        nl.Text = n
-        nl.TextColor3 = cc3(settingsConfig.textColor)
-        nl.Font = Enum.Font.GothamMedium
-        nl.TextSize = 11.5
-        nl.TextXAlignment = Enum.TextXAlignment.Left
-        local rm = Instance.new("TextButton", row)
-        rm.Size = UDim2.new(0, 40, 0, 22)
-        rm.Position = UDim2.new(1, -46, 0.5, -11)
-        rm.BackgroundColor3 = Color3.fromRGB(160, 40, 40)
-        rm.Text = "X"
-        rm.TextColor3 = Color3.new(1, 1, 1)
-        rm.Font = Enum.Font.GothamBold
-        rm.TextSize = 12
-        rm.AutoButtonColor = false
-        Instance.new("UICorner", rm).CornerRadius = UDim.new(0, 6)
-        rm.MouseButton1Click:Connect(function()
-            table.remove(settingsConfig.whitelist, i)
-            saveSettings()
-            refreshLockListUI()
-        end)
-    end
-end
-_G.__AW_REFRESH_LOCK_LIST = refreshLockListUI
-refreshLockListUI()
-
 -- ============ TELEPORT TAB ============
 addSect(pages["Teleport"], "Locations", 1)
 addBtn(pages["Teleport"], "Teleport to Lobby", 2, teleportToLobby)
@@ -4337,28 +4221,136 @@ tgg(pages["Misc"], "Notify Map Name", 7, "notifyMapName")
 tgg(pages["Misc"], "Round Timer", 8, "showRoundTimerCountdown")
 tgg(pages["Misc"], "Murderer Predictor", 9, "murdererPredictor")
 tgg(pages["Misc"], "Murderer Perk Notify", 10, "murdererPerkNotify")
-tgg(pages["Misc"], "Remove Barriers (THICC/Glitchproof/Glitch)", 11, "removeBarriers")
-addBtn(pages["Misc"], "Remove Barriers Now", 12, function()
-    local count = 0
+
+-- ============ BARRIERS ============
+addSect(pages["Misc"], "Barriers", 20)
+tgg(pages["Misc"], "Remove Barriers (THICC / Glitchproof / Glitch)", 21, "removeBarriers")
+addBtn(pages["Misc"], "Remove Barriers Now", 22, function()
+    local removed = 0
     for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("BasePart") then
-            local n = string.lower(obj.Name)
-            if string.find(n, "thicc", 1, true)
-                or string.find(n, "glitchproof", 1, true)
-                or string.find(n, "glitch", 1, true)
-                or string.find(n, "barrier", 1, true) then
-                pcall(function()
-                    obj.CanCollide = false
-                    obj.CanTouch = false
-                    obj.CanQuery = false
-                    obj.Transparency = 1
-                end)
+        local n = string.lower(obj.Name)
+        if n == "thicc" or n == "glitchproof" or n == "glitch" then
+            pcall(function() obj:Destroy() removed = removed + 1 end)
+        end
+    end
+    _G.__AW_NOTIFY("Removed " .. removed .. " barrier(s)")
+end)
+
+-- ============ LOCK / UNLOCK PLAYERS ============
+addSect(pages["Misc"], "Lock / Unlock Players", 30)
+local lockInputBox = makeInput(pages["Misc"], 31, "Player name to lock / unlock...", "", function() end)
+addBtn(pages["Misc"], "Lock Certain", 32, function()
+    local t = (lockInputBox.Text or ""):gsub("^%s+", ""):gsub("%s+$", "")
+    if t == "" then _G.__AW_NOTIFY("Type a name first") return end
+    for _, x in ipairs(settingsConfig.whitelist) do
+        if string.lower(x) == string.lower(t) then _G.__AW_NOTIFY("Already locked") return end
+    end
+    table.insert(settingsConfig.whitelist, t)
+    saveSettings()
+    _G.__AW_NOTIFY("Locked: " .. t)
+    if _G.__AW_REFRESH_LOCK_LIST then pcall(_G.__AW_REFRESH_LOCK_LIST) end
+end)
+addBtn(pages["Misc"], "Unlock Certain", 33, function()
+    local t = (lockInputBox.Text or ""):gsub("^%s+", ""):gsub("%s+$", "")
+    if t == "" then _G.__AW_NOTIFY("Type a name first") return end
+    for i, x in ipairs(settingsConfig.whitelist) do
+        if string.lower(x) == string.lower(t) then
+            table.remove(settingsConfig.whitelist, i)
+            saveSettings()
+            _G.__AW_NOTIFY("Unlocked: " .. t)
+            if _G.__AW_REFRESH_LOCK_LIST then pcall(_G.__AW_REFRESH_LOCK_LIST) end
+            return
+        end
+    end
+    _G.__AW_NOTIFY("Not in lock list")
+end)
+addBtn(pages["Misc"], "Lock All Players", 34, function()
+    local count = 0
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LP then
+            local found = false
+            for _, x in ipairs(settingsConfig.whitelist) do
+                if string.lower(x) == string.lower(p.Name) then found = true break end
+            end
+            if not found then
+                table.insert(settingsConfig.whitelist, p.Name)
                 count = count + 1
             end
         end
     end
-    _G.__AW_NOTIFY("Disabled " .. count .. " barrier(s)")
+    saveSettings()
+    _G.__AW_NOTIFY("Locked " .. count .. " player(s)")
+    if _G.__AW_REFRESH_LOCK_LIST then pcall(_G.__AW_REFRESH_LOCK_LIST) end
 end)
+addBtn(pages["Misc"], "Unlock All Players", 35, function()
+    settingsConfig.whitelist = {}
+    saveSettings()
+    _G.__AW_NOTIFY("Unlocked all players")
+    if _G.__AW_REFRESH_LOCK_LIST then pcall(_G.__AW_REFRESH_LOCK_LIST) end
+end)
+addSect(pages["Misc"], "Current Lock List", 36)
+
+local lockListContainer = Instance.new("Frame", pages["Misc"])
+lockListContainer.Size = UDim2.new(1, 0, 0, 0)
+lockListContainer.AutomaticSize = Enum.AutomaticSize.Y
+lockListContainer.LayoutOrder = 37
+lockListContainer.BackgroundTransparency = 1
+local llLayout = Instance.new("UIListLayout", lockListContainer)
+llLayout.SortOrder = Enum.SortOrder.LayoutOrder
+llLayout.Padding = UDim.new(0, 4)
+
+local function refreshLockListUI()
+    for _, c in ipairs(lockListContainer:GetChildren()) do
+        if c:IsA("GuiObject") and c ~= llLayout then c:Destroy() end
+    end
+    if #settingsConfig.whitelist == 0 then
+        local empty = Instance.new("TextLabel", lockListContainer)
+        empty.Size = UDim2.new(1, 0, 0, 26)
+        empty.LayoutOrder = 1
+        empty.BackgroundColor3 = cc3(settingsConfig.cardColor)
+        empty.Text = "(no locked players — everyone is a valid target)"
+        empty.TextColor3 = cc3(settingsConfig.tabTextColor)
+        empty.Font = Enum.Font.Gotham
+        empty.TextSize = 11
+        Instance.new("UICorner", empty).CornerRadius = UDim.new(0, 6)
+        return
+    end
+    for i, n in ipairs(settingsConfig.whitelist) do
+        local row = Instance.new("Frame", lockListContainer)
+        row.Size = UDim2.new(1, 0, 0, 30)
+        row.LayoutOrder = i
+        row.BackgroundColor3 = cc3(settingsConfig.cardColor)
+        Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
+        local nl = Instance.new("TextLabel", row)
+        nl.Size = UDim2.new(1, -50, 1, 0)
+        nl.Position = UDim2.new(0, 10, 0, 0)
+        nl.BackgroundTransparency = 1
+        nl.Text = "🔒 " .. n
+        nl.TextColor3 = cc3(settingsConfig.textColor)
+        nl.Font = Enum.Font.GothamMedium
+        nl.TextSize = 11.5
+        nl.TextXAlignment = Enum.TextXAlignment.Left
+        local rm = Instance.new("TextButton", row)
+        rm.Size = UDim2.new(0, 40, 0, 22)
+        rm.Position = UDim2.new(1, -46, 0.5, -11)
+        rm.BackgroundColor3 = Color3.fromRGB(160, 40, 40)
+        rm.Text = "X"
+        rm.TextColor3 = Color3.new(1, 1, 1)
+        rm.Font = Enum.Font.GothamBold
+        rm.TextSize = 12
+        rm.AutoButtonColor = false
+        Instance.new("UICorner", rm).CornerRadius = UDim.new(0, 6)
+        local idx = i
+        rm.MouseButton1Click:Connect(function()
+            table.remove(settingsConfig.whitelist, idx)
+            saveSettings()
+            refreshLockListUI()
+            _G.__AW_NOTIFY("Unlocked")
+        end)
+    end
+end
+_G.__AW_REFRESH_LOCK_LIST = refreshLockListUI
+refreshLockListUI()
 
 -- ============ VOTING TAB ============
 addSect(pages["Voting"], "Live Vote Map Names", 1)
@@ -5196,7 +5188,7 @@ task.spawn(function()
                 local myRoot = LP.Character:FindFirstChild("HumanoidRootPart")
                 if myRoot then
                     for _, p in ipairs(Players:GetPlayers()) do
-                        if p ~= LP and targetIsAlive(p) then
+                        if p ~= LP and targetIsAlive(p) and not isWhitelisted(p) then
                             local pr = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
                             if pr and (myRoot.Position - pr.Position).Magnitude <= 8 then
                                 task.spawn(function() executeHitboxKill(p) end)
@@ -5256,107 +5248,67 @@ task.spawn(function()
     end
 end)
 
--- ============ WALL HOP LOOP ============
-do
+-- ============ WALL HOP LOOP (fixed) ============
+task.spawn(function()
     local rayParams = RaycastParams.new()
     rayParams.FilterType = Enum.RaycastFilterType.Exclude
-    local BOOST = 55
-
-    task.spawn(function()
-        while true do
-            task.wait(0.04)
-            if state.wallHop and alive() then
-                local char = LP.Character
-                local root = char and char:FindFirstChild("HumanoidRootPart")
-                local hum  = char and char:FindFirstChildOfClass("Humanoid")
-                if root and hum and hum.Health > 0 then
+    local lastHop = 0
+    while true do
+        task.wait(0.03)
+        if state.wallHop and alive() then
+            local char = LP.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            local hum  = char and char:FindFirstChildOfClass("Humanoid")
+            if root and hum then
+                local humState = hum:GetState()
+                local inAir = (humState == Enum.HumanoidStateType.Freefall
+                            or humState == Enum.HumanoidStateType.Jumping)
+                if inAir and UIS:IsKeyDown(Enum.KeyCode.Space) and tick() - lastHop > 0.15 then
                     rayParams.FilterDescendantsInstances = {char}
-
                     local dirs = {
                         root.CFrame.LookVector,
                         -root.CFrame.LookVector,
                         root.CFrame.RightVector,
                         -root.CFrame.RightVector,
                     }
-                    local wallHit = nil
                     for _, d in ipairs(dirs) do
-                        local hit = Workspace:Raycast(root.Position, d * 3, rayParams)
-                        if hit then wallHit = hit break end
-                    end
-
-                    local airborne = (hum.FloorMaterial == Enum.Material.Air)
-                    local holdingSpace = UIS:IsKeyDown(Enum.KeyCode.Space)
-
-                    if wallHit and holdingSpace and airborne then
-                        local push = wallHit.Normal * 12
-                        root.AssemblyLinearVelocity = Vector3.new(
-                            push.X,
-                            BOOST,
-                            push.Z
-                        )
-                        pcall(function()
-                            hum:ChangeState(Enum.HumanoidStateType.Jumping)
-                        end)
-
-                        if state.wallHopFlick then
-                            local newCF = CFrame.lookAt(root.Position, root.Position + wallHit.Normal)
-                            root.CFrame = newCF
+                        local hit = Workspace:Raycast(root.Position, d * 3.2, rayParams)
+                        if hit and hit.Instance then
+                            local n = hit.Normal
+                            local vel = root.AssemblyLinearVelocity
+                            root.AssemblyLinearVelocity = Vector3.new(
+                                n.X * 28,
+                                math.max(vel.Y, 48),
+                                n.Z * 28
+                            )
+                            if state.wallHopFlick then
+                                root.CFrame = CFrame.lookAt(root.Position, root.Position + n)
+                            end
+                            pcall(function() hum:ChangeState(Enum.HumanoidStateType.Jumping) end)
+                            lastHop = tick()
+                            break
                         end
-
-                        task.wait(0.12)
                     end
                 end
             end
         end
-    end)
-end
-
--- ============ REMOVE BARRIERS LOOP ============
-do
-    local hiddenBarriers = {}
-    local function isBarrierName(n)
-        n = string.lower(n)
-        return string.find(n, "thicc", 1, true)
-            or string.find(n, "glitchproof", 1, true)
-            or string.find(n, "glitch", 1, true)
-            or string.find(n, "barrier", 1, true)
     end
-    task.spawn(function()
-        while true do
-            task.wait(0.4)
-            if state.removeBarriers then
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if obj:IsA("BasePart") and isBarrierName(obj.Name) then
-                        if not hiddenBarriers[obj] then
-                            hiddenBarriers[obj] = {
-                                cc = obj.CanCollide,
-                                t  = obj.Transparency,
-                                ct = obj.CanTouch,
-                                cq = obj.CanQuery,
-                            }
-                        end
-                        obj.CanCollide = false
-                        obj.CanTouch = false
-                        obj.CanQuery = false
-                        obj.Transparency = 1
-                    end
-                end
-            else
-                for obj, saved in pairs(hiddenBarriers) do
-                    if obj and obj.Parent then
-                        pcall(function()
-                            obj.CanCollide = saved.cc
-                            obj.Transparency = saved.t
-                            obj.CanTouch = saved.ct
-                            obj.CanQuery = saved.cq
-                        end)
-                    end
-                    hiddenBarriers[obj] = nil
+end)
+
+-- ============ BARRIER REMOVAL LOOP ============
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        if state.removeBarriers then
+            for _, obj in ipairs(Workspace:GetDescendants()) do
+                local n = string.lower(obj.Name)
+                if n == "thicc" or n == "glitchproof" or n == "glitch" then
+                    pcall(function() obj:Destroy() end)
                 end
             end
         end
-    end)
-end
+    end
+end)
 
 -- ============ INVISIBILITY SYSTEM ============
 local INVIS_POSITION = Vector3.new(-25.95, 84, 3537.55)
@@ -5397,6 +5349,7 @@ local function enableInvisibility()
     seat.Anchored = false
     seat.CanCollide = false
     seat.Transparency = 1
+    seat.Size = Vector2.new(2, 1, 1)
     seat.Size = Vector3.new(2, 1, 1)
     seat.CFrame = CFrame.new(INVIS_POSITION)
     seat.Parent = Workspace
