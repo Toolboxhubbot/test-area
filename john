@@ -1,5 +1,5 @@
 -- ================================================================
--- Appleware - Part 1
+-- Appleware
 -- ================================================================
 
 task.spawn(function()
@@ -50,7 +50,7 @@ state = {
     aimbotSnap=false, aimbotSticky=true,
     silentAimEnabled=false, silentAimWallCheck=true,
     shootThroughWall=false,
-    silentAimFlickToggle=false, silentAimFlickKey="",
+    silentAimFlickToggle=false,
     loopFlingAll=false, loopFlingMur=false, loopFlingSheriff=false, loopFlingCustom=false,
     disable3d=false, fpsBoost=false, sendOnFull=false, autoRejoin=false,
     autoServerHop=false, autoPrestige=false,
@@ -59,10 +59,7 @@ state = {
     espHighlight=true, espOutline=true, espFill=true,
     espShowName=true, espShowRole=true, espShowDistance=false,
     espFillTransparency=0.5, espTextSize=14, espMaxDistance=2000,
-    espTracer=false, espBox=false, espHealthBar=false,
-    espSkeleton=false, espRainbow=false,
-    espChams=false, espChineseHat=false,
-    espHeadDot=false, espArrow=false,
+    espTracer=false, espChineseHat=false, espHeadDot=false,
     flyEnabled=false, flySpeed=50,
     speedEnabled=false, speedValue=16,
     speedGlitch=false, speedGlitchValue=200,
@@ -103,13 +100,7 @@ state = {
     voidPlatform=false,
     loopTpMap=false, loopTpLobby=false, loopTpMurderer=false,
     loopTpSheriff=false, loopTpCustom=false,
-    autoKillMurdererNearby=false,
-    murdererBeam=false, showKillerOnDeath=true,
-    autoBuyKnife=false, autoBuyGun=false,
-    knifeReach=false, knifeReachSize=12,
-    gunReach=false, gunReachSize=20,
-    silentAimFOV=360,
-    espTracerColor=true,
+    autoKillMurdererNearby=false, showKillerOnDeath=true,
 }
 
 KEYBIND_FEATURES = {
@@ -143,8 +134,7 @@ KEYBIND_FEATURES = {
 
 NO_SAVE_STATE_KEYS = {
     bigButtonX=true, bigButtonY=true, mainX=true, mainY=true,
-    openX=true, openY=true,
-    floatButtonPositions=true,
+    openX=true, openY=true, floatButtonPositions=true,
 }
 
 settingsConfig = {
@@ -189,10 +179,8 @@ toggleDisplayNames = {
     espHighlight="ESP Highlight", espOutline="ESP Outline",
     espFill="ESP Fill", espShowName="ESP Name",
     espShowRole="ESP Role", espShowDistance="ESP Distance",
-    espTracer="ESP Tracers", espBox="ESP Boxes", espHealthBar="ESP Health Bar",
-    espSkeleton="ESP Skeleton", espRainbow="ESP Rainbow",
-    espChams="ESP Chams", espChineseHat="ESP Chinese Hat",
-    espHeadDot="ESP Head Dot", espArrow="ESP Arrow",
+    espTracer="ESP Tracers", espChineseHat="ESP Chinese Hat",
+    espHeadDot="ESP Head Dot",
     touchFling="Touch Fling", hitboxExpander="Hitbox Expander",
     radioAutoPlay="Auto Play Audio",
     headless1="Headless V1", headless2="Headless V2", headless3="Headless V3",
@@ -209,10 +197,6 @@ toggleDisplayNames = {
     loopTpMurderer="Loop TP: Murderer", loopTpSheriff="Loop TP: Sheriff",
     loopTpCustom="Loop TP: Custom",
     autoKillMurdererNearby="Auto Kill Murderer Nearby",
-    murdererBeam="Murderer Beam",
-    showKillerOnDeath="Show Killer On Death",
-    autoBuyKnife="Auto Buy Knife", autoBuyGun="Auto Buy Gun",
-    knifeReach="Knife Reach", gunReach="Gun Reach",
 }
 
 function saveSettings()
@@ -1337,7 +1321,7 @@ task.spawn(function()
     end
 end)
 
--- ============ HITBOX EXPANDER (FIXED) ============
+-- ============ HITBOX EXPANDER (FIXED - resizes character parts) ============
 hitboxOrigData = {}
 function getHitboxTargets()
     local targets = {}
@@ -1363,11 +1347,6 @@ function getHitboxTargets()
     return targets
 end
 
-function resizePart(part, size)
-    if not part or not part:IsA("BasePart") then return end
-    pcall(function() part.Size = size end)
-end
-
 function applyHitboxToPlayer(plr)
     local ch = plr.Character
     if not ch then return end
@@ -1379,7 +1358,7 @@ function applyHitboxToPlayer(plr)
         for _, name in ipairs({"Head","UpperTorso","Torso","LowerTorso","HumanoidRootPart"}) do
             local p = ch:FindFirstChild(name)
             if p and p:IsA("BasePart") then
-                hitboxOrigData[plr.UserId][name] = {Size = p.Size, CanCollide = p.CanCollide}
+                hitboxOrigData[plr.UserId][name] = {Size = p.Size, CanCollide = p.CanCollide, Transparency = p.Transparency}
             end
         end
     end
@@ -1409,17 +1388,15 @@ function removeHitboxFromPlayer(plr)
                 pcall(function()
                     p.Size = props.Size
                     p.CanCollide = props.CanCollide
-                    p.Transparency = 0
+                    p.Transparency = props.Transparency
                 end)
             end
         end
         hitboxOrigData[plr.UserId] = nil
     end
-    local oldHb = ch:FindFirstChild("AW_Hitbox")
-    if oldHb then pcall(function() oldHb:Destroy() end) end
 end
 
--- ============ SHOOT FUNCTIONS ============
+-- ============ SHOOT / SILENT AIM / MAGIC BULLET ============
 SHOT_COOLDOWN = 0.4
 lastShotTime = -SHOT_COOLDOWN
 function canFire() return (tick() - lastShotTime) >= SHOT_COOLDOWN end
@@ -1432,6 +1409,15 @@ function getGun()
         if bp and bp:FindFirstChild(name) then return bp[name] end
     end
     return nil
+end
+function isGunEquipped()
+    local ch = LP.Character
+    if not ch then return false end
+    for _, name in ipairs(GUN_NAMES) do
+        local tool = ch:FindFirstChild(name)
+        if tool and tool:IsA("Tool") then return true end
+    end
+    return false
 end
 function findShootRemote()
     local gun = getGun()
@@ -1505,55 +1491,6 @@ function fireSilentAtMurderer()
     return true
 end
 
--- Flick-only camera movement (no fire)
-function flickCameraOnce()
-    if not alive() then return end
-    local part = getTargetPart()
-    if not part then return end
-    local cam = Workspace.CurrentCamera
-    if not cam then return end
-    local aimPos = part.Position + Vector3.new(0, 1.5, 0)
-    local savedCF = cam.CFrame
-    cam.CFrame = CFrame.new(cam.CFrame.Position, aimPos)
-    task.wait(0.03)
-    cam.CFrame = savedCF
-end
--- Flick + shoot once
-function flickShoot()
-    if not alive() then return end
-    local part = getTargetPart()
-    if not part then _G.__AW_NOTIFY("No Murderer"); return end
-    local cam = Workspace.CurrentCamera
-    if not cam then return end
-    local aimPos = part.Position + Vector3.new(0, 1.5, 0)
-    local savedCF = cam.CFrame
-    cam.CFrame = CFrame.new(cam.CFrame.Position, aimPos)
-    RunService.RenderStepped:Wait()
-    pcall(function() fireSilentAtMurderer() end)
-    task.wait(0.02)
-    cam.CFrame = savedCF
-end
-
--- Flick toggle loop: only flicks camera, doesn't shoot
-task.spawn(function()
-    while true do
-        task.wait(0.3)
-        if state.silentAimFlickToggle and alive() then
-            local part = getTargetPart()
-            if part then
-                local cam = Workspace.CurrentCamera
-                if cam then
-                    local aimPos = part.Position + Vector3.new(0, 1.5, 0)
-                    local savedCF = cam.CFrame
-                    cam.CFrame = CFrame.new(cam.CFrame.Position, aimPos)
-                    task.wait(0.03)
-                    cam.CFrame = savedCF
-                end
-            end
-        end
-    end
-end)
-
 function fireThroughWall()
     if not canFire() then return false end
     local murd = getMurd()
@@ -1580,6 +1517,56 @@ function tryShootMurderer()
 end
 function fullShootSequence() return tryShootMurderer() end
 
+-- Flick only fires when a gun is currently in hand
+function flickCameraOnce()
+    if not alive() then return end
+    if not isGunEquipped() then return end
+    local part = getTargetPart()
+    if not part then return end
+    local cam = Workspace.CurrentCamera
+    if not cam then return end
+    local aimPos = part.Position + Vector3.new(0, 1.5, 0)
+    local savedCF = cam.CFrame
+    cam.CFrame = CFrame.new(cam.CFrame.Position, aimPos)
+    task.wait(0.03)
+    cam.CFrame = savedCF
+end
+function flickShoot()
+    if not alive() then return end
+    if not isGunEquipped() then _G.__AW_NOTIFY("Equip your gun first"); return end
+    local part = getTargetPart()
+    if not part then _G.__AW_NOTIFY("No Murderer"); return end
+    local cam = Workspace.CurrentCamera
+    if not cam then return end
+    local aimPos = part.Position + Vector3.new(0, 1.5, 0)
+    local savedCF = cam.CFrame
+    cam.CFrame = CFrame.new(cam.CFrame.Position, aimPos)
+    RunService.RenderStepped:Wait()
+    pcall(function() fireSilentAtMurderer() end)
+    task.wait(0.02)
+    cam.CFrame = savedCF
+end
+
+-- Flick toggle loop: only flicks camera, doesn't shoot, only when gun equipped
+task.spawn(function()
+    while true do
+        task.wait(0.3)
+        if state.silentAimFlickToggle and alive() and isGunEquipped() then
+            local part = getTargetPart()
+            if part then
+                local cam = Workspace.CurrentCamera
+                if cam then
+                    local aimPos = part.Position + Vector3.new(0, 1.5, 0)
+                    local savedCF = cam.CFrame
+                    cam.CFrame = CFrame.new(cam.CFrame.Position, aimPos)
+                    task.wait(0.03)
+                    cam.CFrame = savedCF
+                end
+            end
+        end
+    end
+end)
+
 gunActivatedConn = nil
 function unbindGun()
     if gunActivatedConn then gunActivatedConn:Disconnect(); gunActivatedConn = nil end
@@ -1588,6 +1575,7 @@ function bindGun(tool)
     unbindGun()
     if not tool or tool.Name ~= "Gun" then return end
     gunActivatedConn = tool.Activated:Connect(function()
+        if not isGunEquipped() then return end
         if state.silentAimEnabled then task.spawn(function() pcall(tryShootMurderer) end) end
     end)
 end
@@ -1601,28 +1589,7 @@ end
 if LP.Character then watchCharacter(LP.Character) end
 LP.CharacterAdded:Connect(function(char) unbindGun(); watchCharacter(char) end)
 
--- ============ KNIFE / GUN REACH ============
-task.spawn(function()
-    while true do
-        task.wait(0.15)
-        if state.knifeReach and alive() then
-            local k = LP.Character:FindFirstChild("Knife")
-            if k then
-                local h = k:FindFirstChild("Handle")
-                if h then pcall(function() h.Size = Vector3.new(state.knifeReachSize or 12, state.knifeReachSize or 12, state.knifeReachSize or 12) end) end
-            end
-        end
-        if state.gunReach and alive() then
-            local g = LP.Character:FindFirstChild("Gun") or LP.Character:FindFirstChild("Revolver") or LP.Character:FindFirstChild("Pistol")
-            if g then
-                local h = g:FindFirstChild("Handle")
-                if h then pcall(function() h.Size = Vector3.new(state.gunReachSize or 20, state.gunReachSize or 20, state.gunReachSize or 20) end) end
-            end
-        end
-    end
-end)
-
--- ============ VOTE ============
+-- ============ VOTING ============
 VOTE_SPOTS = {[1] = Vector3.new(25, 508, 50), [2] = Vector3.new(13, 508, 52), [3] = Vector3.new(1, 508, 49)}
 voting = false
 saveVoteCF = nil
@@ -1879,9 +1846,7 @@ FLOAT_BUTTON_DEFS = {
     {id="voidPlatform",  label="Void Platform",   type="toggle", key="voidPlatform"},
     {id="blueAura",      label="Blue Aura",       type="toggle", key="blueAura"},
     {id="feAnim",        label="FE Anim",         type="toggle", key="feAnimEnabled"},
-    {id="knifeReach",    label="Knife Reach",     type="toggle", key="knifeReach"},
-    {id="gunReach",      label="Gun Reach",       type="toggle", key="gunReach"},
-    {id="murdererBeam",  label="Murderer Beam",   type="toggle", key="murdererBeam"},
+    {id="autoKillNear",  label="Auto Kill Near",  type="toggle", key="autoKillMurdererNearby"},
 }
 FLOAT_BUTTON_MAP = {}
 for _, def in ipairs(FLOAT_BUTTON_DEFS) do FLOAT_BUTTON_MAP[def.id] = def end
@@ -2030,9 +1995,6 @@ function setFloatVisible(vis)
     if _G.__AW_EMOTE_FLOAT_REFRESH then pcall(_G.__AW_EMOTE_FLOAT_REFRESH) end
 end
 rebuildFloatButtons()
--- ================================================================
--- Appleware - Part 2
--- ================================================================
 
 -- ============ MAIN UI ============
 sg = Instance.new("ScreenGui")
@@ -2398,120 +2360,12 @@ function makeInput(page, order, ph, val, onC)
     return box
 end
 
-function makeDropdown(page, label, order, options, initial, onSelect)
-    local wrapper = Instance.new("Frame", page)
-    wrapper.Size = UDim2.new(1, 0, 0, 44)
-    wrapper.LayoutOrder = order
-    wrapper.BackgroundTransparency = 1
-    wrapper.ClipsDescendants = false
-    local header = Instance.new("TextButton", wrapper)
-    header.Size = UDim2.new(1, 0, 0, 44)
-    header.BackgroundColor3 = cc3(settingsConfig.cardColor)
-    header.Text = ""
-    header.AutoButtonColor = false
-    Instance.new("UICorner", header).CornerRadius = UDim.new(0, 10)
-    local headerStroke = Instance.new("UIStroke", header)
-    headerStroke.Color = cc3(settingsConfig.accentColor)
-    headerStroke.Thickness = 1
-    headerStroke.Transparency = 0.6
-    local lbl = Instance.new("TextLabel", header)
-    lbl.Size = UDim2.new(1, -44, 0, 14)
-    lbl.Position = UDim2.new(0, 12, 0, 6)
-    lbl.BackgroundTransparency = 1
-    lbl.Text = label
-    lbl.TextColor3 = cc3(settingsConfig.tabTextColor)
-    lbl.Font = Enum.Font.Gotham
-    lbl.TextSize = 11
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    local val = Instance.new("TextLabel", header)
-    val.Size = UDim2.new(1, -44, 0, 18)
-    val.Position = UDim2.new(0, 12, 0, 22)
-    val.BackgroundTransparency = 1
-    val.Text = tostring(initial)
-    val.TextColor3 = cc3(settingsConfig.textColor)
-    val.Font = Enum.Font.GothamBold
-    val.TextSize = 14
-    val.TextXAlignment = Enum.TextXAlignment.Left
-    val.TextTruncate = Enum.TextTruncate.AtEnd
-    local arrow = Instance.new("TextLabel", header)
-    arrow.Size = UDim2.new(0, 24, 0, 24)
-    arrow.Position = UDim2.new(1, -32, 0.5, -12)
-    arrow.BackgroundTransparency = 1
-    arrow.Text = "▼"
-    arrow.TextColor3 = cc3(settingsConfig.textColor)
-    arrow.Font = Enum.Font.GothamBold
-    arrow.TextSize = 13
-    local list = Instance.new("ScrollingFrame", wrapper)
-    list.Size = UDim2.new(1, 0, 0, 0)
-    list.Position = UDim2.new(0, 0, 0, 46)
-    list.BackgroundColor3 = cc3(settingsConfig.cardColor)
-    list.BorderSizePixel = 0
-    list.Visible = false
-    list.ClipsDescendants = true
-    list.ZIndex = 5
-    list.ScrollBarThickness = 4
-    list.CanvasSize = UDim2.new(0, 0, 0, 0)
-    list.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    Instance.new("UICorner", list).CornerRadius = UDim.new(0, 10)
-    local listLayout = Instance.new("UIListLayout", list)
-    listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    listLayout.Padding = UDim.new(0, 3)
-    local listPad = Instance.new("UIPadding", list)
-    listPad.PaddingTop = UDim.new(0, 5); listPad.PaddingBottom = UDim.new(0, 5)
-    listPad.PaddingLeft = UDim.new(0, 5); listPad.PaddingRight = UDim.new(0, 5)
-    local OPTION_H = 38
-    local MAX_VISIBLE = 5
-    local open = false
-    local current = initial
-    local function setOpen(want)
-        if open == want then return end
-        open = want
-        arrow.Text = want and "▲" or "▼"
-        if want then
-            local visibleCount = math.min(#options, MAX_VISIBLE)
-            local targetH = 10 + visibleCount * OPTION_H + math.max(0, visibleCount - 1) * 3
-            list.Visible = true
-            list.Size = UDim2.new(1, 0, 0, 0)
-            TweenService:Create(list, TweenInfo.new(0.30, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, targetH)}):Play()
-            TweenService:Create(wrapper, TweenInfo.new(0.30, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, 44 + targetH + 2)}):Play()
-        else
-            TweenService:Create(list, TweenInfo.new(0.22, EASE_SMOOTH, EASE_IN), {Size = UDim2.new(1, 0, 0, 0)}):Play()
-            TweenService:Create(wrapper, TweenInfo.new(0.22, EASE_SMOOTH, EASE_IN), {Size = UDim2.new(1, 0, 0, 44)}):Play()
-            task.delay(0.24, function() if not open then list.Visible = false end end)
-        end
-    end
-    for i, opt in ipairs(options) do
-        local optBtn = Instance.new("TextButton", list)
-        optBtn.Size = UDim2.new(1, 0, 0, OPTION_H)
-        optBtn.LayoutOrder = i
-        optBtn.BackgroundColor3 = cc3(settingsConfig.cardHoverColor)
-        optBtn.Text = tostring(opt)
-        optBtn.TextColor3 = cc3(settingsConfig.textColor)
-        optBtn.Font = Enum.Font.GothamMedium
-        optBtn.TextSize = 14
-        optBtn.TextXAlignment = Enum.TextXAlignment.Left
-        optBtn.AutoButtonColor = false
-        optBtn.ZIndex = 6
-        local pad = Instance.new("UIPadding", optBtn)
-        pad.PaddingLeft = UDim.new(0, 12)
-        Instance.new("UICorner", optBtn).CornerRadius = UDim.new(0, 6)
-        optBtn.MouseButton1Click:Connect(function()
-            current = opt
-            val.Text = tostring(opt)
-            setOpen(false)
-            if onSelect then pcall(onSelect, opt) end
-        end)
-    end
-    header.MouseButton1Click:Connect(function() setOpen(not open) end)
-    return wrapper, function() return current end, function(newVal) current = newVal; val.Text = tostring(newVal) end
-end
-
 -- ============ SECRET TAB ============
 addSect(pages[SECRET_NAME], "Barriers / Kill Bricks", 1)
 tgg(pages[SECRET_NAME], "Auto Remove Barriers + Kill Bricks", 2, "removeBarriers")
 addBtn(pages[SECRET_NAME], "Remove Now (Destroy)", 3, removeBarriersNow)
 
-addSect(pages[SECRET_NAME], "Hitbox Expander", 10)
+addSect(pages[SECRET_NAME], "Hitbox Expander (resizes character)", 10)
 tgg(pages[SECRET_NAME], "Hitbox Expander", 11, "hitboxExpander")
 makeSlider(pages[SECRET_NAME], "Hitbox Size", 12, state.hitboxExpanderSize or 15, 3, 100, "hitboxExpanderSize")
 do
@@ -2543,12 +2397,6 @@ do
         saveSettings()
     end)
 end
-
-addSect(pages[SECRET_NAME], "Knife / Gun Reach", 20)
-tgg(pages[SECRET_NAME], "Knife Reach", 21, "knifeReach")
-makeSlider(pages[SECRET_NAME], "Knife Handle Size", 22, state.knifeReachSize or 12, 5, 50, "knifeReachSize")
-tgg(pages[SECRET_NAME], "Gun Reach", 23, "gunReach")
-makeSlider(pages[SECRET_NAME], "Gun Handle Size", 24, state.gunReachSize or 20, 5, 50, "gunReachSize")
 
 addSect(pages[SECRET_NAME], "Blue Aura", 30)
 tgg(pages[SECRET_NAME], "Enable Blue Aura", 31, "blueAura")
@@ -2586,9 +2434,6 @@ tgg(pages[SECRET_NAME], "Auto Kill Murderer Nearby", 84, "autoKillMurdererNearby
 
 addSect(pages[SECRET_NAME], "Touch Fling", 90)
 tgg(pages[SECRET_NAME], "Touch Fling (Walk into players)", 91, "touchFling")
-
-addSect(pages[SECRET_NAME], "Murderer Beam", 95)
-tgg(pages[SECRET_NAME], "Murderer Beam", 96, "murdererBeam")
 
 addSect(pages[SECRET_NAME], "Radio Abuse", 100)
 do
@@ -2633,15 +2478,6 @@ do
             if not PlaySong or not PlaySong.Parent then PlaySong = findPlaySong() end
         end
     end)
-    local songFile = "AW_RadioSongs.json"
-    local savedSongs = {}
-    if isfile and isfile(songFile) and readfile then
-        local ok, data = pcall(function() return HttpService:JSONDecode(readfile(songFile)) end)
-        if ok and type(data) == "table" then savedSongs = data end
-    end
-    local function saveSongs()
-        if writefile then pcall(function() writefile(songFile, HttpService:JSONEncode(savedSongs)) end) end
-    end
     local function firePlaySong(rawId, tryAllFormats)
         if not PlaySong or not PlaySong.Parent then PlaySong = findPlaySong() end
         if not PlaySong then _G.__AW_NOTIFY("PlaySong remote not found"); return false end
@@ -2970,7 +2806,7 @@ tgg(pages["Farm"], "Full Bag Gate", 6, "fullBagGate")
 addSect(pages["Combat"], "Silent Aim", 1)
 tgg(pages["Combat"], "Silent Aim", 2, "silentAimEnabled")
 tgg(pages["Combat"], "Silent Aim Wall Check", 3, "silentAimWallCheck")
-addSect(pages["Combat"], "Silent Aim Flick (camera only, no shoot)", 5)
+addSect(pages["Combat"], "Silent Aim Flick (only when gun equipped, no auto shoot)", 5)
 tgg(pages["Combat"], "Enable Auto Flick Toggle", 6, "silentAimFlickToggle")
 addBtn(pages["Combat"], "Flick Camera Once", 7, flickCameraOnce)
 addBtn(pages["Combat"], "Flick + Shoot Once", 8, flickShoot)
@@ -3561,6 +3397,524 @@ addSect(pages["UI"], "Toggles", 4)
 tgg(pages["UI"], "Notification Sound", 6, "notifySound")
 tgg(pages["UI"], "Enable Animations", 7, "animationsEnabled")
 
+-- ============ ANIM/EMOT TAB ============
+do
+    local EMOTES = {
+        {id=3360689775,name="Salute"},{id=5915779043,name="Applaud"},{id=3360692915,name="Tilt"},
+        {id=15610015346,name="Yungblud Jump"},{id=14353423348,name="Bouncy Twirl"},{id=14353421343,name="Face Frame"},
+        {id=3823158750,name="Godlike"},{id=139021427684680,name="Touch"},{id=133596366979822,name="Biblically Accurate"},
+        {id=108128682361404,name="Rambunctious"},{id=79127989560307,name="Moon Walk"},{id=5230661597,name="Bored"},
+        {id=14353425085,name="Strut"},{id=15694504637,name="Backflip"},{id=104142334418357,name="Gangnam Style"},
+        {id=16553249658,name="Piano Hands"},{id=12507097350,name="Lotus Position"},{id=15698511500,name="Levitate"},
+        {id=4689362868,name="Sleep"},{id=111426928948833,name="Floating on Clouds"},{id=130245358716273,name="Starboy Strut"},
+        {id=120642514156293,name="Secret Handshake"},{id=15506503658,name="Victory Dance"},{id=3576717965,name="Shy"},
+        {id=73796726960568,name="Nyan Nyan"},{id=78758922757947,name="Kicking Feet Sit"},{id=93511411593120,name="Fly"},
+        {id=114899970878842,name="R15 Death"},{id=5104377791,name="Hero Landing"},{id=5917570207,name="Floss Dance"},
+        {id=131763631172236,name="Xaviersobased"},{id=132074413582912,name="California Girl"},{id=15554010118,name="Head Bop"},
+        {id=112758073578333,name="Bubbly Sit"},{id=3716636630,name="Monkey"},{id=123015710605336,name="Onion"},
+        {id=4646306583,name="Curtsy"},{id=85936805522788,name="Caramell"},{id=14900153406,name="Feel Special"},
+        {id=102492229412911,name="Tenna Dance"},{id=133142324349281,name="Flopping Fish"},{id=10214406616,name="Frosty Flair"},
+        {id=120224229260879,name="Cute Crouch"},{id=15679955281,name="Festive Dance"},{id=4849502101,name="Sad"},
+        {id=10214418283,name="V Pose"},{id=92853367837757,name="Garry's Dance"},{id=104485625389237,name="Make You Mine"},
+        {id=139830733782518,name="Phut On"},{id=132382355371060,name="Tank Transformation"},{id=103046131635200,name="Love Scenario"},
+        {id=15123050663,name="Bone Chillin Bop"},{id=124305244640379,name="Shattered"},{id=134311528115559,name="Hit Every Beat"},
+        {id=17748346932,name="Heart Shuffle"},{id=93105950995997,name="Caramelldansen"},{id=7466046574,name="Quiet Waves"},
+        {id=96557878503341,name="Caramell Dansen"},{id=139859849852362,name="Dead"},{id=17360720445,name="Lets Drive"},
+        {id=103102322875221,name="Laser Spin"},{id=3576968026,name="Shrug"},{id=130998336536045,name="Gangnam Style 2"},
+        {id=84555218084038,name="Helicopter Spin"},{id=71302743123422,name="Popular"},{id=133765015173412,name="Ariana"},
+        {id=115319301809339,name="2 Phut Hon"},{id=70635223083942,name="Be Not Afraid"},{id=17746270218,name="Sturdy Dance"},
+        {id=129149402922241,name="Griddy"},{id=3576686446,name="Hello"},{id=113547795536875,name="Gangnam Style 3"},
+        {id=126614732606871,name="Sit"},{id=3762654854,name="Greatest"},{id=16572756230,name="Hipmotion"},
+        {id=16276506814,name="Samba"},{id=3576823880,name="Point2"},{id=78459263478161,name="Family Man Death"},
+        {id=14900151704,name="Likey"},{id=3360686498,name="Stadium"},{id=15571540519,name="Starships"},
+        {id=4940597758,name="Cower"},{id=11394056822,name="Elevate"},{id=117734400993750,name="Virtual Singer"},
+        {id=97263450325496,name="Teto Territory"},{id=4102315500,name="Haha"},{id=79312439851071,name="Hot To Go"},
+        {id=105851216004006,name="Electro Swing"},{id=92707348383277,name="Mesmerizer"},{id=103139492736941,name="Tenna Swing"},
+        {id=15571538346,name="Boom Boom Boom"},{id=15554016057,name="Fall Back Float"},{id=70615023659736,name="Floating"},
+        {id=136740085081295,name="Hidden Animation"},{id=119431985170060,name="Helicopter"},{id=87141651594092,name="Speed Glitch Pose"},
+        {id=16303091119,name="Beauty Touchdown"},{id=3934986896,name="Dizzy"},{id=130726889233022,name="Rolling Crybaby"},
+        {id=11309263077,name="Heart Skip"},{id=84511772437190,name="Spinning Robloxian"},{id=14353417553,name="Air Guitar"},
+        {id=15392927897,name="Sliving Groove"},{id=94796833553521,name="Takedown Pt 1"},{id=120437019363089,name="Peter Griffin Death"},
+        {id=15506506103,name="Flex Walk"},{id=90608224567833,name="Expendable"},{id=18526338976,name="Breaking"},
+        {id=99818263438846,name="Default Dance"},{id=103197720369544,name="Dani Gangnam"},{id=75017857395637,name="TV Time"},
+        {id=73683655527605,name="Fashion Roadkill"},{id=15392932768,name="IT-Grrrl"},{id=82217023310738,name="Thanos Jump"},
+        {id=102610758906338,name="Possessed"},{id=95323795166399,name="Rat Dance"},{id=127562607220778,name="Gangnam Style 4"},
+        {id=129132611803602,name="Helicopter 2"},{id=82345302788133,name="Dia Delicia"},{id=15392937495,name="Checking Angles"},
+        {id=4212496830,name="Zombie"},{id=113016438012253,name="Best Mates"},{id=110537281410647,name="Wall Lean Idle"},
+        {id=92903522317071,name="Magnetic"},{id=122899100558551,name="Its TV Time"},{id=75528418031928,name="Rambunctious 2"},
+        {id=103040723950430,name="Gojo Floating"},{id=70788193750089,name="Kickn Around"},{id=5915776835,name="High Wave"},
+        {id=84195923658292,name="Jojo"},{id=110731335896907,name="Headless Emote"},{id=139271706064778,name="Hip Bounce"},
+        {id=4849499887,name="Happy"},{id=127271798262177,name="M3GAN Dance"},{id=104304182344567,name="Once Hop Hop"},
+        {id=85623000473425,name="Takedown Pt 2"},{id=84067050907557,name="Pickle Rick"},{id=86982022610765,name="Caramelldansen 2"},
+        {id=117301403779781,name="Talm Bout Innit"},{id=84822284410814,name="Maraschino Step"},{id=97847706148165,name="Kawaii Dance"},
+        {id=89174456614428,name="Daydreaming"},{id=91023138078288,name="Oh Who Is You"},{id=107978036345855,name="Prince Of Egypt"},
+        {id=71363859760586,name="Golden Freddy"},{id=80877772569772,name="Default Dance OG"},{id=80436375269036,name="Headless Hooper"},
+        {id=93262662842394,name="Sit 2"},{id=75703899901487,name="6 7 Transform"},{id=100773414188482,name="Walkin On Water"},
+        {id=131544122623505,name="Become A Car"},{id=99005087791705,name="Death Pose"},{id=132384701706046,name="MM2 Fake Dead"},
+        {id=129916107176034,name="Discombobulated"},{id=88598010609888,name="Angry Stomp"},{id=132508867759412,name="Xavier Based Emote"},
+        {id=121167704249654,name="Hide"},{id=137873580964093,name="Human Spinner"},{id=76700167742736,name="Belly Dance"},
+        {id=87826892596287,name="Levitate 2"},{id=70972410468289,name="Fake Dead Troll"},{id=134615135651900,name="Head Spin Squid Game"},
+        {id=13823339506,name="Archer"},{id=109755476052324,name="IShowSpeed Dance"},{id=124828909173982,name="Skibidi"},
+        {id=4272351660,name="Fast Hands"},{id=137006085779408,name="Speed Glitch Plus"},{id=89633087256727,name="Weird Spin"},
+        {id=125032357496729,name="Fake Death Best"},{id=81177294287826,name="Hug"},{id=88721672617892,name="P.B.J.T."},
+        {id=121259524934987,name="Xavier Jig"},{id=121067808279598,name="Parrot Party"},{id=7202898984,name="Show Dem Wrists"},
+        {id=120377619472998,name="Macarena"},{id=4940602656,name="Jumping Wave"},{id=94663026124741,name="Torture Dance"},
+        {id=120896030393583,name="Get Sturdy"},{id=137261874619072,name="Sponge Dance"},{id=119746055344304,name="Plane"},
+        {id=78620443286892,name="Cute Laying Down"},{id=108922782921118,name="Pose For The Pic"},{id=131221550165951,name="Heart Hands"},
+        {id=119454955259757,name="Caramel Hip Sway"},{id=7202900159,name="Wake Up Call"},{id=79752538807060,name="Griddy 2"},
+        {id=140466682449054,name="Head Spin"},{id=107899954696611,name="Spongebob Shuffle"},{id=96405718067779,name="Cute Sit"},
+        {id=4849497510,name="Power Blast"},{id=89413575288931,name="Blue Shirt Guy"},{id=112924687333965,name="Aura Farm"},
+        {id=100782362883099,name="Car Transform"},{id=102323907950469,name="Space Dance"},{id=110521067391235,name="Old Jitterbug"},
+        {id=111304332281521,name="Druski Shuffle"},{id=133600250245899,name="Soda Pop"},{id=133477296392756,name="Rasputin"},
+        {id=122949892043249,name="Sit Idle"},{id=82739386299071,name="Jackpot Groove"},{id=80422524668416,name="Dreamer"},
+        {id=97968838104258,name="Subject Three"},{id=91274761264433,name="Macarena 2"},{id=3994130516,name="Bodybuilder"},
+        {id=5938365243,name="Dolphin Dance"},{id=99563839802389,name="Jumpstyle"},{id=85361710130557,name="Caramelldansen 3"},
+        {id=74646784680842,name="Ishowspeed Shake"},{id=5230615437,name="Beckon"},{id=135489824748823,name="Magical Pose"},
+        {id=98603994713783,name="Rat Dance 2"},{id=14353419229,name="Dramatic Bow"},{id=84052327668385,name="Floating 2"},
+        {id=97999370392804,name="Spin My Head"},{id=94319114655768,name="Rat Dance 3"},{id=86849720336961,name="Ant Tennas Dance"},
+        {id=124754178569693,name="Die Lit"},{id=80544397800234,name="Helicopter 3"},{id=100532972764499,name="Monster Mash"},
+        {id=88922397617835,name="What You Want"},{id=115810068374896,name="Garry Dance 2"},{id=75842745124834,name="Human Snake"},
+        {id=94451497143711,name="Hakari Dance"},{id=128972617664804,name="Fortnite Default"},{id=73556976257737,name="Saja Boy Pose"},
+        {id=81390693780805,name="Proxima"},{id=17000058939,name="Mini Kong"},{id=97629500912487,name="BlockyKick"},
+        {id=112949099442762,name="Griddy 3"},{id=130641944883645,name="Jinu Pose"},{id=108474079699304,name="Dep"},
+        {id=4049646104,name="Line Dance"},{id=91423783304464,name="Criss Cross Sit"},{id=90524692306889,name="Chill Sit"},
+        {id=15506496093,name="Rock n Roll"},{id=134737246939931,name="Gag It Death Drop"},{id=71787387963141,name="Worm Dance"},
+        {id=128658037413893,name="Going To Die Here"},{id=99568437064777,name="Relaxed Sit"},{id=83018514370428,name="Stargazing"},
+        {id=92859581691366,name="Couldnt Care Less"},{id=94534169345613,name="Casual Sit"},{id=16126526506,name="Paris Sanasa"},
+        {id=140037329261678,name="Caramel Dance"},{id=94118707925458,name="Go Mufasa"},{id=105730788757021,name="Birdbrain"},
+        {id=91927498467600,name="Koto Nai Meme"},{id=117450501566142,name="Hidden Box"},{id=4272484885,name="Baby Dance"},
+        {id=88024974500195,name="Oppa Gangnam"},{id=7202896732,name="Boxing Punch"},{id=128792127841374,name="Watching Videos"},
+        {id=87756443172440,name="Xavier Based Dance"},{id=116770268279002,name="Teto Birdbrain"},{id=124935873390035,name="Hiding Human Box"},
+        {id=94121796810251,name="Kicking Feet Blush"},
+    }
+    local seen, dedup = {}, {}
+    for _, e in ipairs(EMOTES) do
+        if not seen[e.id] then seen[e.id] = true; table.insert(dedup, e) end
+    end
+    EMOTES = dedup
+
+    local emoteFloatGui = Instance.new("ScreenGui")
+    emoteFloatGui.Name = "AW_EmoteFloats"
+    emoteFloatGui.ResetOnSpawn = false
+    emoteFloatGui.DisplayOrder = 999993
+    emoteFloatGui.IgnoreGuiInset = true
+    pcall(function() emoteFloatGui.Parent = CoreGui end)
+    if not emoteFloatGui.Parent then emoteFloatGui.Parent = PlayerGui end
+
+    local emoteFloatButtons = {}
+    state.emoteFloatButtons = state.emoteFloatButtons or {}
+    state.emoteFloatPositions = state.emoteFloatPositions or {}
+
+    local function playEmote(id)
+        local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+        if not hum then return end
+        pcall(function() hum:PlayEmoteAndGetAnimTrackById(tonumber(id)) end)
+    end
+    local function buildEmoteFloat(id, emote)
+        id = tostring(id)
+        if emoteFloatButtons[id] then return end
+        local outer = Instance.new("Frame", emoteFloatGui)
+        outer.AnchorPoint = Vector2.new(0, 0)
+        outer.BackgroundTransparency = 1
+        outer.Size = UDim2.new(0, 60, 0, 60)
+        local savedPos = state.emoteFloatPositions[id]
+        if savedPos then
+            outer.Position = UDim2.new(savedPos.xScale or 0, savedPos.xOffset or 20, savedPos.yScale or 0, savedPos.yOffset or 200)
+        else
+            outer.Position = UDim2.new(0, 20, 0, 200 + #emoteFloatButtons * 66)
+        end
+        local btn = Instance.new("TextButton", outer)
+        btn.Size = UDim2.new(1, 0, 1, 0)
+        btn.BackgroundColor3 = Color3.fromRGB(0,0,0)
+        btn.BackgroundTransparency = 0.3
+        btn.Text = ""
+        btn.AutoButtonColor = false
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
+        local stroke = Instance.new("UIStroke", btn)
+        stroke.Color = cc3(settingsConfig.accentColor)
+        stroke.Thickness = 1.5
+        stroke.Transparency = 0.4
+        local img = Instance.new("ImageLabel", btn)
+        img.Size = UDim2.new(0.85, 0, 0.85, 0)
+        img.Position = UDim2.new(0.075, 0, 0.075, 0)
+        img.BackgroundTransparency = 1
+        img.Image = "rbxthumb://type=Asset&id=" .. id .. "&w=150&h=150"
+        img.ScaleType = Enum.ScaleType.Fit
+        btn.MouseButton1Click:Connect(function()
+            local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+            if not hum then return end
+            pcall(function() hum:PlayEmoteAndGetAnimTrackById(tonumber(id)) end)
+        end)
+        local dragState = nil
+        btn.InputBegan:Connect(function(input)
+            if input.UserInputType ~= Enum.UserInputType.Touch and input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+            dragState = {input = input, start = input.Position, sp = outer.Position, moved = false}
+        end)
+        UIS.InputChanged:Connect(function(input)
+            if not dragState or input ~= dragState.input then return end
+            local d = input.Position - dragState.start
+            if d.Magnitude > 6 then dragState.moved = true end
+            if dragState.moved then
+                outer.Position = UDim2.new(dragState.sp.X.Scale, dragState.sp.X.Offset + d.X, dragState.sp.Y.Scale, dragState.sp.Y.Offset + d.Y)
+            end
+        end)
+        UIS.InputEnded:Connect(function(input)
+            if dragState and input == dragState.input then
+                if dragState.moved then
+                    state.emoteFloatPositions[id] = {
+                        xScale = outer.Position.X.Scale, xOffset = outer.Position.X.Offset,
+                        yScale = outer.Position.Y.Scale, yOffset = outer.Position.Y.Offset,
+                    }
+                    saveSettings()
+                end
+                dragState = nil
+            end
+        end)
+        emoteFloatButtons[id] = {btn = btn, outer = outer, emote = emote}
+        btn.Visible = state.floatButtonsEnabled
+    end
+    local function removeEmoteFloat(id)
+        id = tostring(id)
+        local rec = emoteFloatButtons[id]
+        if rec then rec.outer:Destroy(); emoteFloatButtons[id] = nil end
+    end
+    local function refreshEmoteFloatVisibility()
+        for _, rec in pairs(emoteFloatButtons) do
+            if rec.btn then rec.btn.Visible = state.floatButtonsEnabled end
+        end
+    end
+    _G.__AW_EMOTE_FLOAT_REFRESH = refreshEmoteFloatVisibility
+
+    addSect(pages["Anim/Emot"], "Emote Browser", 1)
+    local toggleBtn = Instance.new("TextButton", pages["Anim/Emot"])
+    toggleBtn.Size = UDim2.new(1, 0, 0, 42)
+    toggleBtn.LayoutOrder = 2
+    toggleBtn.BackgroundColor3 = cc3(settingsConfig.cardColor)
+    toggleBtn.Text = ""
+    toggleBtn.AutoButtonColor = false
+    Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 10)
+    local tbStroke = Instance.new("UIStroke", toggleBtn)
+    tbStroke.Color = cc3(settingsConfig.accentColor)
+    tbStroke.Thickness = 1.5
+    tbStroke.Transparency = 0.4
+    local toggleLbl = Instance.new("TextLabel", toggleBtn)
+    toggleLbl.Size = UDim2.new(1, -12, 1, 0)
+    toggleLbl.Position = UDim2.new(0, 12, 0, 0)
+    toggleLbl.BackgroundTransparency = 1
+    toggleLbl.Text = state.emoteMenuOpen and "Close Emote Menu" or "Open Emote Menu"
+    toggleLbl.TextColor3 = cc3(settingsConfig.accentColor)
+    toggleLbl.Font = Enum.Font.GothamBold
+    toggleLbl.TextSize = 13
+    toggleLbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    local menuContainer = Instance.new("Frame", pages["Anim/Emot"])
+    menuContainer.Size = UDim2.new(1, 0, 0, 0)
+    menuContainer.LayoutOrder = 3
+    menuContainer.BackgroundTransparency = 1
+    menuContainer.ClipsDescendants = true
+    menuContainer.Visible = state.emoteMenuOpen and true or false
+    local mcLayout = Instance.new("UIListLayout", menuContainer)
+    mcLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    mcLayout.Padding = UDim.new(0, 6)
+    local controlsRow = Instance.new("Frame", menuContainer)
+    controlsRow.Size = UDim2.new(1, 0, 0, 40)
+    controlsRow.LayoutOrder = 1
+    controlsRow.BackgroundTransparency = 1
+    local searchBox = Instance.new("TextBox", controlsRow)
+    searchBox.Size = UDim2.new(1, -110, 1, 0)
+    searchBox.BackgroundColor3 = cc3(settingsConfig.cardColor)
+    searchBox.PlaceholderText = "Search emotes..."
+    searchBox.PlaceholderColor3 = cc3(settingsConfig.tabTextColor)
+    searchBox.Text = state.emoteSearch or ""
+    searchBox.TextColor3 = cc3(settingsConfig.textColor)
+    searchBox.Font = Enum.Font.Gotham
+    searchBox.TextSize = 13
+    searchBox.ClearTextOnFocus = false
+    searchBox.TextXAlignment = Enum.TextXAlignment.Left
+    Instance.new("UICorner", searchBox).CornerRadius = UDim.new(0, 10)
+    local sbPad = Instance.new("UIPadding", searchBox)
+    sbPad.PaddingLeft = UDim.new(0, 10)
+    local searchStroke = Instance.new("UIStroke", searchBox)
+    searchStroke.Color = cc3(settingsConfig.accentColor)
+    searchStroke.Thickness = 1.5
+    searchStroke.Transparency = 0.6
+    local sizeBtn = Instance.new("TextButton", controlsRow)
+    sizeBtn.Size = UDim2.new(0, 100, 1, 0)
+    sizeBtn.Position = UDim2.new(1, -100, 0, 0)
+    sizeBtn.BackgroundColor3 = cc3(settingsConfig.cardColor)
+    sizeBtn.Text = "Size: " .. (state.emoteButtonSize or 120)
+    sizeBtn.TextColor3 = cc3(settingsConfig.textColor)
+    sizeBtn.Font = Enum.Font.GothamBold
+    sizeBtn.TextSize = 11
+    sizeBtn.AutoButtonColor = false
+    Instance.new("UICorner", sizeBtn).CornerRadius = UDim.new(0, 10)
+    local gridScroll = Instance.new("ScrollingFrame", menuContainer)
+    gridScroll.Size = UDim2.new(1, 0, 0, 420)
+    gridScroll.LayoutOrder = 2
+    gridScroll.BackgroundColor3 = cc3(settingsConfig.cardColor)
+    gridScroll.BackgroundTransparency = 0.5
+    gridScroll.BorderSizePixel = 0
+    gridScroll.ScrollBarThickness = 3
+    gridScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+    gridScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    Instance.new("UICorner", gridScroll).CornerRadius = UDim.new(0, 10)
+    local gridLayout = Instance.new("UIGridLayout", gridScroll)
+    gridLayout.CellSize = UDim2.new(0, state.emoteButtonSize or 120, 0, (state.emoteButtonSize or 120) + 30)
+    gridLayout.CellPadding = UDim2.new(0, 6, 0, 6)
+    gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    local renderedCards = {}
+    local currentSize = state.emoteButtonSize or 120
+    local function renderGrid()
+        for _, c in ipairs(renderedCards) do c:Destroy() end
+        renderedCards = {}
+        local q = string.lower(state.emoteSearch or "")
+        for i, emote in ipairs(EMOTES) do
+            if q == "" or string.find(string.lower(emote.name), q, 1, true) or string.find(tostring(emote.id), q, 1, true) then
+                local card = Instance.new("Frame", gridScroll)
+                card.LayoutOrder = i
+                card.BackgroundColor3 = cc3(settingsConfig.cardColor)
+                Instance.new("UICorner", card).CornerRadius = UDim.new(0, 8)
+                local stroke = Instance.new("UIStroke", card)
+                stroke.Color = cc3(settingsConfig.accentColor)
+                stroke.Thickness = 1
+                stroke.Transparency = 0.5
+                local img = Instance.new("ImageLabel", card)
+                img.Size = UDim2.new(1, -8, 0, currentSize - 40)
+                img.Position = UDim2.new(0, 4, 0, 4)
+                img.BackgroundTransparency = 1
+                img.Image = "rbxthumb://type=Asset&id=" .. emote.id .. "&w=150&h=150"
+                img.ScaleType = Enum.ScaleType.Fit
+                local name = Instance.new("TextLabel", card)
+                name.Size = UDim2.new(1, -8, 0, 16)
+                name.Position = UDim2.new(0, 4, 0, currentSize - 34)
+                name.BackgroundTransparency = 1
+                name.Text = emote.name
+                name.TextColor3 = cc3(settingsConfig.textColor)
+                name.Font = Enum.Font.GothamMedium
+                name.TextSize = 10
+                name.TextTruncate = Enum.TextTruncate.AtEnd
+                name.TextXAlignment = Enum.TextXAlignment.Left
+                local playBtn = Instance.new("TextButton", card)
+                playBtn.Size = UDim2.new(1, -32, 0, 20)
+                playBtn.Position = UDim2.new(0, 4, 0, currentSize - 14)
+                playBtn.BackgroundColor3 = cc3(settingsConfig.accentColor)
+                playBtn.Text = "▶"
+                playBtn.TextColor3 = Color3.new(0,0,0)
+                playBtn.Font = Enum.Font.GothamBold
+                playBtn.TextSize = 13
+                playBtn.AutoButtonColor = false
+                Instance.new("UICorner", playBtn).CornerRadius = UDim.new(0, 6)
+                local circleBtn = Instance.new("TextButton", card)
+                circleBtn.Size = UDim2.new(0, 24, 0, 24)
+                circleBtn.Position = UDim2.new(1, -28, 0, currentSize - 16)
+                circleBtn.BackgroundColor3 = state.emoteFloatButtons[tostring(emote.id)] and cc3(settingsConfig.accentColor) or Color3.fromRGB(40,40,40)
+                circleBtn.Text = "●"
+                circleBtn.TextColor3 = Color3.new(1,1,1)
+                circleBtn.Font = Enum.Font.GothamBold
+                circleBtn.TextSize = 12
+                circleBtn.AutoButtonColor = false
+                Instance.new("UICorner", circleBtn).CornerRadius = UDim.new(1, 0)
+                playBtn.MouseButton1Click:Connect(function() playEmote(emote.id) end)
+                circleBtn.MouseButton1Click:Connect(function()
+                    local cur = state.emoteFloatButtons[tostring(emote.id)] and true or false
+                    if cur then
+                        state.emoteFloatButtons[tostring(emote.id)] = nil
+                        removeEmoteFloat(emote.id)
+                        circleBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+                    else
+                        state.emoteFloatButtons[tostring(emote.id)] = true
+                        buildEmoteFloat(emote.id, emote)
+                        circleBtn.BackgroundColor3 = cc3(settingsConfig.accentColor)
+                    end
+                    saveSettings()
+                end)
+                table.insert(renderedCards, card)
+            end
+        end
+    end
+    local searchToken = 0
+    searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+        searchToken = searchToken + 1
+        local myToken = searchToken
+        state.emoteSearch = searchBox.Text
+        task.delay(0.2, function() if searchToken == myToken then renderGrid() end end)
+    end)
+    local sizeOptions = {80, 100, 120, 140, 160, 180}
+    sizeBtn.MouseButton1Click:Connect(function()
+        local cur = state.emoteButtonSize or 120
+        local idx = 1
+        for i, v in ipairs(sizeOptions) do if v == cur then idx = i break end end
+        idx = idx % #sizeOptions + 1
+        state.emoteButtonSize = sizeOptions[idx]
+        currentSize = sizeOptions[idx]
+        sizeBtn.Text = "Size: " .. sizeOptions[idx]
+        gridLayout.CellSize = UDim2.new(0, sizeOptions[idx], 0, sizeOptions[idx] + 30)
+        saveSettings()
+        renderGrid()
+    end)
+    local function refreshMenuVisibility()
+        toggleLbl.Text = state.emoteMenuOpen and "Close Emote Menu" or "Open Emote Menu"
+        if state.emoteMenuOpen then
+            menuContainer.Visible = true
+            menuContainer.Size = UDim2.new(1, 0, 0, 0)
+            TweenService:Create(menuContainer, TweenInfo.new(0.35, EASE_BOUNCE, EASE_OUT), {Size = UDim2.new(1, 0, 0, 466)}):Play()
+            renderGrid()
+        else
+            TweenService:Create(menuContainer, TweenInfo.new(0.22, EASE_SMOOTH, EASE_IN), {Size = UDim2.new(1, 0, 0, 0)}):Play()
+            task.delay(0.24, function() if not state.emoteMenuOpen then menuContainer.Visible = false end end)
+        end
+    end
+    toggleBtn.MouseButton1Click:Connect(function()
+        state.emoteMenuOpen = not state.emoteMenuOpen
+        saveSettings()
+        refreshMenuVisibility()
+    end)
+    addBtn(pages["Anim/Emot"], "Clear All Emote Floating Buttons", 4, function()
+        for _, rec in pairs(emoteFloatButtons) do pcall(function() rec.outer:Destroy() end) end
+        emoteFloatButtons = {}
+        state.emoteFloatButtons = {}
+        state.emoteFloatPositions = {}
+        saveSettings()
+        renderGrid()
+    end)
+    task.defer(function()
+        refreshMenuVisibility()
+        for idStr, on in pairs(state.emoteFloatButtons or {}) do
+            if on then
+                local idNum = tonumber(idStr)
+                if idNum then
+                    local emote = nil
+                    for _, e in ipairs(EMOTES) do if e.id == idNum then emote = e break end end
+                    if emote then buildEmoteFloat(emote.id, emote) end
+                end
+            end
+        end
+    end)
+    task.spawn(function()
+        local last = state.floatButtonsEnabled
+        while true do
+            task.wait(0.2)
+            if state.floatButtonsEnabled ~= last then
+                last = state.floatButtonsEnabled
+                refreshEmoteFloatVisibility()
+            end
+        end
+    end)
+
+    -- FE Animations
+    addSect(pages["Anim/Emot"], "FE Animations", 10)
+    local ANIM_SLOT_PATHS = {
+        idle1={"idle","Animation1"}, idle2={"idle","Animation2"}, walk={"walk","WalkAnim"},
+        run={"run","RunAnim"}, jump={"jump","JumpAnim"}, climb={"climb","ClimbAnim"},
+        fall={"fall","FallAnim"}, swim={"swim","Swim"},
+    }
+    local function setAnimIdOnChar(char, slot, id)
+        if not char or not id then return end
+        local animate = char:FindFirstChild("Animate")
+        if not animate then return end
+        local path = ANIM_SLOT_PATHS[slot]
+        if not path then return end
+        local folder = animate:FindFirstChild(path[1])
+        if not folder then return end
+        local anim = folder:FindFirstChild(path[2])
+        if anim and anim:IsA("Animation") then anim.AnimationId = id end
+    end
+    local function resetAnimateScript(char)
+        local animate = char and char:FindFirstChild("Animate")
+        if not animate then return end
+        if not (animate:IsA("LocalScript") or animate:IsA("Script")) then return end
+        task.spawn(function()
+            pcall(function()
+                animate.Disabled = true
+                task.wait(0.05)
+                if animate and animate.Parent then animate.Disabled = false end
+            end)
+        end)
+    end
+    local FE_PRESETS = {
+        ["Default"] = nil,
+        ["R6"] = {idle1="rbxassetid://180435571",idle2="rbxassetid://180435792",walk="rbxassetid://180426354",run="rbxassetid://180426354",jump="rbxassetid://125750702",climb="rbxassetid://180436334",fall="rbxassetid://180436148",swim="rbxassetid://180426354"},
+        ["R15"] = {idle1="rbxassetid://507766666",idle2="rbxassetid://507766951",walk="rbxassetid://507777826",run="rbxassetid://507767714",jump="rbxassetid://507765000",climb="rbxassetid://507765644",fall="rbxassetid://507767968",swim="rbxassetid://507784897"},
+        ["Zombie"] = {idle1="rbxassetid://616158929",idle2="rbxassetid://616160636",walk="rbxassetid://616168032",run="rbxassetid://616163682",jump="rbxassetid://616161997",climb="rbxassetid://616156119",fall="rbxassetid://616157476",swim="rbxassetid://616159314"},
+        ["Ninja"] = {idle1="rbxassetid://656117400",idle2="rbxassetid://656118341",walk="rbxassetid://656121766",run="rbxassetid://656118852",jump="rbxassetid://656117878",climb="rbxassetid://656114359",fall="rbxassetid://656115606",swim="rbxassetid://656116322"},
+        ["Vampire"] = {idle1="rbxassetid://1083445855",idle2="rbxassetid://1083450166",walk="rbxassetid://1083473930",run="rbxassetid://1083462077",jump="rbxassetid://1083455352",climb="rbxassetid://1083439238",fall="rbxassetid://1083443587",swim="rbxassetid://1083468967"},
+        ["Werewolf"] = {idle1="rbxassetid://1083195517",idle2="rbxassetid://1083214717",walk="rbxassetid://1083178339",run="rbxassetid://1083216690",jump="rbxassetid://1083218792",climb="rbxassetid://1083182000",fall="rbxassetid://1083189019",swim="rbxassetid://1083191111"},
+        ["Astronaut"] = {idle1="rbxassetid://891621366",idle2="rbxassetid://891633237",walk="rbxassetid://891667138",run="rbxassetid://891636393",jump="rbxassetid://891627522",climb="rbxassetid://891609353",fall="rbxassetid://891617961",swim="rbxassetid://891626255"},
+        ["Pirate"] = {idle1="rbxassetid://750781874",idle2="rbxassetid://750782770",walk="rbxassetid://750785693",run="rbxassetid://750783738",jump="rbxassetid://750782230",climb="rbxassetid://750779899",fall="rbxassetid://750780242",swim="rbxassetid://750783107"},
+        ["Toy"] = {idle1="rbxassetid://782841498",idle2="rbxassetid://782845736",walk="rbxassetid://782843345",run="rbxassetid://782842708",jump="rbxassetid://782847020",climb="rbxassetid://782843869",fall="rbxassetid://782846423",swim="rbxassetid://782844417"},
+        ["Knight"] = {idle1="rbxassetid://657595757",idle2="rbxassetid://657568135",walk="rbxassetid://657552124",run="rbxassetid://657564596",jump="rbxassetid://658409194",climb="rbxassetid://658360781",fall="rbxassetid://657600338",swim="rbxassetid://657582909"},
+        ["Cartoon"] = {idle1="rbxassetid://742637544",idle2="rbxassetid://742638445",walk="rbxassetid://742640026",run="rbxassetid://742638842",jump="rbxassetid://742637942",climb="rbxassetid://742636889",fall="rbxassetid://742637151",swim="rbxassetid://742638209"},
+    }
+    local presetOptions = {}
+    for k in pairs(FE_PRESETS) do table.insert(presetOptions, k) end
+    table.sort(presetOptions)
+    for i, name in ipairs(presetOptions) do
+        if name == "Default" then table.remove(presetOptions, i); table.insert(presetOptions, 1, "Default"); break end
+    end
+    local DEFAULT_ANIMS = nil
+    local function captureDefaultAnims(char)
+        if not char then char = LP.Character end
+        if not char then return end
+        local animate = char:FindFirstChild("Animate")
+        if not animate then return end
+        local captured = {}
+        for slot, path in pairs(ANIM_SLOT_PATHS) do
+            local folder = animate:FindFirstChild(path[1])
+            if folder then
+                local a = folder:FindFirstChild(path[2])
+                if a and a:IsA("Animation") then captured[slot] = a.AnimationId end
+            end
+        end
+        DEFAULT_ANIMS = captured
+    end
+    local function applyPreset(name, slots)
+        local char = LP.Character
+        if not char then return end
+        if name == "Default" then
+            if not DEFAULT_ANIMS then captureDefaultAnims(char) end
+            for _, slot in ipairs(slots) do
+                local id = DEFAULT_ANIMS and DEFAULT_ANIMS[slot]
+                if id then setAnimIdOnChar(char, slot, id) end
+            end
+        else
+            local preset = FE_PRESETS[name]
+            if not preset then return end
+            for _, slot in ipairs(slots) do
+                local id = preset[slot]
+                if id then setAnimIdOnChar(char, slot, id) end
+            end
+        end
+        resetAnimateScript(char)
+    end
+    LP.CharacterAdded:Connect(function(char)
+        task.wait(0.6)
+        if char ~= LP.Character then return end
+        DEFAULT_ANIMS = nil
+        captureDefaultAnims(char)
+    end)
+    if LP.Character then task.spawn(function() task.wait(0.5); captureDefaultAnims(LP.Character) end) end
+    tgg(pages["Anim/Emot"], "Enable FE Animations", 11, "feAnimEnabled")
+    addSect(pages["Anim/Emot"], "Presets", 12)
+    for i, name in ipairs(presetOptions) do
+        addBtn(pages["Anim/Emot"], name, 12 + i, function()
+            state.feAnimAll = name
+            state.feAnimIdle = name; state.feAnimWalk = name; state.feAnimRun = name
+            state.feAnimJump = name; state.feAnimClimb = name; state.feAnimFall = name; state.feAnimSwim = name
+            saveSettings()
+            applyPreset(name, {"idle1","idle2","walk","run","jump","climb","fall","swim"})
+            _G.__AW_NOTIFY("Applied: " .. name)
+        end)
+    end
+    addBtn(pages["Anim/Emot"], "Reset to Default", 200, function()
+        state.feAnimAll = "Default"
+        state.feAnimIdle = "Default"; state.feAnimWalk = "Default"; state.feAnimRun = "Default"
+        state.feAnimJump = "Default"; state.feAnimClimb = "Default"; state.feAnimFall = "Default"; state.feAnimSwim = "Default"
+        saveSettings()
+        applyPreset("Default", {"idle1","idle2","walk","run","jump","climb","fall","swim"})
+        _G.__AW_NOTIFY("Reset to default")
+    end)
+end
+
 -- ============ OPEN/CLOSE BUTTON ============
 fb = Instance.new("TextButton", sg)
 fb.Size = UDim2.new(0,78,0,34)
@@ -4058,33 +4412,6 @@ task.spawn(function()
     end
 end)
 
--- MURDERER BEAM
-murdererBeamHighlight = nil
-task.spawn(function()
-    while true do
-        task.wait(0.5)
-        if state.murdererBeam then
-            local m = getMurd()
-            if m and m.Character and not murdererBeamHighlight then
-                local hl = Instance.new("Highlight")
-                hl.FillColor = Color3.fromRGB(255, 0, 0)
-                hl.FillTransparency = 0.7
-                hl.OutlineColor = Color3.fromRGB(255, 100, 100)
-                hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
-                hl.Parent = CoreGui
-                hl.Adornee = m.Character
-                murdererBeamHighlight = hl
-            elseif not m and murdererBeamHighlight then
-                murdererBeamHighlight:Destroy()
-                murdererBeamHighlight = nil
-            end
-        elseif murdererBeamHighlight then
-            murdererBeamHighlight:Destroy()
-            murdererBeamHighlight = nil
-        end
-    end
-end)
-
 -- BLUE AURA
 task.spawn(function()
     while true do
@@ -4360,13 +4687,12 @@ getOrCreateEspFolder = function()
     return f
 end
 espF = getOrCreateEspFolder()
-espCache, gunDropCache, espExtraCache = {}, {}, {}
+espCache, gunDropCache = {}, {}
 function destroyEspEntry(e)
     if not e then return end
     pcall(function()
         if e.hl then e.hl:Destroy() end
         if e.bb then e.bb:Destroy() end
-        if e.tracer then e.tracer:Destroy() end
         if e.hat then e.hat:Destroy() end
         if e.dot then e.dot:Destroy() end
     end)
@@ -4429,7 +4755,7 @@ task.spawn(function()
                         end
                         local head = ch:FindFirstChild("Head") or hrp
                         local e = espCache[p]
-                        if e and (not e.hl or not e.hl.Parent or not e.bb or not e.bb.Parent or (e.hl and e.hl.Adornee ~= ch) or e.bb.Adornee ~= head) then
+                        if e and (not e.bb or not e.bb.Parent or (e.hl and not e.hl.Parent) or (e.hl and e.hl.Adornee ~= ch) or e.bb.Adornee ~= head) then
                             destroyEspEntry(e); espCache[p] = nil; e = nil
                         end
                         if not e then
@@ -4525,9 +4851,6 @@ task.spawn(function()
                                 e.tx.TextSize = state.espTextSize or 14
                             end
                             if e.dot then pcall(function() e.dot.Color = col end) end
-                            if e.hat and not e.hat.Parent then
-                                e.hat = nil
-                            end
                         end
                     else
                         if espCache[p] then clearESP(p) end
@@ -4648,4 +4971,4 @@ end)
 
 print("[Appleware] Fully loaded - made by p04j on discord")
 print("Credits: lzzzx, noir (7yd7)")
-print("Silent Aim Flick does NOT auto-shoot. Hitbox uses character parts (works on any rig).")
+print("Flick only works with gun equipped. Murderer beam removed. Knife/Gun reach removed.")
