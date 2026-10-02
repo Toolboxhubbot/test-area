@@ -105,8 +105,8 @@ KEYBIND_FEATURES = {
     {key="infJumpEnabled",    label="Infinite Jump",          default="J"},
     {key="bunnyHop",          label="Bunny Hop",              default="B"},
     {key="speedGlitch",       label="Speed Glitch",           default="V"},
-    {key="speedEnabled",      label="Speed Changer",          default="BracketLeft"},
-    {key="jumpEnabled",       label="Jump Power",             default="BracketRight"},
+    {key="speedEnabled",      label="Speed Changer",          default="KeypadOne"},
+    {key="jumpEnabled",       label="Jump Power",             default="KeypadTwo"},
     {key="killAura",          label="Kill Aura",              default="K"},
     {key="flingAura",         label="Fling Aura",             default="L"},
     {key="silentAimEnabled",  label="Silent Aim",             default="C"},
@@ -128,8 +128,8 @@ KEYBIND_FEATURES = {
     {key="wallHopFlick",      label="Wall Hop Flick",         default="U"},
     {key="blueAura",          label="Blue Aura",              default="G"},
     {key="feAnimEnabled",     label="FE Animations",          default="Q"},
-    {key="removeBarriers",    label="Remove Barriers",        default="BracketLeft"},
-    {key="touchFling",        label="Touch Fling",            default="BracketRight"},
+    {key="removeBarriers",    label="Remove Barriers",        default="KeypadThree"},
+    {key="touchFling",        label="Touch Fling",            default="KeypadFour"},
     {key="autoKillAll",       label="Auto Kill All",          default="Semicolon"},
     {key="loopFlingAll",      label="Loop Fling All",         default="Quote"},
     {key="loopFlingMur",      label="Loop Fling Murderer",    default="Period"},
@@ -243,13 +243,11 @@ function loadSettings()
 end
 loadSettings()
 
+if type(state.keybinds) ~= "table" then state.keybinds = {} end
+if type(state.keybindsDisabled) ~= "table" then state.keybindsDisabled = {} end
 for _, kb in ipairs(KEYBIND_FEATURES) do
-    if state.keybinds[kb.key] == nil then
-        state.keybinds[kb.key] = kb.default
-    end
-    if state.keybindsDisabled[kb.key] == nil then
-        state.keybindsDisabled[kb.key] = false
-    end
+    if state.keybinds[kb.key] == nil then state.keybinds[kb.key] = kb.default end
+    if state.keybindsDisabled[kb.key] == nil then state.keybindsDisabled[kb.key] = false end
 end
 
 EASE_SMOOTH = Enum.EasingStyle.Quint
@@ -258,7 +256,6 @@ EASE_SOFT = Enum.EasingStyle.Sine
 EASE_OUT = Enum.EasingDirection.Out
 EASE_IN = Enum.EasingDirection.In
 
--- ============ SPINNING STROKE GRADIENT ============
 spinGradients = {}
 local SPIN_SPEED = 130
 local PULSE_SPEED = 0.9
@@ -287,11 +284,8 @@ end
 
 local function setSpinGradColors(grad, isOn)
     if not grad then return end
-    if isOn then
-        grad.Color = buildAltSeq(WHITE, BLACK)
-    else
-        grad.Color = buildAltSeq(BLACK, WHITE)
-    end
+    if isOn then grad.Color = buildAltSeq(WHITE, BLACK)
+    else grad.Color = buildAltSeq(BLACK, WHITE) end
 end
 
 local function attachSpinStroke(stroke, isOn, opts)
@@ -301,8 +295,7 @@ local function attachSpinStroke(stroke, isOn, opts)
     pcall(function() stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
     local existing = stroke:FindFirstChild("SpinGrad")
     local grad
-    if existing then
-        grad = existing
+    if existing then grad = existing
     else
         grad = Instance.new("UIGradient", stroke)
         grad.Name = "SpinGrad"
@@ -712,6 +705,18 @@ local function findPlayerByRole(r)
     return nil
 end
 local function getMurd() return findPlayerByRole("Murderer") end
+
+local function findKnifeHolder()
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LP and p.Parent then
+            local ch = p.Character
+            local bp = p:FindFirstChild("Backpack")
+            if ch and ch:FindFirstChild("Knife") then return p end
+            if bp and bp:FindFirstChild("Knife") then return p end
+        end
+    end
+    return nil
+end
 
 local GUN_NAMES = {"Gun", "Revolver", "Pistol"}
 local function playerHasGun(p)
@@ -1613,7 +1618,7 @@ UIS.InputEnded:Connect(function(input)
         runShootWorkflow()
         if state.animationsEnabled then
             local s = Instance.new("UIScale", bigWrap)
-            TweenService:Create(s, TweenInfo.new(0.1, EASE_SMOOTH), {Scale = 0.88}):Play()
+            TweenService:Create(s, TweenInfo.new(0.1, EASE_SMOOTH, EASE_OUT), {Scale = 0.88}):Play()
             TweenService:Create(s, TweenInfo.new(0.45, Enum.EasingStyle.Elastic), {Scale = 1}):Play()
             task.delay(0.6, function() if s and s.Parent then s:Destroy() end end)
         end
@@ -3251,7 +3256,7 @@ tgg(pages[SECRET_NAME], "Freeze", 58, "freeze")
 addSect(pages[SECRET_NAME], "Combat Aura", 60)
 tgg(pages[SECRET_NAME], "Kill Aura", 61, "killAura")
 tgg(pages[SECRET_NAME], "Fling Aura", 62, "flingAura")
-tgg(pages[SECRET_NAME], "Auto Dodge", 63, "autoDodge")
+tgg(pages[SECRET_NAME], "Auto Dodge (25/40 stud knife)", 63, "autoDodge")
 
 addSect(pages[SECRET_NAME], "Extra Actions", 70)
 addBtn(pages[SECRET_NAME], "Kill Custom Now", 71, killCustomNow)
@@ -3652,8 +3657,9 @@ local function refreshCustomListUI()
         rm.TextSize = 12
         rm.AutoButtonColor = false
         Instance.new("UICorner", rm).CornerRadius = UDim.new(0, 6)
+        local idx = i
         rm.MouseButton1Click:Connect(function()
-            table.remove(settingsConfig.flingList, i)
+            table.remove(settingsConfig.flingList, idx)
             saveSettings()
             refreshCustomListUI()
         end)
@@ -4149,7 +4155,6 @@ do
 end
 addSect(pages["Keybinds"], "Bulk Actions", 3)
 addBtn(pages["Keybinds"], "Enable All Keybinds", 4, function()
-    state.keybindsDisabled = {}
     for _, kb in ipairs(KEYBIND_FEATURES) do state.keybindsDisabled[kb.key] = false end
     saveSettings()
     if _G.__AW_REFRESH_KB_UI then pcall(_G.__AW_REFRESH_KB_UI) end
@@ -5130,18 +5135,28 @@ LP.CharacterAdded:Connect(function()
     end
 end)
 
+-- ============ AUTO DODGE (Knife detection, 25/40 stud) ============
 task.spawn(function()
     while true do
         task.wait(0.15)
         if state.autoDodge and alive() and not isLocalFlinging then
-            local m = getMurd()
-            local myRoot = LP.Character:FindFirstChild("HumanoidRootPart")
-            if m and m.Character and myRoot then
-                local mRoot = m.Character:FindFirstChild("HumanoidRootPart")
-                if mRoot then
-                    local dist = (myRoot.Position - mRoot.Position).Magnitude
-                    if not dodgeActive and dist < 20 then dodgeActive = true
-                    elseif dodgeActive and dist > 30 then dodgeActive = false end
+            local holder = findKnifeHolder()
+            local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+            if holder and holder.Character and myRoot then
+                local hRoot = holder.Character:FindFirstChild("HumanoidRootPart")
+                if hRoot then
+                    local dist = (myRoot.Position - hRoot.Position).Magnitude
+                    if not dodgeActive and dist <= 25 then
+                        dodgeActive = true
+                        _G.__AW_NOTIFY('<font color="#ff5a5a">Knife within 25 studs</font> — going invisible')
+                    elseif dodgeActive and dist >= 40 then
+                        dodgeActive = false
+                        _G.__AW_NOTIFY('<font color="#5aff8c">Knife holder is 40+ studs away</font> — visible again')
+                    end
+                end
+            else
+                if dodgeActive then
+                    dodgeActive = false
                 end
             end
         elseif dodgeActive then
