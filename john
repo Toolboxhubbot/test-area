@@ -1,3 +1,7 @@
+-- ================================================================
+-- Appleware
+-- ================================================================
+
 Players = game:GetService("Players")
 RunService = game:GetService("RunService")
 TweenService = game:GetService("TweenService")
@@ -207,17 +211,16 @@ EASE_SOFT = Enum.EasingStyle.Sine
 EASE_OUT = Enum.EasingDirection.Out
 EASE_IN = Enum.EasingDirection.In
 
--- ============ SPINNING STROKE GRADIENT ============
 spinGradients = {}
-local SPIN_SPEED = 130
-local PULSE_SPEED = 0.9
-local PULSE_MIN = 0.6
-local PULSE_MAX = 1.8
+SPIN_SPEED = 130
+PULSE_SPEED = 0.9
+PULSE_MIN = 0.6
+PULSE_MAX = 1.8
 
-local BLACK = Color3.new(0,0,0)
-local WHITE = Color3.new(1,1,1)
+BLACK = Color3.new(0,0,0)
+WHITE = Color3.new(1,1,1)
 
-local function buildAltSeq(firstColor, secondColor)
+function buildAltSeq(firstColor, secondColor)
     return ColorSequence.new({
         ColorSequenceKeypoint.new(0.000, firstColor),
         ColorSequenceKeypoint.new(0.166, firstColor),
@@ -234,7 +237,7 @@ local function buildAltSeq(firstColor, secondColor)
     })
 end
 
-local function setSpinGradColors(grad, isOn)
+function setSpinGradColors(grad, isOn)
     if not grad then return end
     if isOn then
         grad.Color = buildAltSeq(WHITE, BLACK)
@@ -243,7 +246,7 @@ local function setSpinGradColors(grad, isOn)
     end
 end
 
-local function attachSpinStroke(stroke, isOn, opts)
+function attachSpinStroke(stroke, isOn, opts)
     if not stroke then return nil end
     opts = opts or {}
     stroke.Color = WHITE
@@ -293,7 +296,7 @@ task.spawn(function()
     end
 end)
 
-local function attachBounce(b)
+function attachBounce(b)
     if state.animationsEnabled == false then return end
     local s = Instance.new("UIScale", b)
     b.MouseButton1Down:Connect(function()
@@ -306,7 +309,7 @@ local function attachBounce(b)
     b.MouseLeave:Connect(r)
 end
 
-local function attachRipple(b, c)
+function attachRipple(b, c)
     if state.animationsEnabled == false then return end
     c = c or Color3.new(1,1,1)
     b.ClipsDescendants = true
@@ -332,7 +335,7 @@ local function attachRipple(b, c)
     end)
 end
 
-local function attachShine(b)
+function attachShine(b)
     if state.animationsEnabled == false then return end
     b.ClipsDescendants = true
     local s = Instance.new("Frame", b)
@@ -354,7 +357,7 @@ local function attachShine(b)
     end)
 end
 
-local function staggerFade(p)
+function staggerFade(p)
     if state.animationsEnabled == false then return end
     local ch = {}
     for _, c in ipairs(p:GetChildren()) do
@@ -381,26 +384,26 @@ local function staggerFade(p)
     end
 end
 
-local notifyGui = Instance.new("ScreenGui")
+notifyGui = Instance.new("ScreenGui")
 notifyGui.Name = "AWNotes"
 notifyGui.ResetOnSpawn = false
 notifyGui.DisplayOrder = 999998
 notifyGui.IgnoreGuiInset = true
 notifyGui.Parent = PlayerGui
 
-local notifyContainer = Instance.new("Frame", notifyGui)
+notifyContainer = Instance.new("Frame", notifyGui)
 notifyContainer.AnchorPoint = Vector2.new(0,1)
 notifyContainer.Position = UDim2.new(0,14,1,-14)
 notifyContainer.AutomaticSize = Enum.AutomaticSize.Y
 notifyContainer.Size = UDim2.new(0,300,0,0)
 notifyContainer.BackgroundTransparency = 1
-local notifyLayout = Instance.new("UIListLayout", notifyContainer)
+notifyLayout = Instance.new("UIListLayout", notifyContainer)
 notifyLayout.Padding = UDim.new(0,10)
 notifyLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
 
-local function cc3(t) return Color3.fromRGB(t.r or 0, t.g or 0, t.b or 0) end
+function cc3(t) return Color3.fromRGB(t.r or 0, t.g or 0, t.b or 0) end
 
-local nCount = 0
+nCount = 0
 _G.__AW_NOTIFY = function(text)
     if nCount >= 5 then return end
     nCount = nCount + 1
@@ -479,31 +482,31 @@ _G.__AW_NOTIFY = function(text)
     end)
 end
 
-local function isInRound()
+function isInRound()
     for _,m in ipairs(Workspace:GetChildren()) do
         if m:FindFirstChild("CoinContainer") or m.Name=="CoinContainer" then return true end
     end
     return false
 end
-local function isLobby() return not isInRound() end
-local function alive()
+function isLobby() return not isInRound() end
+function alive()
     local c = LP.Character
     return c and c:FindFirstChild("Humanoid") and c.Humanoid.Health>0 and c:FindFirstChild("HumanoidRootPart")
 end
-local function targetIsAlive(plr)
+function targetIsAlive(plr)
     if not plr or not plr.Parent then return false end
     local c = plr.Character
     if not c then return false end
     local h = c:FindFirstChildOfClass("Humanoid")
     return h and h.Health>0
 end
-local function findTool(n)
+function findTool(n)
     local ch, bp = LP.Character, LP:FindFirstChild("Backpack")
     if ch and ch:FindFirstChild(n) then return ch[n] end
     if bp and bp:FindFirstChild(n) then return bp[n] end
     return nil
 end
-local function equipTool(n)
+function equipTool(n)
     local ch = LP.Character
     local bp = LP:FindFirstChild("Backpack")
     local h = ch and ch:FindFirstChildOfClass("Humanoid")
@@ -520,27 +523,27 @@ local function equipTool(n)
     end
     return nil
 end
-local function isWhitelisted(p)
+function isWhitelisted(p)
     if not p then return false end
     for _,x in ipairs(settingsConfig.whitelist) do
         if string.lower(x)==string.lower(p.Name) then return true end
     end
     return false
 end
-local function playerMatchesName(p, nameStr)
+function playerMatchesName(p, nameStr)
     if not p or not nameStr or nameStr == "" then return false end
     local n = string.lower(nameStr)
     if string.lower(p.Name) == n then return true end
     if p.DisplayName and string.lower(p.DisplayName) == n then return true end
     return false
 end
-local function standUp()
+function standUp()
     local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
     local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if h then h.PlatformStand=false; h.AutoRotate=true; pcall(function() h:ChangeState(Enum.HumanoidStateType.GettingUp) end) end
     if r then r.Anchored=false; r.AssemblyLinearVelocity=Vector3.zero; r.AssemblyAngularVelocity=Vector3.zero end
 end
-local function readNum(v)
+function readNum(v)
     if v == nil then return nil end
     if type(v) == "number" then return v end
     if typeof and typeof(v) == "Instance" then
@@ -551,7 +554,7 @@ local function readNum(v)
     end
     return nil
 end
-local function getCoinCount()
+function getCoinCount()
     local candidates = {
         function() return LP:FindFirstChild("Coins") end,
         function() return LP:FindFirstChild("coins") end,
@@ -567,14 +570,14 @@ local function getCoinCount()
     end
     return nil
 end
-local function isBagFull()
+function isBagFull()
     if not state.fullBagGate then return true end
     local c = getCoinCount()
     if c == nil then return true end
     return c >= (state.bagTarget or 40)
 end
-local cachedRoleModule, cachedRoleModuleAt = nil, 0
-local function getCachedRoleData()
+cachedRoleModule, cachedRoleModuleAt = nil, 0
+function getCachedRoleData()
     local now = tick()
     if cachedRoleModule and (now - cachedRoleModuleAt) < 2 then return cachedRoleModule end
     local ok, data = pcall(function()
@@ -598,7 +601,7 @@ local function getCachedRoleData()
     end
     return nil
 end
-local function getPlayerRole(plr)
+function getPlayerRole(plr)
     if not plr or not plr.Parent then return "Innocent" end
     local ch = plr.Character
     local bp = plr:FindFirstChild("Backpack")
@@ -652,17 +655,17 @@ local function getPlayerRole(plr)
     end
     return "Innocent"
 end
-local function findPlayerByRole(r)
+function findPlayerByRole(r)
     for _,p in ipairs(Players:GetPlayers()) do
         if p~=LP and p.Character and p.Character:FindFirstChild("Humanoid")
             and p.Character.Humanoid.Health>0 and getPlayerRole(p)==r then return p end
     end
     return nil
 end
-local function getMurd() return findPlayerByRole("Murderer") end
+function getMurd() return findPlayerByRole("Murderer") end
 
-local GUN_NAMES = {"Gun", "Revolver", "Pistol"}
-local function playerHasGun(p)
+GUN_NAMES = {"Gun", "Revolver", "Pistol"}
+function playerHasGun(p)
     if not p then return false end
     local bp, ch = p:FindFirstChild("Backpack"), p.Character
     for _, name in ipairs(GUN_NAMES) do
@@ -685,9 +688,9 @@ local function playerHasGun(p)
     if scanForTool(bp) then return true end
     return false
 end
-local function lpHasGun() return playerHasGun(LP) end
+function lpHasGun() return playerHasGun(LP) end
 
-local function getLiveSheriffHeroes()
+function getLiveSheriffHeroes()
     local gunHolders = {}
     local others = {}
     for _,p in ipairs(Players:GetPlayers()) do
@@ -706,14 +709,14 @@ local function getLiveSheriffHeroes()
     return result
 end
 
-local function roleColor(role)
+function roleColor(role)
     local r = tostring(role or ""):lower()
     if r == "murderer" then return Color3.fromRGB(255, 40, 40)
     elseif r == "sheriff" or r == "hero" then return Color3.fromRGB(40, 130, 255)
     else return Color3.fromRGB(40, 220, 90) end
 end
 
-local function detectMurdererPerk(plr)
+function detectMurdererPerk(plr)
     if not plr then return nil end
     local ch = plr.Character
     for _, attr in ipairs({"Perk","perk","PerkName","perkName","MurdererPerk","CurrentPerk"}) do
@@ -730,7 +733,7 @@ local function detectMurdererPerk(plr)
     return nil
 end
 
-local function triggerMenuReset()
+function triggerMenuReset()
     pcall(function()
         VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.Escape, false, game)
         VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.Escape, false, game)
@@ -743,19 +746,19 @@ local function triggerMenuReset()
     end)
 end
 
-local killLocked = {}
-local activeResets = {}
-local RESET_DURATION = 2.0
-local isLocalFlinging = false
-local flingActiveCount = 0
+killLocked = {}
+activeResets = {}
+RESET_DURATION = 2.0
+isLocalFlinging = false
+flingActiveCount = 0
 
-local function isResetActive(userId)
+function isResetActive(userId)
     local t = activeResets[userId]
     if not t then return false end
     if tick()-t > RESET_DURATION + 0.5 then activeResets[userId] = nil; return false end
     return true
 end
-local function reliableFling(tp, forceManual)
+function reliableFling(tp, forceManual)
     if not tp or tp==LP or not tp.Parent then return false end
     if not targetIsAlive(tp) then return false end
     if isResetActive(tp.UserId) then return false end
@@ -845,7 +848,7 @@ local function reliableFling(tp, forceManual)
     return true
 end
 
-local function executeHitboxKill(tp)
+function executeHitboxKill(tp)
     if not tp or not tp.Parent then return end
     if killLocked[tp.UserId] then return end
     killLocked[tp.UserId] = true
@@ -890,7 +893,7 @@ local function executeHitboxKill(tp)
     killLocked[tp.UserId] = nil
 end
 
-local function killAllNow()
+function killAllNow()
     task.spawn(function()
         standUp(); task.wait(0.1)
         if findTool("Knife") or equipTool("Knife") then
@@ -903,7 +906,7 @@ local function killAllNow()
         else _G.__AW_NOTIFY('No Knife - must be Murderer') end
     end)
 end
-local function killSheriffNow()
+function killSheriffNow()
     task.spawn(function()
         if not alive() then return end
         standUp(); task.wait(0.15)
@@ -920,7 +923,7 @@ local function killSheriffNow()
         end
     end)
 end
-local function killCustomNow()
+function killCustomNow()
     task.spawn(function()
         if #settingsConfig.flingList==0 then _G.__AW_NOTIFY('No custom targets') return end
         standUp(); task.wait(0.15)
@@ -936,8 +939,7 @@ local function killCustomNow()
     end)
 end
 
--- ============ HANDLETOUCHED KILL ============
-local function fireHandleTouchedKill(targets)
+function fireHandleTouchedKill(targets)
     local char = LP.Character
     if not char then return end
     local knife = char:FindFirstChild("Knife") or equipTool("Knife")
@@ -977,7 +979,7 @@ local function fireHandleTouchedKill(targets)
     end)
 end
 
-local function handleTouchKillAll()
+function handleTouchKillAll()
     local targets = {}
     for _, p in ipairs(Players:GetPlayers()) do
         if p ~= LP and targetIsAlive(p) then table.insert(targets, p) end
@@ -985,13 +987,13 @@ local function handleTouchKillAll()
     fireHandleTouchedKill(targets)
 end
 
-local function handleTouchKillSheriff()
+function handleTouchKillSheriff()
     local targets = getLiveSheriffHeroes()
     if #targets == 0 then _G.__AW_NOTIFY("No Sheriff / Hero") return end
     fireHandleTouchedKill(targets)
 end
 
-local function handleTouchKillCustom()
+function handleTouchKillCustom()
     if #settingsConfig.flingList == 0 then _G.__AW_NOTIFY("No custom targets") return end
     local targets = {}
     for _, n in ipairs(settingsConfig.flingList) do
@@ -1005,9 +1007,8 @@ local function handleTouchKillCustom()
     fireHandleTouchedKill(targets)
 end
 
--- ============ BARRIERS / KILL BRICKS / LOCK ============
-local barrierOrigProps = {}
-local function collectBarrierParts()
+barrierOrigProps = {}
+function collectBarrierParts()
     local parts, seen = {}, {}
     local containers = {Workspace}
     local map = Workspace:FindFirstChild("map")
@@ -1033,7 +1034,7 @@ local function collectBarrierParts()
     return parts
 end
 
-local function setBarriersRemoved(remove)
+function setBarriersRemoved(remove)
     local parts = collectBarrierParts()
     for _, p in ipairs(parts) do
         pcall(function()
@@ -1064,7 +1065,7 @@ local function setBarriersRemoved(remove)
     end
 end
 
-local function removeBarriersNow()
+function removeBarriersNow()
     local parts = collectBarrierParts()
     local n = 0
     for _, p in ipairs(parts) do
@@ -1073,7 +1074,7 @@ local function removeBarriersNow()
     _G.__AW_NOTIFY("Removed " .. n .. " barrier part(s)")
 end
 
-local function lockBarriersAll(lock)
+function lockBarriersAll(lock)
     local parts = collectBarrierParts()
     local n = 0
     for _, p in ipairs(parts) do
@@ -1083,7 +1084,7 @@ local function lockBarriersAll(lock)
     _G.__AW_NOTIFY((lock and "Locked " or "Unlocked ") .. n .. " barrier(s)")
 end
 
-local function lockPartsCertain(lock, name)
+function lockPartsCertain(lock, name)
     if not name or name == "" then _G.__AW_NOTIFY("Type a name first") return end
     local ln = string.lower(name)
     local n = 0
@@ -1111,7 +1112,7 @@ task.spawn(function()
     end
 end)
 
-local function flingAllNow()
+function flingAllNow()
     task.spawn(function()
         for _,p in ipairs(Players:GetPlayers()) do
             if p~=LP and not isWhitelisted(p) and targetIsAlive(p) then
@@ -1121,7 +1122,7 @@ local function flingAllNow()
         end
     end)
 end
-local function flingSheriffNow()
+function flingSheriffNow()
     task.spawn(function()
         if not alive() then return end
         for k in pairs(activeResets) do activeResets[k] = nil end
@@ -1139,14 +1140,14 @@ local function flingSheriffNow()
         end
     end)
 end
-local function flingMurdererNow()
+function flingMurdererNow()
     task.spawn(function()
         local m = getMurd()
         if m then task.spawn(function() reliableFling(m, true) end)
         else _G.__AW_NOTIFY('No Murderer') end
     end)
 end
-local function flingCustomNow()
+function flingCustomNow()
     task.spawn(function()
         for _,n in ipairs(settingsConfig.flingList) do
             for _,p in ipairs(Players:GetPlayers()) do
@@ -1158,7 +1159,7 @@ local function flingCustomNow()
         end
     end)
 end
-local function grabGunNow()
+function grabGunNow()
     task.spawn(function()
         if not alive() then return end
         local r = LP.Character:FindFirstChild("HumanoidRootPart")
@@ -1171,15 +1172,15 @@ local function grabGunNow()
         end
     end)
 end
-local LOBBY_CFRAME = CFrame.new(14.47, 516.73, -25.34)
-local function teleportToLobby()
+LOBBY_CFRAME = CFrame.new(14.47, 516.73, -25.34)
+function teleportToLobby()
     local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if r then r.CFrame = LOBBY_CFRAME end
 end
 
-local lobbyBounds = nil
-local lobbyBoundsCheckedAt = 0
-local function detectLobbyBounds()
+lobbyBounds = nil
+lobbyBoundsCheckedAt = 0
+function detectLobbyBounds()
     for _, obj in ipairs(Workspace:GetChildren()) do
         local n = string.lower(obj.Name)
         if string.find(n, "lobby", 1, true) or string.find(n, "waiting", 1, true) then
@@ -1195,8 +1196,8 @@ local function detectLobbyBounds()
     end
     return nil
 end
-local LOBBY_FALLBACK_Y = 400
-local function isInLobby(position)
+LOBBY_FALLBACK_Y = 400
+function isInLobby(position)
     local now = tick()
     if not lobbyBounds or (now - lobbyBoundsCheckedAt) > 5 then
         lobbyBounds = detectLobbyBounds()
@@ -1214,7 +1215,7 @@ local function isInLobby(position)
     return false
 end
 
-local function teleportToMap()
+function teleportToMap()
     local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if not r then return end
     local mapFolder = nil
@@ -1259,15 +1260,15 @@ local function teleportToMap()
     end
     _G.__AW_NOTIFY("Teleported to <font color=\"#5aff8c\">" .. mapFolder.Name .. "</font>")
 end
-local function teleportToPlayer(p)
+function teleportToPlayer(p)
     if not p then return end
     local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     local tr = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
     if r and tr then r.CFrame = tr.CFrame * CFrame.new(0,0,3) end
 end
-local function teleportToMurderer() teleportToPlayer(getMurd()) end
-local function teleportToSheriff() teleportToPlayer(getLiveSheriffHeroes()[1]) end
-local function teleportToCustom()
+function teleportToMurderer() teleportToPlayer(getMurd()) end
+function teleportToSheriff() teleportToPlayer(getLiveSheriffHeroes()[1]) end
+function teleportToCustom()
     for _,n in ipairs(settingsConfig.flingList) do
         for _,p in ipairs(Players:GetPlayers()) do
             if playerMatchesName(p, n) then teleportToPlayer(p); return end
@@ -1276,7 +1277,7 @@ local function teleportToCustom()
     _G.__AW_NOTIFY("No custom target found")
 end
 
-local function getHitboxTargets()
+function getHitboxTargets()
     local targets = {}
     local mode = state.hitboxExpanderTarget or "murderer"
     for _, plr in ipairs(Players:GetPlayers()) do
@@ -1299,7 +1300,7 @@ local function getHitboxTargets()
     end
     return targets
 end
-local function applyHitboxToPlayer(plr)
+function applyHitboxToPlayer(plr)
     if killLocked[plr.UserId] then return end
     local ch = plr.Character
     if not ch then return end
@@ -1333,19 +1334,19 @@ local function applyHitboxToPlayer(plr)
         hb.Massless = true
     end
 end
-local function removeHitboxFromPlayer(plr)
+function removeHitboxFromPlayer(plr)
     if not plr or not plr.Character then return end
     local hb = plr.Character:FindFirstChild("AW_Hitbox")
     if hb then pcall(function() hb:Destroy() end) end
 end
 
-local SHOT_COOLDOWN = 0.4
-local lastShotTime = -SHOT_COOLDOWN
-local function canFire() return (tick() - lastShotTime) >= SHOT_COOLDOWN end
+SHOT_COOLDOWN = 0.4
+lastShotTime = -SHOT_COOLDOWN
+function canFire() return (tick() - lastShotTime) >= SHOT_COOLDOWN end
 
-local silentAimTarget = nil
-local silentAimHead = nil
-local function getGun()
+silentAimTarget = nil
+silentAimHead = nil
+function getGun()
     local char = LP.Character
     local bp = LP:FindFirstChild("Backpack")
     for _, name in ipairs(GUN_NAMES) do
@@ -1354,7 +1355,7 @@ local function getGun()
     end
     return nil
 end
-local function findShootRemote()
+function findShootRemote()
     local gun = getGun()
     if gun then
         local shoot = gun:FindFirstChild("Shoot", true)
@@ -1377,7 +1378,7 @@ local function findShootRemote()
     end
     return nil
 end
-local function hasClearShot(targetPart)
+function hasClearShot(targetPart)
     if not state.silentAimWallCheck then return true end
     if not targetPart then return true end
     local cam = Workspace.CurrentCamera
@@ -1413,8 +1414,7 @@ RunService.RenderStepped:Connect(function()
     silentAimHead = nil
 end)
 
--- Y level: 1 = top (head), 0 = middle (torso/root), -1 = floor / below floor
-local function getAimPosAtLevel(char)
+function getAimPosAtLevel(char)
     if not char then return nil end
     local level = state.magicBulletYLevel or 0
     local root = char:FindFirstChild("HumanoidRootPart")
@@ -1424,13 +1424,13 @@ local function getAimPosAtLevel(char)
     if level >= 1 then
         return (head and head.Position) or (root.Position + Vector3.new(0, 1.5, 0))
     elseif level <= -1 then
-        return root.Position - Vector3.new(0, 6, 0)   -- below the floor
+        return root.Position - Vector3.new(0, 6, 0)
     else
         return (torso and torso.Position) or root.Position
     end
 end
 
-local function fireSilentAtMurderer()
+function fireSilentAtMurderer()
     if not canFire() then return false end
     local murd = getMurd()
     if not murd or not murd.Character then return false end
@@ -1464,7 +1464,7 @@ local function fireSilentAtMurderer()
     return true
 end
 
-local function fireThroughWall()
+function fireThroughWall()
     if not canFire() then return false end
     local murd = getMurd()
     if not murd or not murd.Character then return false end
@@ -1492,16 +1492,16 @@ local function fireThroughWall()
     return true
 end
 
-local function tryShootMurderer()
+function tryShootMurderer()
     if state.shootThroughWall then return fireThroughWall() else return fireSilentAtMurderer() end
 end
-local function fullShootSequence() return tryShootMurderer() end
+function fullShootSequence() return tryShootMurderer() end
 
-local gunActivatedConn = nil
-local function unbindGun()
+gunActivatedConn = nil
+function unbindGun()
     if gunActivatedConn then gunActivatedConn:Disconnect(); gunActivatedConn = nil end
 end
-local function bindGun(tool)
+function bindGun(tool)
     unbindGun()
     if not tool or tool.Name ~= "Gun" then return end
     gunActivatedConn = tool.Activated:Connect(function()
@@ -1510,7 +1510,7 @@ local function bindGun(tool)
         end
     end)
 end
-local function watchCharacter(char)
+function watchCharacter(char)
     if not char then return end
     char.ChildAdded:Connect(function(child) if child:IsA("Tool") and child.Name == "Gun" then bindGun(child) end end)
     char.ChildRemoved:Connect(function(child) if child:IsA("Tool") and child.Name == "Gun" then unbindGun() end end)
@@ -1520,16 +1520,16 @@ end
 if LP.Character then watchCharacter(LP.Character) end
 LP.CharacterAdded:Connect(function(char) unbindGun(); watchCharacter(char) end)
 
-local VOTE_SPOTS = {[1] = Vector3.new(25, 508, 50), [2] = Vector3.new(13, 508, 52), [3] = Vector3.new(1, 508, 49)}
-local voting = false
-local saveVoteCF = nil
-local function teleportToVoteSpot(i)
+VOTE_SPOTS = {[1] = Vector3.new(25, 508, 50), [2] = Vector3.new(13, 508, 52), [3] = Vector3.new(1, 508, 49)}
+voting = false
+saveVoteCF = nil
+function teleportToVoteSpot(i)
     local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if not r then return end
     saveVoteCF = r.CFrame
     r.CFrame = CFrame.new(VOTE_SPOTS[i])
 end
-local function resetX4(i)
+function resetX4(i)
     if voting then return end
     voting = true
     task.spawn(function()
@@ -1556,7 +1556,7 @@ local function resetX4(i)
         voting = false
     end)
 end
-local function getVoteMapNames()
+function getVoteMapNames()
     local mapNames = {"N/A", "N/A", "N/A"}
     local boards = {}
     for _, obj in ipairs(workspace:GetDescendants()) do
@@ -1589,11 +1589,11 @@ local function getVoteMapNames()
     return mapNames
 end
 
-local rtGui = Instance.new("ScreenGui")
+rtGui = Instance.new("ScreenGui")
 rtGui.Name = "AWRT"; rtGui.ResetOnSpawn = false
 rtGui.DisplayOrder = 999997; rtGui.IgnoreGuiInset = true
 rtGui.Parent = PlayerGui
-local roundTimerFrame = Instance.new("Frame", rtGui)
+roundTimerFrame = Instance.new("Frame", rtGui)
 roundTimerFrame.AnchorPoint = Vector2.new(0.5,0)
 roundTimerFrame.Position = UDim2.new(0.5,0,0,8)
 roundTimerFrame.Size = UDim2.new(0,130,0,50)
@@ -1603,7 +1603,7 @@ roundTimerFrame.Visible = false
 roundTimerFrame.Active = true
 roundTimerFrame.Draggable = true
 Instance.new("UICorner", roundTimerFrame).CornerRadius = UDim.new(0,10)
-local rtValue = Instance.new("TextLabel", roundTimerFrame)
+rtValue = Instance.new("TextLabel", roundTimerFrame)
 rtValue.Size = UDim2.new(1,0,1,0)
 rtValue.BackgroundTransparency = 1
 rtValue.Text = "0:00"
@@ -1611,20 +1611,20 @@ rtValue.TextColor3 = Color3.new(1,1,1)
 rtValue.Font = Enum.Font.GothamBold
 rtValue.TextSize = 22
 
-local bigGui = Instance.new("ScreenGui")
+bigGui = Instance.new("ScreenGui")
 bigGui.Name = "AW_BigShoot"
 bigGui.ResetOnSpawn = false
 bigGui.DisplayOrder = 999991
 bigGui.IgnoreGuiInset = true
 bigGui.Parent = PlayerGui
-local bigWrap = Instance.new("Frame", bigGui)
+bigWrap = Instance.new("Frame", bigGui)
 bigWrap.Name = "BigWrap"
 bigWrap.AnchorPoint = Vector2.new(0.5, 0.5)
 bigWrap.Position = UDim2.new(state.bigButtonX, 0, state.bigButtonY, 0)
 bigWrap.Size = UDim2.new(0, state.bigButtonW, 0, state.bigButtonH)
 bigWrap.BackgroundTransparency = 1
 bigWrap.Visible = state.bigButtonEnabled
-local bigBtn = Instance.new("TextButton")
+bigBtn = Instance.new("TextButton")
 bigBtn.Name = "AWBigShootBtn"
 bigBtn.AnchorPoint = Vector2.new(0.5, 0.5)
 bigBtn.Position = UDim2.new(0.5, 0, 0.5, 0)
@@ -1643,27 +1643,27 @@ bigBtn.BorderSizePixel = 0
 bigBtn.Active = true
 bigBtn.Parent = bigWrap
 Instance.new("UICorner", bigBtn).CornerRadius = UDim.new(0, 12)
-local bigStroke = Instance.new("UIStroke", bigBtn)
+bigStroke = Instance.new("UIStroke", bigBtn)
 bigStroke.Color = WHITE
 bigStroke.Thickness = 3
 bigStroke.Transparency = 0
 attachSpinStroke(bigStroke, false, {baseThickness = 3})
 
-local firingTimer = 0
-local function showFiringText()
+firingTimer = 0
+function showFiringText()
     bigBtn.Text = "Firing"
     firingTimer = firingTimer + 1
     local myTimer = firingTimer
     task.delay(0.7, function() if myTimer == firingTimer then bigBtn.Text = "Shoot Murderer" end end)
 end
-local shootWorkflowRunning = false
-local function runShootWorkflow()
+shootWorkflowRunning = false
+function runShootWorkflow()
     if shootWorkflowRunning then return end
     shootWorkflowRunning = true
     showFiringText()
     task.spawn(function() pcall(fullShootSequence); shootWorkflowRunning = false end)
 end
-local bigDrag = nil
+bigDrag = nil
 bigBtn.InputBegan:Connect(function(input)
     if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
     bigDrag = {input = input, start = input.Position, startPos = bigWrap.Position, moved = false}
@@ -1700,14 +1700,14 @@ UIS.InputEnded:Connect(function(input)
     end
 end)
 
-local floatGui = Instance.new("ScreenGui")
+floatGui = Instance.new("ScreenGui")
 floatGui.Name = "AW_FloatingActions"
 floatGui.ResetOnSpawn = false
 floatGui.DisplayOrder = 999990
 floatGui.IgnoreGuiInset = true
 floatGui.Parent = PlayerGui
 
-local FLOAT_BUTTON_DEFS = {
+FLOAT_BUTTON_DEFS = {
     {id="killAll",       label="Kill All",        type="action", cb=killAllNow},
     {id="killSheriff",   label="Kill Sheriff",    type="action", cb=killSheriffNow},
     {id="killCustom",    label="Kill Custom",     type="action", cb=killCustomNow},
@@ -1771,7 +1771,7 @@ local FLOAT_BUTTON_DEFS = {
     {id="blueAura",      label="Blue Aura",       type="toggle", key="blueAura"},
     {id="feAnim",        label="FE Anim",         type="toggle", key="feAnimEnabled"},
 }
-local FLOAT_BUTTON_MAP = {}
+FLOAT_BUTTON_MAP = {}
 for _, def in ipairs(FLOAT_BUTTON_DEFS) do FLOAT_BUTTON_MAP[def.id] = def end
 
 state.floatEnabledButtons = state.floatEnabledButtons or {}
@@ -1781,9 +1781,9 @@ end
 state.floatButtonPositions = state.floatButtonPositions or {}
 if not state.floatButtonShape then state.floatButtonShape = "circle" end
 
-local floatButtons = {}
-local START_Y_OFFSET = 180
-local function defaultPositionForIndex(i)
+floatButtons = {}
+START_Y_OFFSET = 180
+function defaultPositionForIndex(i)
     local vpW = (Workspace.CurrentCamera and Workspace.CurrentCamera.ViewportSize.X) or 1920
     local cell = state.floatButtonSize + 10
     local perRow = math.max(1, math.floor((vpW - 20) / cell))
@@ -1791,7 +1791,7 @@ local function defaultPositionForIndex(i)
     local row = math.floor((i - 1) / perRow)
     return {xScale = 0, xOffset = 10 + col * cell, yScale = 0, yOffset = START_Y_OFFSET + row * cell}
 end
-local function refreshFloatVisual(def)
+function refreshFloatVisual(def)
     local data = floatButtons[def.id]
     if not data or not data.btn or not data.btn.Parent then return end
     local isOn = false
@@ -1804,7 +1804,7 @@ local function refreshFloatVisual(def)
     data.btn.TextColor3 = isOn and Color3.new(0,0,0) or Color3.new(1,1,1)
     data.btn.TextStrokeColor3 = isOn and Color3.new(1,1,1) or Color3.new(0,0,0)
 end
-local function applyShape(btn, shape)
+function applyShape(btn, shape)
     for _, c in ipairs(btn:GetChildren()) do
         if c:IsA("UICorner") then c:Destroy() end
     end
@@ -1818,8 +1818,8 @@ local function applyShape(btn, shape)
     btn.Rotation = rot
     return rot
 end
-local DRAG_DEAD_ZONE = 6
-local function rebuildFloatButtons()
+DRAG_DEAD_ZONE = 6
+function rebuildFloatButtons()
     for _, c in ipairs(floatGui:GetChildren()) do
         if c:IsA("TextButton") or c:IsA("Frame") then c:Destroy() end
     end
@@ -1906,7 +1906,7 @@ local function rebuildFloatButtons()
         end
     end
 end
-local function setFloatVisible(vis)
+function setFloatVisible(vis)
     for _, data in pairs(floatButtons) do
         if data.btn and data.btn.Parent then data.btn.Visible = vis end
         if data.outer and data.outer.Parent then data.outer.Visible = vis end
@@ -1915,41 +1915,40 @@ local function setFloatVisible(vis)
 end
 rebuildFloatButtons()
 
--- ============ MAIN UI ============
-local sg = Instance.new("ScreenGui")
+sg = Instance.new("ScreenGui")
 sg.Name = "Appleware"
 sg.Parent = PlayerGui
 sg.ResetOnSpawn = false
 sg.DisplayOrder = 999999
 sg.IgnoreGuiInset = true
 
-local mainWrap = Instance.new("Frame", sg)
+mainWrap = Instance.new("Frame", sg)
 mainWrap.Name = "MainWrap"
 mainWrap.AnchorPoint = Vector2.new(0.5,0.5)
 mainWrap.Position = UDim2.new(state.mainX, 0, state.mainY, 0)
 mainWrap.Size = UDim2.new(0,540,0,420)
 mainWrap.BackgroundTransparency = 1
-local mainScale = Instance.new("UIScale", mainWrap)
+mainScale = Instance.new("UIScale", mainWrap)
 mainScale.Scale = settingsConfig.selectedScale or 1
 _G.__AW_MAINSCALE = mainScale
-local main = Instance.new("Frame", mainWrap)
+main = Instance.new("Frame", mainWrap)
 main.Size = UDim2.new(1,0,1,0)
 main.BackgroundColor3 = cc3(settingsConfig.bgColor)
 main.Active = true
 main.ClipsDescendants = true
 Instance.new("UICorner", main).CornerRadius = UDim.new(0,14)
-local ms = Instance.new("UIStroke", main)
+ms = Instance.new("UIStroke", main)
 ms.Color = cc3(settingsConfig.borderColor)
 ms.Transparency = 0.3
-local dragStrip = Instance.new("TextButton", main)
+dragStrip = Instance.new("TextButton", main)
 dragStrip.Size = UDim2.new(1, -140, 0, 34)
 dragStrip.Position = UDim2.new(0, 140, 0, 0)
 dragStrip.BackgroundTransparency = 1
 dragStrip.Text = ""
 dragStrip.ZIndex = 20
-local mainDrag = nil
-local function beginMainDrag(input) mainDrag = {input = input, start = input.Position, startPos = mainWrap.Position} end
-local function endMainDrag(input)
+mainDrag = nil
+function beginMainDrag(input) mainDrag = {input = input, start = input.Position, startPos = mainWrap.Position} end
+function endMainDrag(input)
     if not mainDrag then return end
     if input ~= mainDrag.input then return end
     mainDrag = nil
@@ -1970,11 +1969,11 @@ UIS.InputEnded:Connect(function(input)
     endMainDrag(input)
 end)
 
-local sb = Instance.new("Frame", main)
+sb = Instance.new("Frame", main)
 sb.Size = UDim2.new(0,138,1,0)
 sb.BackgroundColor3 = cc3(settingsConfig.tabBgColor)
 Instance.new("UICorner", sb).CornerRadius = UDim.new(0,14)
-local logo = Instance.new("TextButton", sb)
+logo = Instance.new("TextButton", sb)
 logo.Size = UDim2.new(1,-12,0,48)
 logo.Position = UDim2.new(0,6,0,4)
 logo.BackgroundTransparency = 1
@@ -1987,28 +1986,28 @@ logo.AutoButtonColor = false
 logo.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then beginMainDrag(input) end
 end)
-local tlb = Instance.new("ScrollingFrame", sb)
+tlb = Instance.new("ScrollingFrame", sb)
 tlb.Size = UDim2.new(1,-12,1,-68)
 tlb.Position = UDim2.new(0,6,0,58)
 tlb.BackgroundTransparency = 1
 tlb.ScrollBarThickness = 2
 tlb.CanvasSize = UDim2.new(0,0,0,0)
 tlb.AutomaticCanvasSize = Enum.AutomaticSize.Y
-local tll = Instance.new("UIListLayout", tlb)
+tll = Instance.new("UIListLayout", tlb)
 tll.SortOrder = Enum.SortOrder.LayoutOrder
 tll.Padding = UDim.new(0,3)
-local ct = Instance.new("Frame", main)
+ct = Instance.new("Frame", main)
 ct.Size = UDim2.new(1,-148,1,-56)
 ct.Position = UDim2.new(0,148,0,10)
 ct.BackgroundTransparency = 1
 ct.ClipsDescendants = true
 
-local tabs = {"Farm","Combat","Players","Teleport","ESP","Webhook","Misc","Voting","Button","Keybinds","UI","Anim/Emot","Secret"}
-local pages, pageGs, btns = {}, {}, {}
-local curTab = "Farm"
-local SECRET_NAME = "Secret"
+tabs = {"Farm","Combat","Players","Teleport","ESP","Webhook","Misc","Voting","Button","Keybinds","UI","Anim/Emot","Secret"}
+pages, pageGs, btns = {}, {}, {}
+curTab = "Farm"
+SECRET_NAME = "Secret"
 
-local function makePage(n)
+function makePage(n)
     local g = Instance.new("Frame", ct)
     g.Name = n .. "_G"
     g.Size = UDim2.new(1,0,1,0)
@@ -2031,8 +2030,8 @@ local function makePage(n)
     pages[n] = pg
     pageGs[n] = g
 end
-local switching = false
-local function switchTab(n)
+switching = false
+function switchTab(n)
     if switching or n == curTab then return end
     switching = true
     local o = curTab
@@ -2058,7 +2057,7 @@ local function switchTab(n)
     end
     task.delay(0.24, function() switching = false end)
 end
-local function createTabButton(name, isFirst)
+function createTabButton(name, isFirst)
     local b = Instance.new("TextButton", tlb)
     b.Size = UDim2.new(1,0,0,32)
     b.BackgroundColor3 = isFirst and cc3(settingsConfig.cardHoverColor) or cc3(settingsConfig.tabBgColor)
@@ -2081,7 +2080,7 @@ end
 for i, n in ipairs(tabs) do createTabButton(n, i==1) end
 
 mainTgls = {}
-local function tgg(page, name, order, key)
+function tgg(page, name, order, key)
     local row = Instance.new("Frame", page)
     row.Size = UDim2.new(1,0,0,40)
     row.LayoutOrder = order
@@ -2139,7 +2138,7 @@ local function tgg(page, name, order, key)
         saveSettings()
     end)
 end
-local function addBtn(page, name, order, cb)
+function addBtn(page, name, order, cb)
     local b = Instance.new("TextButton", page)
     b.Size = UDim2.new(1,0,0,38)
     b.LayoutOrder = order
@@ -2166,7 +2165,7 @@ local function addBtn(page, name, order, cb)
     b.MouseButton1Click:Connect(cb)
     return b
 end
-local function addSect(page, text, order)
+function addSect(page, text, order)
     local w = Instance.new("Frame", page)
     w.Size = UDim2.new(1,0,0,22)
     w.LayoutOrder = order
@@ -2186,7 +2185,7 @@ local function addSect(page, text, order)
     l.TextSize = 11
     l.TextXAlignment = Enum.TextXAlignment.Left
 end
-local function makeSlider(page, label, order, iv, minV, maxV, sK, onChange)
+function makeSlider(page, label, order, iv, minV, maxV, sK, onChange)
     local row = Instance.new("Frame", page)
     row.Size = UDim2.new(1,0,0,56)
     row.LayoutOrder = order
@@ -2261,7 +2260,7 @@ local function makeSlider(page, label, order, iv, minV, maxV, sK, onChange)
         end
     end)
 end
-local function makeInput(page, order, ph, val, onC)
+function makeInput(page, order, ph, val, onC)
     local box = Instance.new("TextBox", page)
     box.Size = UDim2.new(1,0,0,36)
     box.LayoutOrder = order
@@ -2278,8 +2277,7 @@ local function makeInput(page, order, ph, val, onC)
     return box
 end
 
--- ============ DROPDOWN ============
-local function makeDropdown(page, label, order, options, initial, onSelect)
+function makeDropdown(page, label, order, options, initial, onSelect)
     local wrapper = Instance.new("Frame", page)
     wrapper.Size = UDim2.new(1, 0, 0, 44)
     wrapper.LayoutOrder = order
