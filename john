@@ -73,7 +73,6 @@ state = {
     floatButtonPositions={}, floatEnabledButtons={},
     hitboxExpander=false, hitboxExpanderSize=15, hitboxExpanderTarget="murderer",
     keybinds={},
-    keybindsDisabled={},
     playerSearchText="",
     playerListOpen=true,
     radioAutoPlay=false,
@@ -85,7 +84,7 @@ state = {
     fpsPingMonitor=false, fpsPingColor=false,
     disableTrading=false,
     wallHop=false, wallHopFlick=false,
-    removeBarriers=false,
+    removeBarriers=false, magicBulletYLevel=0,
     blueAura=false, blueAuraStuds=10,
     feAnimEnabled=false,
     feAnimAll="Default",
@@ -100,54 +99,29 @@ state = {
 }
 
 KEYBIND_FEATURES = {
-    {key="flyEnabled",        label="Fly",                    default="F"},
-    {key="noclip",            label="Noclip",                 default="N"},
-    {key="infJumpEnabled",    label="Infinite Jump",          default="J"},
-    {key="bunnyHop",          label="Bunny Hop",              default="B"},
-    {key="speedGlitch",       label="Speed Glitch",           default="V"},
-    {key="speedEnabled",      label="Speed Changer",          default="KeypadOne"},
-    {key="jumpEnabled",       label="Jump Power",             default="KeypadTwo"},
-    {key="killAura",          label="Kill Aura",              default="K"},
-    {key="flingAura",         label="Fling Aura",             default="L"},
-    {key="silentAimEnabled",  label="Silent Aim",             default="C"},
-    {key="shootThroughWall",  label="Shoot Through Walls",    default="X"},
-    {key="autoShootMurderer", label="Auto Shoot Murderer",    default="Z"},
-    {key="fullbright",        label="Fullbright",             default="P"},
-    {key="invisibleEnabled",  label="Invisible",              default="I"},
-    {key="espPlayers",        label="Player ESP",             default="E"},
-    {key="espGunDrop",        label="Gun Drop ESP",           default="R"},
-    {key="aimbotMurderer",    label="Aimbot: Murderer",       default="One"},
-    {key="aimbotSheriff",     label="Aimbot: Sheriff",        default="Two"},
-    {key="aimbotSnap",        label="Aimbot Instant Snap",    default="Three"},
-    {key="aimbotPredict",     label="Aimbot Prediction",      default="Four"},
-    {key="freeze",            label="Freeze",                 default="M"},
-    {key="clickTP",           label="Click Teleport",         default="T"},
-    {key="autoDodge",         label="Auto Dodge",             default="O"},
-    {key="hitboxExpander",    label="Hitbox Expander",        default="H"},
-    {key="wallHop",           label="Wall Hop",               default="Y"},
-    {key="wallHopFlick",      label="Wall Hop Flick",         default="U"},
-    {key="blueAura",          label="Blue Aura",              default="G"},
-    {key="feAnimEnabled",     label="FE Animations",          default="Q"},
-    {key="removeBarriers",    label="Remove Barriers",        default="KeypadThree"},
-    {key="touchFling",        label="Touch Fling",            default="KeypadFour"},
-    {key="autoKillAll",       label="Auto Kill All",          default="Semicolon"},
-    {key="loopFlingAll",      label="Loop Fling All",         default="Quote"},
-    {key="loopFlingMur",      label="Loop Fling Murderer",    default="Period"},
-    {key="loopFlingSheriff",  label="Loop Fling Sheriff",     default="Comma"},
-    {key="loopFlingCustom",   label="Loop Fling Custom",      default="Slash"},
-    {key="autoResetMurderer", label="Auto Reset Murderer",    default="Minus"},
-    {key="autoResetSheriff",  label="Auto Reset Sheriff",     default="Equals"},
-    {key="autoResetInnocent", label="Auto Reset Innocent",    default="BackSlash"},
-    {key="murdererPredictor", label="Murderer Predictor",     default="Tab"},
-    {key="afk",               label="Anti AFK",               default="F1"},
-    {key="gun",               label="Auto Grab Gun",          default="F2"},
-    {key="antiVoid",          label="Anti-Void",              default="F3"},
-    {key="cameraZoomEnabled", label="Camera Zoom",            default="F4"},
-    {key="fovEnabled",        label="FOV Changer",            default="F5"},
-    {key="disable3d",         label="Disable 3D",             default="F6"},
-    {key="fpsBoost",          label="FPS Boost",              default="F7"},
-    {key="autoRejoin",        label="Auto Rejoin",            default="F8"},
-    {key="autoServerHop",     label="Auto Serverhop",         default="F9"},
+    {key="flyEnabled",        label="Fly",                  default="F"},
+    {key="noclip",            label="Noclip",               default="N"},
+    {key="infJumpEnabled",    label="Infinite Jump",        default="J"},
+    {key="bunnyHop",          label="Bunny Hop",            default="B"},
+    {key="speedGlitch",       label="Speed Glitch",         default="V"},
+    {key="killAura",          label="Kill Aura",            default="K"},
+    {key="flingAura",         label="Fling Aura",           default="L"},
+    {key="silentAimEnabled",  label="Silent Aim",           default="C"},
+    {key="shootThroughWall",  label="Shoot Through Walls",  default="X"},
+    {key="autoShootMurderer", label="Auto Shoot Murderer",  default="Z"},
+    {key="fullbright",        label="Fullbright",           default="P"},
+    {key="invisibleEnabled",  label="Invisible",            default="I"},
+    {key="espPlayers",        label="Player ESP",           default="E"},
+    {key="aimbotMurderer",    label="Aimbot: Murderer",     default="One"},
+    {key="aimbotSheriff",     label="Aimbot: Sheriff",      default="Two"},
+    {key="freeze",            label="Freeze",               default="M"},
+    {key="clickTP",           label="Click Teleport",       default="T"},
+    {key="autoDodge",         label="Auto Dodge",           default="O"},
+    {key="hitboxExpander",    label="Hitbox Expander",      default="H"},
+    {key="wallHop",           label="Wall Hop",             default="Y"},
+    {key="blueAura",          label="Blue Aura",            default="G"},
+    {key="feAnimEnabled",     label="FE Animations",        default="Q"},
+    {key="removeBarriers",    label="Remove Barriers",      default="U"},
 }
 
 NO_SAVE_STATE_KEYS = {
@@ -243,11 +217,10 @@ function loadSettings()
 end
 loadSettings()
 
-if type(state.keybinds) ~= "table" then state.keybinds = {} end
-if type(state.keybindsDisabled) ~= "table" then state.keybindsDisabled = {} end
 for _, kb in ipairs(KEYBIND_FEATURES) do
-    if state.keybinds[kb.key] == nil then state.keybinds[kb.key] = kb.default end
-    if state.keybindsDisabled[kb.key] == nil then state.keybindsDisabled[kb.key] = false end
+    if state.keybinds[kb.key] == nil then
+        state.keybinds[kb.key] = kb.default
+    end
 end
 
 EASE_SMOOTH = Enum.EasingStyle.Quint
@@ -256,6 +229,7 @@ EASE_SOFT = Enum.EasingStyle.Sine
 EASE_OUT = Enum.EasingDirection.Out
 EASE_IN = Enum.EasingDirection.In
 
+-- ============ SPINNING STROKE GRADIENT ============
 spinGradients = {}
 local SPIN_SPEED = 130
 local PULSE_SPEED = 0.9
@@ -284,8 +258,11 @@ end
 
 local function setSpinGradColors(grad, isOn)
     if not grad then return end
-    if isOn then grad.Color = buildAltSeq(WHITE, BLACK)
-    else grad.Color = buildAltSeq(BLACK, WHITE) end
+    if isOn then
+        grad.Color = buildAltSeq(WHITE, BLACK)
+    else
+        grad.Color = buildAltSeq(BLACK, WHITE)
+    end
 end
 
 local function attachSpinStroke(stroke, isOn, opts)
@@ -295,7 +272,8 @@ local function attachSpinStroke(stroke, isOn, opts)
     pcall(function() stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border end)
     local existing = stroke:FindFirstChild("SpinGrad")
     local grad
-    if existing then grad = existing
+    if existing then
+        grad = existing
     else
         grad = Instance.new("UIGradient", stroke)
         grad.Name = "SpinGrad"
@@ -568,7 +546,6 @@ local function isWhitelisted(p)
     if not p then return false end
     for _,x in ipairs(settingsConfig.whitelist) do
         if string.lower(x)==string.lower(p.Name) then return true end
-        if p.DisplayName and string.lower(x)==string.lower(p.DisplayName) then return true end
     end
     return false
 end
@@ -705,18 +682,6 @@ local function findPlayerByRole(r)
     return nil
 end
 local function getMurd() return findPlayerByRole("Murderer") end
-
-local function findKnifeHolder()
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LP and p.Parent then
-            local ch = p.Character
-            local bp = p:FindFirstChild("Backpack")
-            if ch and ch:FindFirstChild("Knife") then return p end
-            if bp and bp:FindFirstChild("Knife") then return p end
-        end
-    end
-    return nil
-end
 
 local GUN_NAMES = {"Gun", "Revolver", "Pistol"}
 local function playerHasGun(p)
@@ -904,8 +869,6 @@ end
 
 local function executeHitboxKill(tp)
     if not tp or not tp.Parent then return end
-    if tp == LP then return end
-    if isWhitelisted(tp) then return end
     if killLocked[tp.UserId] then return end
     killLocked[tp.UserId] = true
     pcall(function()
@@ -929,7 +892,6 @@ local function executeHitboxKill(tp)
         local startTime = tick()
         while tick() - startTime < 0.5 do
             if not targetIsAlive(tp) then break end
-            if isWhitelisted(tp) then break end
             local kHandle = k:FindFirstChild("Handle")
             if kHandle and tr and tr.Parent then
                 pcall(function() k:Activate() end)
@@ -955,7 +917,7 @@ local function killAllNow()
         standUp(); task.wait(0.1)
         if findTool("Knife") or equipTool("Knife") then
             for _,tp in ipairs(Players:GetPlayers()) do
-                if tp~=LP and targetIsAlive(tp) and not isWhitelisted(tp) then
+                if tp~=LP and targetIsAlive(tp) then
                     task.spawn(function() executeHitboxKill(tp) end)
                     task.wait(0.05)
                 end
@@ -973,7 +935,7 @@ local function killSheriffNow()
         if not findTool("Knife") then _G.__AW_NOTIFY('No Knife') return end
         local live = getLiveSheriffHeroes()
         for _, target in ipairs(live) do
-            if target and target ~= LP and targetIsAlive(target) and not isWhitelisted(target) then
+            if target and target ~= LP and targetIsAlive(target) then
                 task.spawn(function() executeHitboxKill(target) end)
                 task.wait(0.1)
             end
@@ -987,7 +949,7 @@ local function killCustomNow()
         if not (findTool("Knife") or equipTool("Knife")) then _G.__AW_NOTIFY('No Knife') return end
         for _,n in ipairs(settingsConfig.flingList) do
             for _,p in ipairs(Players:GetPlayers()) do
-                if playerMatchesName(p, n) and targetIsAlive(p) and not isWhitelisted(p) then
+                if playerMatchesName(p, n) and targetIsAlive(p) then
                     task.spawn(function() executeHitboxKill(p) end)
                     task.wait(0.1)
                 end
@@ -996,6 +958,7 @@ local function killCustomNow()
     end)
 end
 
+-- ============ HANDLETOUCHED KILL ============
 local function fireHandleTouchedKill(targets)
     local char = LP.Character
     if not char then return end
@@ -1039,17 +1002,14 @@ end
 local function handleTouchKillAll()
     local targets = {}
     for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LP and targetIsAlive(p) and not isWhitelisted(p) then table.insert(targets, p) end
+        if p ~= LP and targetIsAlive(p) then table.insert(targets, p) end
     end
     fireHandleTouchedKill(targets)
 end
 
 local function handleTouchKillSheriff()
-    local targets = {}
-    for _, p in ipairs(getLiveSheriffHeroes()) do
-        if not isWhitelisted(p) then table.insert(targets, p) end
-    end
-    if #targets == 0 then _G.__AW_NOTIFY("No Sheriff / Hero (or all locked)") return end
+    local targets = getLiveSheriffHeroes()
+    if #targets == 0 then _G.__AW_NOTIFY("No Sheriff / Hero") return end
     fireHandleTouchedKill(targets)
 end
 
@@ -1058,14 +1018,120 @@ local function handleTouchKillCustom()
     local targets = {}
     for _, n in ipairs(settingsConfig.flingList) do
         for _, p in ipairs(Players:GetPlayers()) do
-            if playerMatchesName(p, n) and targetIsAlive(p) and not isWhitelisted(p) then
+            if playerMatchesName(p, n) and targetIsAlive(p) then
                 table.insert(targets, p)
             end
         end
     end
-    if #targets == 0 then _G.__AW_NOTIFY("No custom targets in server (or all locked)") return end
+    if #targets == 0 then _G.__AW_NOTIFY("No custom targets in server") return end
     fireHandleTouchedKill(targets)
 end
+
+-- ============ BARRIERS / KILL BRICKS / LOCK ============
+local barrierOrigProps = {}
+local function collectBarrierParts()
+    local parts, seen = {}, {}
+    local containers = {Workspace}
+    local map = Workspace:FindFirstChild("map")
+    if map then table.insert(containers, map) end
+    local lobby = Workspace:FindFirstChild("lobby")
+    if lobby then table.insert(containers, lobby) end
+    for _, container in ipairs(containers) do
+        if container then
+            for _, d in ipairs(container:GetDescendants()) do
+                if d:IsA("BasePart") and not seen[d] then
+                    local n = d.Name
+                    local ln = string.lower(n)
+                    if n == "THICC" or n == "Glitchproof" or n == "Glitch"
+                        or string.find(ln, "glitchproof", 1, true)
+                        or string.find(ln, "glitch", 1, true) then
+                        seen[d] = true
+                        table.insert(parts, d)
+                    end
+                end
+            end
+        end
+    end
+    return parts
+end
+
+local function setBarriersRemoved(remove)
+    local parts = collectBarrierParts()
+    for _, p in ipairs(parts) do
+        pcall(function()
+            if remove then
+                if barrierOrigProps[p] == nil then
+                    barrierOrigProps[p] = {
+                        CanCollide = p.CanCollide,
+                        Transparency = p.Transparency,
+                        CanTouch = p.CanTouch,
+                        CanQuery = p.CanQuery,
+                    }
+                end
+                p.CanCollide = false
+                p.CanTouch = false
+                p.CanQuery = false
+                p.Transparency = 1
+            else
+                local o = barrierOrigProps[p]
+                if o then
+                    p.CanCollide = o.CanCollide
+                    p.CanTouch = o.CanTouch
+                    p.CanQuery = o.CanQuery
+                    p.Transparency = o.Transparency
+                    barrierOrigProps[p] = nil
+                end
+            end
+        end)
+    end
+end
+
+local function removeBarriersNow()
+    local parts = collectBarrierParts()
+    local n = 0
+    for _, p in ipairs(parts) do
+        if p and p.Parent then pcall(function() p:Destroy() end); n = n + 1 end
+    end
+    _G.__AW_NOTIFY("Removed " .. n .. " barrier part(s)")
+end
+
+local function lockBarriersAll(lock)
+    local parts = collectBarrierParts()
+    local n = 0
+    for _, p in ipairs(parts) do
+        pcall(function() p.Anchored = lock end)
+        n = n + 1
+    end
+    _G.__AW_NOTIFY((lock and "Locked " or "Unlocked ") .. n .. " barrier(s)")
+end
+
+local function lockPartsCertain(lock, name)
+    if not name or name == "" then _G.__AW_NOTIFY("Type a name first") return end
+    local ln = string.lower(name)
+    local n = 0
+    for _, container in ipairs({Workspace, Workspace:FindFirstChild("map"), Workspace:FindFirstChild("lobby")}) do
+        if container then
+            for _, d in ipairs(container:GetDescendants()) do
+                if d:IsA("BasePart") and string.lower(d.Name) == ln then
+                    pcall(function() d.Anchored = lock end)
+                    n = n + 1
+                end
+            end
+        end
+    end
+    _G.__AW_NOTIFY((lock and "Locked " or "Unlocked ") .. n .. " part(s) named '" .. name .. "'")
+end
+
+task.spawn(function()
+    local last = nil
+    while true do
+        task.wait(0.25)
+        if state.removeBarriers ~= last then
+            last = state.removeBarriers
+            pcall(function() setBarriersRemoved(state.removeBarriers) end)
+        end
+    end
+end)
 
 local function flingAllNow()
     task.spawn(function()
@@ -1098,9 +1164,7 @@ end
 local function flingMurdererNow()
     task.spawn(function()
         local m = getMurd()
-        if m then
-            if isWhitelisted(m) then _G.__AW_NOTIFY("Murderer is locked") return end
-            task.spawn(function() reliableFling(m, true) end)
+        if m then task.spawn(function() reliableFling(m, true) end)
         else _G.__AW_NOTIFY('No Murderer') end
     end)
 end
@@ -1335,11 +1399,6 @@ local function findShootRemote()
     end
     return nil
 end
-local function getTargetPart()
-    local murd = getMurd()
-    if not murd or not murd.Character then return nil end
-    return murd.Character:FindFirstChild("Head") or murd.Character:FindFirstChild("HumanoidRootPart")
-end
 local function hasClearShot(targetPart)
     if not state.silentAimWallCheck then return true end
     if not targetPart then return true end
@@ -1376,53 +1435,85 @@ RunService.RenderStepped:Connect(function()
     silentAimHead = nil
 end)
 
+-- Y level: 1 = top (head), 0 = middle (torso/root), -1 = floor / below floor
+local function getAimPosAtLevel(char)
+    if not char then return nil end
+    local level = state.magicBulletYLevel or 0
+    local root = char:FindFirstChild("HumanoidRootPart")
+    local head = char:FindFirstChild("Head")
+    local torso = char:FindFirstChild("UpperTorso") or char:FindFirstChild("Torso")
+    if not root then return nil end
+    if level >= 1 then
+        return (head and head.Position) or (root.Position + Vector3.new(0, 1.5, 0))
+    elseif level <= -1 then
+        return root.Position - Vector3.new(0, 6, 0)   -- below the floor
+    else
+        return (torso and torso.Position) or root.Position
+    end
+end
+
 local function fireSilentAtMurderer()
     if not canFire() then return false end
-    local part = getTargetPart()
+    local murd = getMurd()
+    if not murd or not murd.Character then return false end
+    local char = murd.Character
+    local part = char:FindFirstChild("Head") or char:FindFirstChild("HumanoidRootPart")
     if not part then return false end
     if not state.shootThroughWall and not hasClearShot(part) then return false end
     lastShotTime = tick()
     local remote = findShootRemote()
     if not remote then return false end
-    local targetCF = part.CFrame
-    local aimCF = CFrame.new(part.Position + Vector3.new(0, 1.5, 0))
+    local aimPos = getAimPosAtLevel(char)
+    if not aimPos then return false end
+    local targetCF = CFrame.new(aimPos)
     local originCF = Workspace.CurrentCamera and Workspace.CurrentCamera.CFrame or targetCF
+    local yLevel = state.magicBulletYLevel or 0
+    local hum = char:FindFirstChildOfClass("Humanoid")
     pcall(function()
         if remote:IsA("RemoteEvent") then
-            remote:FireServer(originCF, targetCF)
-            remote:FireServer(aimCF, targetCF)
+            remote:FireServer(originCF, targetCF, murd, yLevel)
+            remote:FireServer(aimPos, murd, yLevel)
             remote:FireServer(targetCF)
-            local hum = part.Parent and part.Parent:FindFirstChildOfClass("Humanoid")
+            remote:FireServer(murd)
+            remote:FireServer(murd, yLevel)
             if hum then remote:FireServer(hum) end
         else
-            remote:InvokeServer(originCF, targetCF)
-            remote:InvokeServer(nil, part.Position)
-            remote:InvokeServer(part.Position)
+            remote:InvokeServer(originCF, targetCF, murd, yLevel)
+            remote:InvokeServer(aimPos, murd, yLevel)
+            remote:InvokeServer(murd, yLevel)
         end
     end)
     return true
 end
+
 local function fireThroughWall()
     if not canFire() then return false end
     local murd = getMurd()
     if not murd or not murd.Character then return false end
-    local root = murd.Character:FindFirstChild("HumanoidRootPart")
+    local char = murd.Character
+    local root = char:FindFirstChild("HumanoidRootPart")
     if not root then return false end
     local remote = findShootRemote()
     if not remote then return false end
     lastShotTime = tick()
-    local targetCF = root.CFrame
-    local originCF = CFrame.new(targetCF.Position + Vector3.new(0, 3, 0))
+    local aimPos = getAimPosAtLevel(char) or root.Position
+    local targetCF = CFrame.new(aimPos)
+    local originCF = CFrame.new(aimPos + Vector3.new(0, 3, 0))
+    local yLevel = state.magicBulletYLevel or 0
     pcall(function()
         if remote:IsA("RemoteEvent") then
-            remote:FireServer(originCF, targetCF)
+            remote:FireServer(originCF, targetCF, murd, yLevel)
+            remote:FireServer(aimPos, murd, yLevel)
             remote:FireServer(targetCF)
+            remote:FireServer(murd, yLevel)
         elseif remote:IsA("RemoteFunction") then
-            remote:InvokeServer(originCF, targetCF)
+            remote:InvokeServer(originCF, targetCF, murd, yLevel)
+            remote:InvokeServer(aimPos, murd, yLevel)
         end
     end)
     return true
 end
+
 local function tryShootMurderer()
     if state.shootThroughWall then return fireThroughWall() else return fireSilentAtMurderer() end
 end
@@ -1436,7 +1527,9 @@ local function bindGun(tool)
     unbindGun()
     if not tool or tool.Name ~= "Gun" then return end
     gunActivatedConn = tool.Activated:Connect(function()
-        if state.silentAimEnabled then task.spawn(function() pcall(tryShootMurderer) end) end
+        if state.silentAimEnabled or state.shootThroughWall then
+            task.spawn(function() pcall(tryShootMurderer) end)
+        end
     end)
 end
 local function watchCharacter(char)
@@ -1618,7 +1711,7 @@ UIS.InputEnded:Connect(function(input)
         runShootWorkflow()
         if state.animationsEnabled then
             local s = Instance.new("UIScale", bigWrap)
-            TweenService:Create(s, TweenInfo.new(0.1, EASE_SMOOTH, EASE_OUT), {Scale = 0.88}):Play()
+            TweenService:Create(s, TweenInfo.new(0.1, EASE_SMOOTH), {Scale = 0.88}):Play()
             TweenService:Create(s, TweenInfo.new(0.45, Enum.EasingStyle.Elastic), {Scale = 1}):Play()
             task.delay(0.6, function() if s and s.Parent then s:Destroy() end end)
         end
@@ -1637,12 +1730,13 @@ floatGui.IgnoreGuiInset = true
 floatGui.Parent = PlayerGui
 
 local FLOAT_BUTTON_DEFS = {
-    {id="killAll",       label="Kill All",        type="action", cb=handleTouchKillAll},
-    {id="killSheriff",   label="Kill Sheriff",    type="action", cb=handleTouchKillSheriff},
-    {id="killCustom",    label="Kill Custom",     type="action", cb=handleTouchKillCustom},
+    {id="killAll",       label="Kill All",        type="action", cb=killAllNow},
+    {id="killSheriff",   label="Kill Sheriff",    type="action", cb=killSheriffNow},
+    {id="killCustom",    label="Kill Custom",     type="action", cb=killCustomNow},
     {id="flingMurAction",label="Fling Murderer",  type="action", cb=flingMurdererNow},
     {id="flingSherAction",label="Fling Sheriff",  type="action", cb=flingSheriffNow},
     {id="flingAllAction",label="Fling All",       type="action", cb=flingAllNow},
+    {id="flingCustAction",label="Fling Custom",   type="action", cb=flingCustomNow},
     {id="tpMap",         label="TP Map",          type="action", cb=teleportToMap},
     {id="tpLobby",       label="TP Lobby",        type="action", cb=teleportToLobby},
     {id="tpMur",         label="TP Murderer",     type="action", cb=teleportToMurderer},
@@ -1651,16 +1745,9 @@ local FLOAT_BUTTON_DEFS = {
     {id="grabGun",       label="Grab Gun",        type="action", cb=grabGunNow},
     {id="shoot",         label="Shoot Murderer",  type="action", cb=fullShootSequence},
     {id="shootWall",     label="Shoot Wall",      type="action", cb=fireThroughWall},
-    {id="removeBarriersAction", label="Remove Barriers Now", type="action", cb=function()
-        local removed = 0
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            local n = string.lower(obj.Name)
-            if n == "thicc" or n == "glitchproof" or n == "glitch" then
-                pcall(function() obj:Destroy() removed = removed + 1 end)
-            end
-        end
-        _G.__AW_NOTIFY("Removed " .. removed .. " barrier(s)")
-    end},
+    {id="removeBarriers",label="Remove Barriers", type="action", cb=removeBarriersNow},
+    {id="lockAll",       label="Lock All",        type="action", cb=function() lockBarriersAll(true) end},
+    {id="unlockAll",     label="Unlock All",      type="action", cb=function() lockBarriersAll(false) end},
     {id="wallShoot",     label="Shoot Thru Walls",type="toggle", key="shootThroughWall"},
     {id="silentAim",     label="Silent Aim",      type="toggle", key="silentAimEnabled"},
     {id="silentAimWC",   label="Silent Aim WC",   type="toggle", key="silentAimWallCheck"},
@@ -1702,7 +1789,7 @@ local FLOAT_BUTTON_DEFS = {
     {id="notifySound",   label="Notify Sound",    type="toggle", key="notifySound"},
     {id="signSpam",      label="Sign Spam",       type="toggle", key="signSpam"},
     {id="wallHop",       label="Wall Hop",        type="toggle", key="wallHop"},
-    {id="removeBarriers",label="Remove Barriers", type="toggle", key="removeBarriers"},
+    {id="removeBarriersT",label="Remove Barriers",type="toggle", key="removeBarriers"},
     {id="blueAura",      label="Blue Aura",       type="toggle", key="blueAura"},
     {id="feAnim",        label="FE Anim",         type="toggle", key="feAnimEnabled"},
 }
@@ -2213,6 +2300,7 @@ local function makeInput(page, order, ph, val, onC)
     return box
 end
 
+-- ============ DROPDOWN ============
 local function makeDropdown(page, label, order, options, initial, onSelect)
     local wrapper = Instance.new("Frame", page)
     wrapper.Size = UDim2.new(1, 0, 0, 44)
@@ -2799,6 +2887,7 @@ do
         end
     end)
 
+    -- ============ FE ANIMATIONS ============
     addSect(pages["Anim/Emot"], "FE Animations", 10)
 
     local ANIM_SLOT_PATHS = {
@@ -3256,7 +3345,7 @@ tgg(pages[SECRET_NAME], "Freeze", 58, "freeze")
 addSect(pages[SECRET_NAME], "Combat Aura", 60)
 tgg(pages[SECRET_NAME], "Kill Aura", 61, "killAura")
 tgg(pages[SECRET_NAME], "Fling Aura", 62, "flingAura")
-tgg(pages[SECRET_NAME], "Auto Dodge (25/40 stud knife)", 63, "autoDodge")
+tgg(pages[SECRET_NAME], "Auto Dodge", 63, "autoDodge")
 
 addSect(pages[SECRET_NAME], "Extra Actions", 70)
 addBtn(pages[SECRET_NAME], "Kill Custom Now", 71, killCustomNow)
@@ -3264,6 +3353,426 @@ addBtn(pages[SECRET_NAME], "Fling Custom Now", 72, flingCustomNow)
 
 addSect(pages[SECRET_NAME], "Touch Fling", 80)
 tgg(pages[SECRET_NAME], "Touch Fling (Walk into players)", 81, "touchFling")
+
+addSect(pages[SECRET_NAME], "Radio Abuse", 100)
+do
+    local function findPlaySong()
+        local paths = {
+            {"Remotes", "Inventory", "PlaySong"},
+            {"Remotes", "PlaySong"},
+            {"Remotes", "Gameplay", "PlaySong"},
+            {"Remotes", "Radio", "PlaySong"},
+            {"Remotes", "Inventory", "PlaySound"},
+            {"Remotes", "PlaySound"},
+            {"PlaySong"},
+        }
+        for _, path in ipairs(paths) do
+            local cur = ReplicatedStorage
+            local ok = true
+            for _, name in ipairs(path) do
+                cur = cur and cur:FindFirstChild(name)
+                if not cur then ok = false; break end
+            end
+            if ok and cur and (cur:IsA("RemoteEvent") or cur:IsA("RemoteFunction")) then
+                return cur
+            end
+        end
+        local found = ReplicatedStorage:FindFirstChild("PlaySong", true)
+        if found and (found:IsA("RemoteEvent") or found:IsA("RemoteFunction")) then
+            return found
+        end
+        return nil
+    end
+
+    local function findStopRemote()
+        local stopNames = {"StopSong", "StopSound", "PauseSong", "PauseSound", "StopMusic", "StopRadio", "Stop"}
+        local parent = PlaySong and PlaySong.Parent or (ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Inventory"))
+        if parent then
+            for _, name in ipairs(stopNames) do
+                local r = parent:FindFirstChild(name)
+                if r and (r:IsA("RemoteEvent") or r:IsA("RemoteFunction")) then
+                    return r
+                end
+            end
+        end
+        for _, name in ipairs(stopNames) do
+            local found = ReplicatedStorage:FindFirstChild(name, true)
+            if found and (found:IsA("RemoteEvent") or found:IsA("RemoteFunction")) then
+                return found
+            end
+        end
+        return nil
+    end
+
+    local PlaySong = findPlaySong()
+    task.spawn(function()
+        while true do
+            task.wait(2)
+            if not PlaySong or not PlaySong.Parent then
+                PlaySong = findPlaySong()
+            end
+        end
+    end)
+
+    local songFile = "AW_RadioSongs.json"
+    local savedSongs = {}
+    if isfile and isfile(songFile) and readfile then
+        local ok, data = pcall(function() return HttpService:JSONDecode(readfile(songFile)) end)
+        if ok and type(data) == "table" then savedSongs = data end
+    end
+    local function saveSongs()
+        if writefile then pcall(function() writefile(songFile, HttpService:JSONEncode(savedSongs)) end) end
+    end
+
+    local function firePlaySong(rawId, tryAllFormats)
+        if not PlaySong or not PlaySong.Parent then
+            PlaySong = findPlaySong()
+        end
+        if not PlaySong then
+            _G.__AW_NOTIFY("PlaySong remote not found")
+            return false
+        end
+        local idNum = tonumber(tostring(rawId or ""):match("%d+"))
+        if not idNum then
+            _G.__AW_NOTIFY("Invalid audio ID")
+            return false
+        end
+        local formats = { idNum }
+        if tryAllFormats then
+            table.insert(formats, "rbxassetid://" .. idNum)
+            table.insert(formats, "https://www.roblox.com/asset/?id=" .. idNum)
+        end
+        for i, arg in ipairs(formats) do
+            pcall(function()
+                if PlaySong:IsA("RemoteEvent") then
+                    PlaySong:FireServer(arg)
+                elseif PlaySong:IsA("RemoteFunction") then
+                    PlaySong:InvokeServer(arg)
+                end
+            end)
+            if i < #formats then task.wait(0.08) end
+        end
+        return true
+    end
+
+    local function stopAudio()
+        if not PlaySong or not PlaySong.Parent then
+            PlaySong = findPlaySong()
+        end
+        local stopRemote = findStopRemote()
+        if stopRemote then
+            pcall(function()
+                if stopRemote:IsA("RemoteEvent") then
+                    stopRemote:FireServer()
+                else
+                    stopRemote:InvokeServer()
+                end
+            end)
+            return true
+        end
+        if PlaySong then
+            pcall(function()
+                if PlaySong:IsA("RemoteEvent") then
+                    PlaySong:FireServer(0)
+                    task.wait(0.05)
+                    PlaySong:FireServer("")
+                    task.wait(0.05)
+                    PlaySong:FireServer(nil)
+                else
+                    PlaySong:InvokeServer(0)
+                end
+            end)
+            return true
+        end
+        return false
+    end
+
+    local songWrapper = Instance.new("Frame", pages[SECRET_NAME])
+    songWrapper.Size = UDim2.new(1, 0, 0, 44)
+    songWrapper.LayoutOrder = 101
+    songWrapper.BackgroundTransparency = 1
+    songWrapper.ClipsDescendants = false
+
+    local songHeader = Instance.new("TextButton", songWrapper)
+    songHeader.Size = UDim2.new(1, 0, 0, 44)
+    songHeader.BackgroundColor3 = cc3(settingsConfig.cardColor)
+    songHeader.Text = ""
+    songHeader.AutoButtonColor = false
+    Instance.new("UICorner", songHeader).CornerRadius = UDim.new(0, 10)
+    local songHeaderStroke = Instance.new("UIStroke", songHeader)
+    songHeaderStroke.Color = cc3(settingsConfig.accentColor)
+    songHeaderStroke.Thickness = 1
+    songHeaderStroke.Transparency = 0.6
+
+    local songLbl = Instance.new("TextLabel", songHeader)
+    songLbl.Size = UDim2.new(1, -44, 0, 14)
+    songLbl.Position = UDim2.new(0, 12, 0, 6)
+    songLbl.BackgroundTransparency = 1
+    songLbl.Text = "Selected Song"
+    songLbl.TextColor3 = cc3(settingsConfig.tabTextColor)
+    songLbl.Font = Enum.Font.Gotham
+    songLbl.TextSize = 11
+    songLbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    local songVal = Instance.new("TextLabel", songHeader)
+    songVal.Size = UDim2.new(1, -44, 0, 18)
+    songVal.Position = UDim2.new(0, 12, 0, 22)
+    songVal.BackgroundTransparency = 1
+    songVal.Text = "(none selected)"
+    songVal.TextColor3 = cc3(settingsConfig.textColor)
+    songVal.Font = Enum.Font.GothamBold
+    songVal.TextSize = 14
+    songVal.TextXAlignment = Enum.TextXAlignment.Left
+    songVal.TextTruncate = Enum.TextTruncate.AtEnd
+
+    local songArrow = Instance.new("TextLabel", songHeader)
+    songArrow.Size = UDim2.new(0, 24, 0, 24)
+    songArrow.Position = UDim2.new(1, -32, 0.5, -12)
+    songArrow.BackgroundTransparency = 1
+    songArrow.Text = "▼"
+    songArrow.TextColor3 = cc3(settingsConfig.textColor)
+    songArrow.Font = Enum.Font.GothamBold
+    songArrow.TextSize = 13
+
+    local songList = Instance.new("ScrollingFrame", songWrapper)
+    songList.Size = UDim2.new(1, 0, 0, 0)
+    songList.Position = UDim2.new(0, 0, 0, 46)
+    songList.BackgroundColor3 = cc3(settingsConfig.cardColor)
+    songList.BorderSizePixel = 0
+    songList.Visible = false
+    songList.ClipsDescendants = true
+    songList.ZIndex = 5
+    songList.ScrollBarThickness = 4
+    songList.ScrollBarImageColor3 = cc3(settingsConfig.accentColor)
+    songList.CanvasSize = UDim2.new(0, 0, 0, 0)
+    songList.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    Instance.new("UICorner", songList).CornerRadius = UDim.new(0, 10)
+    local songListLayout = Instance.new("UIListLayout", songList)
+    songListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    songListLayout.Padding = UDim.new(0, 3)
+    local songListPad = Instance.new("UIPadding", songList)
+    songListPad.PaddingTop = UDim.new(0, 5)
+    songListPad.PaddingBottom = UDim.new(0, 5)
+    songListPad.PaddingLeft = UDim.new(0, 5)
+    songListPad.PaddingRight = UDim.new(0, 5)
+
+    local songListOpen = false
+    local selectedSongId = state.radioSelectedSongId or ""
+
+    local function findSongById(id)
+        for _, s in ipairs(savedSongs) do
+            if tostring(s.id) == tostring(id) then return s end
+        end
+        return nil
+    end
+
+    local function refreshSongDisplay()
+        local s = findSongById(selectedSongId)
+        if s then
+            songVal.Text = (s.name or s.id)
+        else
+            songVal.Text = "(none selected)"
+            selectedSongId = ""
+            state.radioSelectedSongId = ""
+        end
+    end
+
+    local function rebuildSongList()
+        for _, c in ipairs(songList:GetChildren()) do
+            if c:IsA("TextButton") or c:IsA("TextLabel") then c:Destroy() end
+        end
+        if #savedSongs == 0 then
+            local empty = Instance.new("TextLabel", songList)
+            empty.Size = UDim2.new(1, 0, 0, 34)
+            empty.LayoutOrder = 1
+            empty.BackgroundTransparency = 1
+            empty.Text = "(no saved songs — add one below)"
+            empty.TextColor3 = cc3(settingsConfig.tabTextColor)
+            empty.Font = Enum.Font.Gotham
+            empty.TextSize = 12
+            return
+        end
+        for i, s in ipairs(savedSongs) do
+            local btn = Instance.new("TextButton", songList)
+            btn.Size = UDim2.new(1, 0, 0, 38)
+            btn.LayoutOrder = i
+            btn.BackgroundColor3 = (tostring(s.id) == tostring(selectedSongId)) and cc3(settingsConfig.accentColor) or cc3(settingsConfig.cardHoverColor)
+            btn.Text = (s.name or s.id)
+            btn.TextColor3 = (tostring(s.id) == tostring(selectedSongId)) and Color3.new(0,0,0) or cc3(settingsConfig.textColor)
+            btn.Font = Enum.Font.GothamMedium
+            btn.TextSize = 14
+            btn.TextXAlignment = Enum.TextXAlignment.Left
+            btn.AutoButtonColor = false
+            btn.ZIndex = 6
+            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+            local bp = Instance.new("UIPadding", btn); bp.PaddingLeft = UDim.new(0, 12)
+            btn.MouseEnter:Connect(function()
+                if state.animationsEnabled == false then return end
+                if tostring(s.id) ~= tostring(selectedSongId) then
+                    TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = cc3(settingsConfig.accentColor), TextColor3 = Color3.new(0,0,0)}):Play()
+                end
+            end)
+            btn.MouseLeave:Connect(function()
+                if state.animationsEnabled == false then return end
+                if tostring(s.id) ~= tostring(selectedSongId) then
+                    TweenService:Create(btn, TweenInfo.new(0.15), {BackgroundColor3 = cc3(settingsConfig.cardHoverColor), TextColor3 = cc3(settingsConfig.textColor)}):Play()
+                end
+            end)
+            btn.MouseButton1Click:Connect(function()
+                selectedSongId = tostring(s.id)
+                state.radioSelectedSongId = selectedSongId
+                saveSettings()
+                refreshSongDisplay()
+                setSongListOpen(false)
+                for _, c in ipairs(songList:GetChildren()) do
+                    if c:IsA("TextButton") then
+                        c.BackgroundColor3 = cc3(settingsConfig.cardHoverColor)
+                        c.TextColor3 = cc3(settingsConfig.textColor)
+                    end
+                end
+                btn.BackgroundColor3 = cc3(settingsConfig.accentColor)
+                btn.TextColor3 = Color3.new(0,0,0)
+            end)
+        end
+    end
+
+    function setSongListOpen(want)
+        if songListOpen == want then return end
+        songListOpen = want
+        songArrow.Text = want and "▲" or "▼"
+        if want then
+            rebuildSongList()
+            local visibleCount = math.min(math.max(#savedSongs, 1), 5)
+            local targetH = 10 + visibleCount * 38 + math.max(0, visibleCount - 1) * 3
+            songList.Visible = true
+            songList.Size = UDim2.new(1, 0, 0, 0)
+            TweenService:Create(songList, TweenInfo.new(0.30, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, targetH)}):Play()
+            TweenService:Create(songWrapper, TweenInfo.new(0.30, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, 44 + targetH + 2)}):Play()
+        else
+            TweenService:Create(songList, TweenInfo.new(0.22, EASE_SMOOTH, EASE_IN), {Size = UDim2.new(1, 0, 0, 0)}):Play()
+            TweenService:Create(songWrapper, TweenInfo.new(0.22, EASE_SMOOTH, EASE_IN), {Size = UDim2.new(1, 0, 0, 44)}):Play()
+            task.delay(0.24, function() if not songListOpen then songList.Visible = false end end)
+        end
+    end
+
+    songHeader.MouseButton1Click:Connect(function()
+        setSongListOpen(not songListOpen)
+    end)
+
+    refreshSongDisplay()
+
+    local songInput = makeInput(pages[SECRET_NAME], 102, "Audio ID to add...", "", function() end)
+
+    addBtn(pages[SECRET_NAME], "Add Audio ID", 103, function()
+        local id = tostring(songInput.Text or ""):match("%d+")
+        if not id then _G.__AW_NOTIFY("Invalid audio ID") return end
+        local name = id
+        pcall(function()
+            local info = game:GetService("MarketplaceService"):GetProductInfo(tonumber(id))
+            if info and info.Name then name = info.Name end
+        end)
+        for _, s in ipairs(savedSongs) do
+            if tostring(s.id) == id then _G.__AW_NOTIFY("Already added") return end
+        end
+        table.insert(savedSongs, {name = name, id = id})
+        saveSongs()
+        selectedSongId = id
+        state.radioSelectedSongId = id
+        saveSettings()
+        refreshSongDisplay()
+        if songListOpen then rebuildSongList() end
+        _G.__AW_NOTIFY("Added: " .. name)
+    end)
+
+    addBtn(pages[SECRET_NAME], "Play Audio", 104, function()
+        if not selectedSongId or selectedSongId == "" then
+            _G.__AW_NOTIFY("No song selected")
+            return
+        end
+        local s = findSongById(selectedSongId)
+        if firePlaySong(selectedSongId, true) then
+            _G.__AW_NOTIFY("Playing: " .. ((s and s.name) or selectedSongId))
+        end
+    end)
+
+    addBtn(pages[SECRET_NAME], "Pause / Stop Audio", 105, function()
+        if stopAudio() then
+            _G.__AW_NOTIFY("Audio stopped")
+        else
+            _G.__AW_NOTIFY("Could not stop audio — no stop remote or PlaySong missing")
+        end
+    end)
+
+    addBtn(pages[SECRET_NAME], "Restart Audio", 106, function()
+        if not selectedSongId or selectedSongId == "" then
+            _G.__AW_NOTIFY("No song selected")
+            return
+        end
+        task.spawn(function()
+            stopAudio()
+            task.wait(0.25)
+            local s = findSongById(selectedSongId)
+            if firePlaySong(selectedSongId, true) then
+                _G.__AW_NOTIFY("Restarted: " .. ((s and s.name) or selectedSongId))
+            end
+        end)
+    end)
+
+    addBtn(pages[SECRET_NAME], "Spam Selected (x5)", 107, function()
+        if not selectedSongId or selectedSongId == "" then
+            _G.__AW_NOTIFY("No song selected")
+            return
+        end
+        task.spawn(function()
+            for _ = 1, 5 do
+                firePlaySong(selectedSongId, false)
+                task.wait(0.15)
+            end
+        end)
+    end)
+
+    addBtn(pages[SECRET_NAME], "Delete Selected", 108, function()
+        if not selectedSongId or selectedSongId == "" then
+            _G.__AW_NOTIFY("No song selected")
+            return
+        end
+        for i, s in ipairs(savedSongs) do
+            if tostring(s.id) == tostring(selectedSongId) then
+                table.remove(savedSongs, i)
+                saveSongs()
+                selectedSongId = ""
+                state.radioSelectedSongId = ""
+                saveSettings()
+                refreshSongDisplay()
+                if songListOpen then rebuildSongList() end
+                _G.__AW_NOTIFY("Removed")
+                return
+            end
+        end
+    end)
+
+    addBtn(pages[SECRET_NAME], "Test Remote", 109, function()
+        PlaySong = findPlaySong()
+        if PlaySong then
+            local stopRemote = findStopRemote()
+            if stopRemote then
+                _G.__AW_NOTIFY("PlaySong: " .. PlaySong:GetFullName() .. " | Stop: " .. stopRemote:GetFullName())
+            else
+                _G.__AW_NOTIFY("PlaySong found at: " .. PlaySong:GetFullName() .. " (no stop remote found — fallback will be used)")
+            end
+        else
+            _G.__AW_NOTIFY("PlaySong remote NOT FOUND anywhere in ReplicatedStorage")
+        end
+    end)
+
+    tgg(pages[SECRET_NAME], "Auto Play Audio", 110, "radioAutoPlay")
+    LP.CharacterAdded:Connect(function()
+        if state.radioAutoPlay and state.radioSelectedSongId and state.radioSelectedSongId ~= "" then
+            task.wait(1.5)
+            firePlaySong(state.radioSelectedSongId, true)
+        end
+    end)
+end
 
 addSect(pages[SECRET_NAME], "FE Headless", 120)
 do
@@ -3569,23 +4078,38 @@ tgg(pages["Combat"], "Loop Fling Custom", 25, "loopFlingCustom")
 tgg(pages["Combat"], "Auto Reset: Murderer", 26, "autoResetMurderer")
 tgg(pages["Combat"], "Auto Reset: Sheriff", 27, "autoResetSheriff")
 tgg(pages["Combat"], "Auto Reset: Innocent", 28, "autoResetInnocent")
-addSect(pages["Combat"], "Manual Actions (HandleTouched)", 30)
+addSect(pages["Combat"], "Manual Actions (Fling / Gun)", 30)
 addBtn(pages["Combat"], "Fling Murderer Now", 31, flingMurdererNow)
 addBtn(pages["Combat"], "Fling Sheriff Now", 32, flingSheriffNow)
 addBtn(pages["Combat"], "Fling All Now", 33, flingAllNow)
-addBtn(pages["Combat"], "Kill All (HandleTouched)", 34, handleTouchKillAll)
-addBtn(pages["Combat"], "Kill Sheriff (HandleTouched)", 35, handleTouchKillSheriff)
-addBtn(pages["Combat"], "Kill Custom (HandleTouched)", 36, handleTouchKillCustom)
-addBtn(pages["Combat"], "Grab Gun Now", 37, grabGunNow)
-addSect(pages["Combat"], "Aimbot", 60)
-tgg(pages["Combat"], "Aimbot: Murderer", 61, "aimbotMurderer")
-tgg(pages["Combat"], "Aimbot: Sheriff", 62, "aimbotSheriff")
-makeSlider(pages["Combat"], "Aimbot FOV", 63, state.aimbotFOV or 250, 30, 800, "aimbotFOV")
-makeSlider(pages["Combat"], "Aimbot Smoothness", 64, state.aimbotSmooth or 4, 1, 20, "aimbotSmooth")
-tgg(pages["Combat"], "Aimbot Prediction", 65, "aimbotPredict")
-tgg(pages["Combat"], "Aimbot Visibility Check", 66, "aimbotVisCheck")
-tgg(pages["Combat"], "Aimbot Instant Snap", 67, "aimbotSnap")
-tgg(pages["Combat"], "Aimbot Sticky Target", 68, "aimbotSticky")
+addBtn(pages["Combat"], "Fling Custom Now", 34, flingCustomNow)
+addBtn(pages["Combat"], "Grab Gun Now", 35, grabGunNow)
+addSect(pages["Combat"], "Kill (HandleTouched)", 50)
+addBtn(pages["Combat"], "Kill All (HandleTouched)", 51, handleTouchKillAll)
+addBtn(pages["Combat"], "Kill Sheriff (HandleTouched)", 52, handleTouchKillSheriff)
+addBtn(pages["Combat"], "Kill Custom (HandleTouched)", 53, handleTouchKillCustom)
+addSect(pages["Combat"], "Barriers / Kill Bricks", 70)
+tgg(pages["Combat"], "Remove Barriers (THICC / Glitchproof / Glitch)", 71, "removeBarriers")
+addBtn(pages["Combat"], "Remove Barriers Now (Destroy)", 72, removeBarriersNow)
+addBtn(pages["Combat"], "Lock All Barriers", 73, function() lockBarriersAll(true) end)
+addBtn(pages["Combat"], "Unlock All Barriers", 74, function() lockBarriersAll(false) end)
+do
+    local lockCertainName = ""
+    makeInput(pages["Combat"], 75, "Part name for Lock/Unlock Certain...", "", function(t) lockCertainName = t end)
+    addBtn(pages["Combat"], "Lock Certain (by Name)", 76, function() lockPartsCertain(true, lockCertainName) end)
+    addBtn(pages["Combat"], "Unlock Certain (by Name)", 77, function() lockPartsCertain(false, lockCertainName) end)
+end
+addSect(pages["Combat"], "Magic Bullet Y Level", 80)
+makeSlider(pages["Combat"], "Y Level (-1 = floor, 0 = middle, 1 = top)", 81, state.magicBulletYLevel or 0, -1, 1, "magicBulletYLevel")
+addSect(pages["Combat"], "Aimbot", 90)
+tgg(pages["Combat"], "Aimbot: Murderer", 91, "aimbotMurderer")
+tgg(pages["Combat"], "Aimbot: Sheriff", 92, "aimbotSheriff")
+makeSlider(pages["Combat"], "Aimbot FOV", 93, state.aimbotFOV or 250, 30, 800, "aimbotFOV")
+makeSlider(pages["Combat"], "Aimbot Smoothness", 94, state.aimbotSmooth or 4, 1, 20, "aimbotSmooth")
+tgg(pages["Combat"], "Aimbot Prediction", 95, "aimbotPredict")
+tgg(pages["Combat"], "Aimbot Visibility Check", 96, "aimbotVisCheck")
+tgg(pages["Combat"], "Aimbot Instant Snap", 97, "aimbotSnap")
+tgg(pages["Combat"], "Aimbot Sticky Target", 98, "aimbotSticky")
 
 -- ============ PLAYERS TAB ============
 addSect(pages["Players"], "Add Player (Type Name)", 1)
@@ -3657,9 +4181,8 @@ local function refreshCustomListUI()
         rm.TextSize = 12
         rm.AutoButtonColor = false
         Instance.new("UICorner", rm).CornerRadius = UDim.new(0, 6)
-        local idx = i
         rm.MouseButton1Click:Connect(function()
-            table.remove(settingsConfig.flingList, idx)
+            table.remove(settingsConfig.flingList, i)
             saveSettings()
             refreshCustomListUI()
         end)
@@ -3844,134 +4367,6 @@ tgg(pages["Misc"], "Round Timer", 8, "showRoundTimerCountdown")
 tgg(pages["Misc"], "Murderer Predictor", 9, "murdererPredictor")
 tgg(pages["Misc"], "Murderer Perk Notify", 10, "murdererPerkNotify")
 
-addSect(pages["Misc"], "Barriers", 20)
-tgg(pages["Misc"], "Remove Barriers (THICC / Glitchproof / Glitch)", 21, "removeBarriers")
-addBtn(pages["Misc"], "Remove Barriers Now", 22, function()
-    local removed = 0
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        local n = string.lower(obj.Name)
-        if n == "thicc" or n == "glitchproof" or n == "glitch" then
-            pcall(function() obj:Destroy() removed = removed + 1 end)
-        end
-    end
-    _G.__AW_NOTIFY("Removed " .. removed .. " barrier(s)")
-end)
-
-addSect(pages["Misc"], "Lock / Unlock Players", 30)
-local lockInputBox = makeInput(pages["Misc"], 31, "Player name to lock / unlock...", "", function() end)
-addBtn(pages["Misc"], "Lock Certain", 32, function()
-    local t = (lockInputBox.Text or ""):gsub("^%s+", ""):gsub("%s+$", "")
-    if t == "" then _G.__AW_NOTIFY("Type a name first") return end
-    for _, x in ipairs(settingsConfig.whitelist) do
-        if string.lower(x) == string.lower(t) then _G.__AW_NOTIFY("Already locked") return end
-    end
-    table.insert(settingsConfig.whitelist, t)
-    saveSettings()
-    _G.__AW_NOTIFY("Locked: " .. t)
-    if _G.__AW_REFRESH_LOCK_LIST then pcall(_G.__AW_REFRESH_LOCK_LIST) end
-end)
-addBtn(pages["Misc"], "Unlock Certain", 33, function()
-    local t = (lockInputBox.Text or ""):gsub("^%s+", ""):gsub("%s+$", "")
-    if t == "" then _G.__AW_NOTIFY("Type a name first") return end
-    for i, x in ipairs(settingsConfig.whitelist) do
-        if string.lower(x) == string.lower(t) then
-            table.remove(settingsConfig.whitelist, i)
-            saveSettings()
-            _G.__AW_NOTIFY("Unlocked: " .. t)
-            if _G.__AW_REFRESH_LOCK_LIST then pcall(_G.__AW_REFRESH_LOCK_LIST) end
-            return
-        end
-    end
-    _G.__AW_NOTIFY("Not in lock list")
-end)
-addBtn(pages["Misc"], "Lock All Players", 34, function()
-    local count = 0
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LP then
-            local found = false
-            for _, x in ipairs(settingsConfig.whitelist) do
-                if string.lower(x) == string.lower(p.Name) then found = true break end
-            end
-            if not found then
-                table.insert(settingsConfig.whitelist, p.Name)
-                count = count + 1
-            end
-        end
-    end
-    saveSettings()
-    _G.__AW_NOTIFY("Locked " .. count .. " player(s)")
-    if _G.__AW_REFRESH_LOCK_LIST then pcall(_G.__AW_REFRESH_LOCK_LIST) end
-end)
-addBtn(pages["Misc"], "Unlock All Players", 35, function()
-    settingsConfig.whitelist = {}
-    saveSettings()
-    _G.__AW_NOTIFY("Unlocked all players")
-    if _G.__AW_REFRESH_LOCK_LIST then pcall(_G.__AW_REFRESH_LOCK_LIST) end
-end)
-addSect(pages["Misc"], "Current Lock List", 36)
-
-local lockListContainer = Instance.new("Frame", pages["Misc"])
-lockListContainer.Size = UDim2.new(1, 0, 0, 0)
-lockListContainer.AutomaticSize = Enum.AutomaticSize.Y
-lockListContainer.LayoutOrder = 37
-lockListContainer.BackgroundTransparency = 1
-local llLayout = Instance.new("UIListLayout", lockListContainer)
-llLayout.SortOrder = Enum.SortOrder.LayoutOrder
-llLayout.Padding = UDim.new(0, 4)
-
-local function refreshLockListUI()
-    for _, c in ipairs(lockListContainer:GetChildren()) do
-        if c:IsA("GuiObject") and c ~= llLayout then c:Destroy() end
-    end
-    if #settingsConfig.whitelist == 0 then
-        local empty = Instance.new("TextLabel", lockListContainer)
-        empty.Size = UDim2.new(1, 0, 0, 26)
-        empty.LayoutOrder = 1
-        empty.BackgroundColor3 = cc3(settingsConfig.cardColor)
-        empty.Text = "(no locked players — everyone is a valid target)"
-        empty.TextColor3 = cc3(settingsConfig.tabTextColor)
-        empty.Font = Enum.Font.Gotham
-        empty.TextSize = 11
-        Instance.new("UICorner", empty).CornerRadius = UDim.new(0, 6)
-        return
-    end
-    for i, n in ipairs(settingsConfig.whitelist) do
-        local row = Instance.new("Frame", lockListContainer)
-        row.Size = UDim2.new(1, 0, 0, 30)
-        row.LayoutOrder = i
-        row.BackgroundColor3 = cc3(settingsConfig.cardColor)
-        Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
-        local nl = Instance.new("TextLabel", row)
-        nl.Size = UDim2.new(1, -50, 1, 0)
-        nl.Position = UDim2.new(0, 10, 0, 0)
-        nl.BackgroundTransparency = 1
-        nl.Text = "🔒 " .. n
-        nl.TextColor3 = cc3(settingsConfig.textColor)
-        nl.Font = Enum.Font.GothamMedium
-        nl.TextSize = 11.5
-        nl.TextXAlignment = Enum.TextXAlignment.Left
-        local rm = Instance.new("TextButton", row)
-        rm.Size = UDim2.new(0, 40, 0, 22)
-        rm.Position = UDim2.new(1, -46, 0.5, -11)
-        rm.BackgroundColor3 = Color3.fromRGB(160, 40, 40)
-        rm.Text = "X"
-        rm.TextColor3 = Color3.new(1, 1, 1)
-        rm.Font = Enum.Font.GothamBold
-        rm.TextSize = 12
-        rm.AutoButtonColor = false
-        Instance.new("UICorner", rm).CornerRadius = UDim.new(0, 6)
-        local idx = i
-        rm.MouseButton1Click:Connect(function()
-            table.remove(settingsConfig.whitelist, idx)
-            saveSettings()
-            refreshLockListUI()
-            _G.__AW_NOTIFY("Unlocked")
-        end)
-    end
-end
-_G.__AW_REFRESH_LOCK_LIST = refreshLockListUI
-refreshLockListUI()
-
 -- ============ VOTING TAB ============
 addSect(pages["Voting"], "Live Vote Map Names", 1)
 local voteMapLabels = {}
@@ -4138,64 +4533,22 @@ end
 addSect(pages["Keybinds"], "Instructions", 1)
 do
     local info = Instance.new("TextLabel", pages["Keybinds"])
-    info.Size = UDim2.new(1, 0, 0, 60)
+    info.Size = UDim2.new(1, 0, 0, 48)
     info.LayoutOrder = 2
     info.BackgroundColor3 = cc3(settingsConfig.cardColor)
-    info.Text = "Click [Set] then press a key. Toggle the pill on the left to enable/disable a bind without losing its key."
+    info.Text = "Click [Set] then press a key to bind it."
     info.TextColor3 = cc3(settingsConfig.tabTextColor)
     info.Font = Enum.Font.Gotham
     info.TextSize = 11
     info.TextWrapped = true
     info.TextXAlignment = Enum.TextXAlignment.Left
-    info.TextYAlignment = Enum.TextYAlignment.Center
     Instance.new("UICorner", info).CornerRadius = UDim.new(0, 8)
     local pad = Instance.new("UIPadding", info)
     pad.PaddingLeft = UDim.new(0, 10)
-    pad.PaddingRight = UDim.new(0, 10)
 end
-addSect(pages["Keybinds"], "Bulk Actions", 3)
-addBtn(pages["Keybinds"], "Enable All Keybinds", 4, function()
-    for _, kb in ipairs(KEYBIND_FEATURES) do state.keybindsDisabled[kb.key] = false end
-    saveSettings()
-    if _G.__AW_REFRESH_KB_UI then pcall(_G.__AW_REFRESH_KB_UI) end
-    _G.__AW_NOTIFY("All keybinds enabled")
-end)
-addBtn(pages["Keybinds"], "Disable All Keybinds", 5, function()
-    for _, kb in ipairs(KEYBIND_FEATURES) do
-        state.keybindsDisabled[kb.key] = true
-    end
-    saveSettings()
-    if _G.__AW_REFRESH_KB_UI then pcall(_G.__AW_REFRESH_KB_UI) end
-    _G.__AW_NOTIFY("All keybinds disabled")
-end)
-
 local kbKeyLabels = {}
 local kbSetButtons = {}
-local kbTogglePills = {}
-local kbToggleDots = {}
-local kbTogglePillBacks = {}
 local listeningFor = nil
-
-local function refreshKbEnabledVisual(kbKey)
-    local pill = kbTogglePills[kbKey]
-    local dot = kbToggleDots[kbKey]
-    local pillBack = kbTogglePillBacks[kbKey]
-    if not pill or not dot or not pillBack then return end
-    local on = not state.keybindsDisabled[kbKey]
-    local ac = cc3(settingsConfig.accentColor)
-    pill.BackgroundColor3 = on and ac or Color3.fromRGB(32,32,32)
-    pillBack.BackgroundColor3 = on and ac or Color3.fromRGB(22,22,22)
-    dot.Position = on and UDim2.new(1,-18,0.5,-7) or UDim2.new(0,4,0.5,-7)
-    dot.BackgroundColor3 = on and Color3.new(0,0,0) or Color3.fromRGB(200,200,200)
-end
-
-local function refreshAllKbVisuals()
-    for _, kb in ipairs(KEYBIND_FEATURES) do
-        refreshKbEnabledVisual(kb.key)
-    end
-end
-_G.__AW_REFRESH_KB_UI = refreshAllKbVisuals
-
 local function resetAllSetButtons()
     for _, b in pairs(kbSetButtons) do
         if b and b.Parent then
@@ -4204,56 +4557,21 @@ local function resetAllSetButtons()
         end
     end
 end
-
 for i, kb in ipairs(KEYBIND_FEATURES) do
     local row = Instance.new("Frame", pages["Keybinds"])
-    row.Size = UDim2.new(1, 0, 0, 44)
-    row.LayoutOrder = 100 + i
+    row.Size = UDim2.new(1, 0, 0, 40)
+    row.LayoutOrder = 10 + i
     row.BackgroundColor3 = cc3(settingsConfig.cardColor)
     Instance.new("UICorner", row).CornerRadius = UDim.new(0, 10)
-
-    local pill = Instance.new("Frame", row)
-    pill.Size = UDim2.new(0, 40, 0, 22)
-    pill.Position = UDim2.new(0, 10, 0.5, -11)
-    pill.BackgroundColor3 = cc3(settingsConfig.accentColor)
-    Instance.new("UICorner", pill).CornerRadius = UDim.new(1,0)
-    local pI = Instance.new("Frame", pill)
-    pI.Size = UDim2.new(1,-4,1,-4)
-    pI.Position = UDim2.new(0,2,0,2)
-    pI.BackgroundColor3 = cc3(settingsConfig.accentColor)
-    Instance.new("UICorner", pI).CornerRadius = UDim.new(1,0)
-    local dot = Instance.new("Frame", pill)
-    dot.Size = UDim2.new(0,14,0,14)
-    dot.Position = UDim2.new(1,-18,0.5,-7)
-    dot.BackgroundColor3 = Color3.new(0,0,0)
-    Instance.new("UICorner", dot).CornerRadius = UDim.new(1,0)
-    kbTogglePills[kb.key] = pill
-    kbToggleDots[kb.key] = dot
-    kbTogglePillBacks[kb.key] = pI
-
-    local pillHit = Instance.new("TextButton", row)
-    pillHit.Size = UDim2.new(0, 40, 0, 22)
-    pillHit.Position = UDim2.new(0, 10, 0.5, -11)
-    pillHit.BackgroundTransparency = 1
-    pillHit.Text = ""
-    pillHit.AutoButtonColor = false
-    pillHit.MouseButton1Click:Connect(function()
-        state.keybindsDisabled[kb.key] = not state.keybindsDisabled[kb.key]
-        refreshKbEnabledVisual(kb.key)
-        saveSettings()
-        _G.__AW_NOTIFY(kb.label .. " keybind " .. (state.keybindsDisabled[kb.key] and "disabled" or "enabled"))
-    end)
-
     local nameLbl = Instance.new("TextLabel", row)
     nameLbl.Size = UDim2.new(0.5, 0, 1, 0)
-    nameLbl.Position = UDim2.new(0, 58, 0, 0)
+    nameLbl.Position = UDim2.new(0, 12, 0, 0)
     nameLbl.BackgroundTransparency = 1
     nameLbl.Text = kb.label
     nameLbl.TextColor3 = cc3(settingsConfig.textColor)
     nameLbl.Font = Enum.Font.GothamMedium
     nameLbl.TextSize = 12
     nameLbl.TextXAlignment = Enum.TextXAlignment.Left
-
     local keyLbl = Instance.new("TextLabel", row)
     keyLbl.Size = UDim2.new(0, 56, 0, 26)
     keyLbl.Position = UDim2.new(1, -178, 0.5, -13)
@@ -4264,7 +4582,6 @@ for i, kb in ipairs(KEYBIND_FEATURES) do
     keyLbl.TextSize = 12
     Instance.new("UICorner", keyLbl).CornerRadius = UDim.new(0, 6)
     kbKeyLabels[kb.key] = keyLbl
-
     local setBtn = Instance.new("TextButton", row)
     setBtn.Size = UDim2.new(0, 52, 0, 26)
     setBtn.Position = UDim2.new(1, -116, 0.5, -13)
@@ -4276,7 +4593,6 @@ for i, kb in ipairs(KEYBIND_FEATURES) do
     setBtn.AutoButtonColor = false
     Instance.new("UICorner", setBtn).CornerRadius = UDim.new(0, 6)
     kbSetButtons[kb.key] = setBtn
-
     local clearBtn = Instance.new("TextButton", row)
     clearBtn.Size = UDim2.new(0, 52, 0, 26)
     clearBtn.Position = UDim2.new(1, -58, 0.5, -13)
@@ -4287,7 +4603,6 @@ for i, kb in ipairs(KEYBIND_FEATURES) do
     clearBtn.TextSize = 11
     clearBtn.AutoButtonColor = false
     Instance.new("UICorner", clearBtn).CornerRadius = UDim.new(0, 6)
-
     setBtn.MouseButton1Click:Connect(function()
         resetAllSetButtons()
         listeningFor = kb.key
@@ -4300,30 +4615,23 @@ for i, kb in ipairs(KEYBIND_FEATURES) do
         saveSettings()
     end)
 end
-refreshAllKbVisuals()
-
-addSect(pages["Keybinds"], "Reset", 900)
-addBtn(pages["Keybinds"], "Reset All Keybinds to Defaults", 901, function()
+addSect(pages["Keybinds"], "Reset", 200)
+addBtn(pages["Keybinds"], "Reset All Keybinds to Defaults", 201, function()
     for _, kb in ipairs(KEYBIND_FEATURES) do
         state.keybinds[kb.key] = kb.default
-        state.keybindsDisabled[kb.key] = false
     end
     for k, lbl in pairs(kbKeyLabels) do
         lbl.Text = string.upper(state.keybinds[k] or "-")
     end
-    refreshAllKbVisuals()
     saveSettings()
     _G.__AW_NOTIFY("All keybinds reset")
 end)
-
 UIS.InputBegan:Connect(function(input, gameProcessed)
     if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
     if listeningFor then
         state.keybinds[listeningFor] = input.KeyCode.Name
-        state.keybindsDisabled[listeningFor] = false
         local lbl = kbKeyLabels[listeningFor]
         if lbl then lbl.Text = string.upper(input.KeyCode.Name) end
-        refreshKbEnabledVisual(listeningFor)
         listeningFor = nil
         resetAllSetButtons()
         saveSettings()
@@ -4334,9 +4642,6 @@ UIS.InputBegan:Connect(function(input, gameProcessed)
     if UIS:GetFocusedTextBox() then return end
     for feature, keyName in pairs(state.keybinds) do
         if keyName and keyName ~= "" and input.KeyCode.Name == keyName then
-            if state.keybindsDisabled[feature] then
-                return
-            end
             if state[feature] ~= nil and type(state[feature]) == "boolean" then
                 local ns = not state[feature]
                 state[feature] = ns
@@ -4732,36 +5037,22 @@ task.spawn(function()
     end
 end)
 
--- ============ ROUND-START STATE REFRESH ============
+-- ============ SILENT LOOP REFRESH ============
 task.spawn(function()
     local wasInRound = false
-    local REFRESH_KEYS = {
-        "loopFlingAll", "loopFlingMur", "loopFlingSheriff", "loopFlingCustom",
-        "flyEnabled", "noclip", "invisibleEnabled", "bunnyHop", "infJumpEnabled",
-        "speedEnabled", "speedGlitch", "jumpEnabled",
-        "autoShootMurderer", "silentAimEnabled", "shootThroughWall",
-        "killAura", "flingAura", "autoDodge", "touchFling",
-        "autoKillAll", "autoResetMurderer", "autoResetSheriff", "autoResetInnocent",
-        "hitboxExpander", "blueAura", "wallHop", "wallHopFlick",
-        "headless1", "headless2", "headless3",
-        "korbloxEnabled", "korbloxFE", "feAnimEnabled",
-        "signSpam", "autoGetGG", "removeBarriers",
-    }
+    local LOOP_KEYS = {"loopFlingAll", "loopFlingMur", "loopFlingSheriff", "loopFlingCustom"}
     while true do
         task.wait(0.25)
         local nowInRound = isInRound()
         if nowInRound and not wasInRound then
             local enabled = {}
-            for _, k in ipairs(REFRESH_KEYS) do
+            for _, k in ipairs(LOOP_KEYS) do
                 if state[k] then enabled[k] = true end
             end
             if next(enabled) then
                 for k in pairs(enabled) do state[k] = false end
-                task.wait(0.45)
+                task.wait(0.4)
                 for k in pairs(enabled) do state[k] = true end
-                local n = 0
-                for _ in pairs(enabled) do n = n + 1 end
-                _G.__AW_NOTIFY("Refreshed " .. n .. " feature(s) for new round")
             end
         end
         wasInRound = nowInRound
@@ -4912,7 +5203,7 @@ task.spawn(function()
                 local myRoot = LP.Character:FindFirstChild("HumanoidRootPart")
                 if myRoot then
                     for _, p in ipairs(Players:GetPlayers()) do
-                        if p ~= LP and targetIsAlive(p) and not isWhitelisted(p) then
+                        if p ~= LP and targetIsAlive(p) then
                             local pr = p.Character and p.Character:FindFirstChild("HumanoidRootPart")
                             if pr and (myRoot.Position - pr.Position).Magnitude <= 8 then
                                 task.spawn(function() executeHitboxKill(p) end)
@@ -4972,67 +5263,48 @@ task.spawn(function()
     end
 end)
 
--- ============ WALL HOP LOOP (fixed) ============
-task.spawn(function()
+-- ============ WALL HOP LOOP ============
+do
     local rayParams = RaycastParams.new()
     rayParams.FilterType = Enum.RaycastFilterType.Exclude
     local lastHop = 0
-    while true do
-        task.wait(0.03)
-        if state.wallHop and alive() then
-            local char = LP.Character
-            local root = char and char:FindFirstChild("HumanoidRootPart")
-            local hum  = char and char:FindFirstChildOfClass("Humanoid")
-            if root and hum then
-                local humState = hum:GetState()
-                local inAir = (humState == Enum.HumanoidStateType.Freefall
-                            or humState == Enum.HumanoidStateType.Jumping)
-                if inAir and UIS:IsKeyDown(Enum.KeyCode.Space) and tick() - lastHop > 0.15 then
+    task.spawn(function()
+        while true do
+            task.wait(0.02)
+            if state.wallHop and alive() then
+                local char = LP.Character
+                local root = char:FindFirstChild("HumanoidRootPart")
+                local hum = char:FindFirstChildOfClass("Humanoid")
+                if root and hum and UIS:IsKeyDown(Enum.KeyCode.Space) then
                     rayParams.FilterDescendantsInstances = {char}
                     local dirs = {
                         root.CFrame.LookVector,
                         -root.CFrame.LookVector,
                         root.CFrame.RightVector,
                         -root.CFrame.RightVector,
+                        hum.MoveDirection,
                     }
-                    for _, d in ipairs(dirs) do
-                        local hit = Workspace:Raycast(root.Position, d * 3.2, rayParams)
-                        if hit and hit.Instance then
-                            local n = hit.Normal
-                            local vel = root.AssemblyLinearVelocity
-                            root.AssemblyLinearVelocity = Vector3.new(
-                                n.X * 28,
-                                math.max(vel.Y, 48),
-                                n.Z * 28
-                            )
-                            if state.wallHopFlick then
-                                root.CFrame = CFrame.lookAt(root.Position, root.Position + n)
-                            end
-                            pcall(function() hum:ChangeState(Enum.HumanoidStateType.Jumping) end)
-                            lastHop = tick()
-                            break
+                    local hit = nil
+                    for _, dir in ipairs(dirs) do
+                        if dir.Magnitude > 0.05 then
+                            local h = Workspace:Raycast(root.Position, dir.Unit * 3, rayParams)
+                            if h then hit = h break end
+                        end
+                    end
+                    if hit and tick() - lastHop > 0.06 then
+                        lastHop = tick()
+                        pcall(function() hum:ApplyImpulse(Vector3.new(0, 55, 0)) end)
+                        pcall(function() hum:ChangeState(Enum.HumanoidStateType.Jumping) end)
+                        if state.wallHopFlick then
+                            local newCF = CFrame.lookAt(root.Position, root.Position + hit.Normal)
+                            root.CFrame = newCF
                         end
                     end
                 end
             end
         end
-    end
-end)
-
--- ============ BARRIER REMOVAL LOOP ============
-task.spawn(function()
-    while true do
-        task.wait(0.5)
-        if state.removeBarriers then
-            for _, obj in ipairs(Workspace:GetDescendants()) do
-                local n = string.lower(obj.Name)
-                if n == "thicc" or n == "glitchproof" or n == "glitch" then
-                    pcall(function() obj:Destroy() end)
-                end
-            end
-        end
-    end
-end)
+    end)
+end
 
 -- ============ INVISIBILITY SYSTEM ============
 local INVIS_POSITION = Vector3.new(-25.95, 84, 3537.55)
@@ -5135,28 +5407,18 @@ LP.CharacterAdded:Connect(function()
     end
 end)
 
--- ============ AUTO DODGE (Knife detection, 25/40 stud) ============
 task.spawn(function()
     while true do
         task.wait(0.15)
         if state.autoDodge and alive() and not isLocalFlinging then
-            local holder = findKnifeHolder()
-            local myRoot = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-            if holder and holder.Character and myRoot then
-                local hRoot = holder.Character:FindFirstChild("HumanoidRootPart")
-                if hRoot then
-                    local dist = (myRoot.Position - hRoot.Position).Magnitude
-                    if not dodgeActive and dist <= 25 then
-                        dodgeActive = true
-                        _G.__AW_NOTIFY('<font color="#ff5a5a">Knife within 25 studs</font> — going invisible')
-                    elseif dodgeActive and dist >= 40 then
-                        dodgeActive = false
-                        _G.__AW_NOTIFY('<font color="#5aff8c">Knife holder is 40+ studs away</font> — visible again')
-                    end
-                end
-            else
-                if dodgeActive then
-                    dodgeActive = false
+            local m = getMurd()
+            local myRoot = LP.Character:FindFirstChild("HumanoidRootPart")
+            if m and m.Character and myRoot then
+                local mRoot = m.Character:FindFirstChild("HumanoidRootPart")
+                if mRoot then
+                    local dist = (myRoot.Position - mRoot.Position).Magnitude
+                    if not dodgeActive and dist < 20 then dodgeActive = true
+                    elseif dodgeActive and dist > 30 then dodgeActive = false end
                 end
             end
         elseif dodgeActive then
