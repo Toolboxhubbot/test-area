@@ -1,4 +1,4 @@
--- Appleware
+-- Appleware - Fully Updated
 if _G.ApplewareLoaded and _G.ApplewareUnload then
 local r=nil
 local pg=Instance.new("ScreenGui") pg.Name="AW_ReloadPrompt" pg.ResetOnSpawn=false pg.DisplayOrder=9999999 pg.IgnoreGuiInset=true
@@ -66,7 +66,7 @@ mainX=0.5,mainY=0.5,openX=0.014,openY=0.28,fullBagGate=false,bagTarget=40,
 floatButtonsEnabled=false,floatButtonSize=68,floatButtonShape="circle",
 floatButtonPositions={},floatEnabledButtons={},hitboxExpander=false,hitboxExpanderSize=15,
 hitboxExpanderTarget="murderer",keybinds={},playerSearchText="",playerListOpen=true,
-korbloxEnabled=false,korbloxFE=false,signSpam=false,autoGetGG=false,
+korbloxEnabled=false,korbloxFE=false,removeKorblox=false,signSpam=false,autoGetGG=false,
 fpsPingMonitor=false,fpsPingColor=false,disableTrading=false,
 wallHop=false,wallHopFlick=false,removeBarriers=false,
 blueAura=false,blueAuraStuds=10,feAnimEnabled=false,
@@ -122,7 +122,7 @@ espPlayers="ESP",espGunDrop="Gun ESP",espTeamColor="Team Colors",
 espMurderer="ESP Mur",espSheriff="ESP Sher",espHero="ESP Hero",espInnocent="ESP Inno",
 espHighlight="ESP HL",espOutline="ESP Outline",espFill="ESP Fill",espShowName="ESP Name",
 espShowRole="ESP Role",espShowDistance="ESP Dist",touchFling="Touch Fling",
-hitboxExpander="Hitbox Exp",korbloxEnabled="Korblox",korbloxFE="FE Korblox",
+hitboxExpander="Hitbox Exp",korbloxEnabled="Korblox",korbloxFE="FE Korblox",removeKorblox="Remove Korblox",
 signSpam="Sign Spam",autoGetGG="Auto GG",fpsPingMonitor="FPS Monitor",fpsPingColor="Color FPS",
 disableTrading="No Trade",wallHop="Wall Hop",wallHopFlick="Wall Hop Flick",
 removeBarriers="Remove Barriers",blueAura="Blue Aura",feAnimEnabled="FE Anim",
@@ -184,7 +184,7 @@ task.delay(i*0.02,function() if not c.Parent then return end
 if c:IsA("Frame") or c:IsA("TextButton") then TweenService:Create(c,TweenInfo.new(0.5,EAB,EAO),{BackgroundTransparency=sb,Position=op}):Play() end
 if stt then TweenService:Create(c,TweenInfo.new(0.4,EASF),{TextTransparency=stt}):Play() end end) end end
 
--- Notifications - ALWAYS ENABLED (removed uiVisNotifs gate)
+-- Notifications
 NG=Instance.new("ScreenGui")
 NG.Name="AWNotes" NG.ResetOnSpawn=false NG.DisplayOrder=999998 NG.IgnoreGuiInset=true NG.Parent=PlayerGui
 NC=Instance.new("Frame",NG)
@@ -360,6 +360,7 @@ rp.AssemblyLinearVelocity=Vector3.new(0,-50000,0) rp.AssemblyAngularVelocity=Vec
 local d=tr.Position-rp.Position if d.Magnitude>0.01 then bv.Velocity=d.Unit*50000 end bg.CFrame=rp.CFrame end end)
 local to=tick()+RESET_DURATION+1 while activeResets[tp.UserId] and tick()<to do task.wait(0.05) end cln() return true end
 
+-- HANDLE TOUCHED KILL (Replaces Hitbox execution for buttons)
 local function FHTK(tg)
 local ch=LP.Character if not ch then return end
 local k=ch:FindFirstChild("Knife") or ET("Knife") if not k then _G.__AW_NOTIFY("No Knife") return end
@@ -622,7 +623,7 @@ state.bigButtonX=BW.Position.X.Scale state.bigButtonY=BW.Position.Y.Scale RSW()
 if state.animationsEnabled then
 local s=Instance.new("UIScale",BW)
 TweenService:Create(s,TweenInfo.new(0.1,EAS),{Scale=0.88}):Play()
-TweenService:Create(s,TweenInfo.new(0.45,Enum.EasingStyle.Elastic),{Scale=1}):Play()
+TweenService:Create(s,TweenInfo.new(0.45,Enum.EasingStyle.Elastic,{Scale=1}):Play()
 task.delay(0.6,function() if s and s.Parent then s:Destroy() end end) end
 else state.bigButtonX=BW.Position.X.Scale state.bigButtonY=BW.Position.Y.Scale saveSettings() end end)
 
@@ -678,7 +679,8 @@ FBD={
 {id="removeBarriersT",label="Remove Barriers",type="toggle",key="removeBarriers"},
 {id="voidPlatform",label="Void Platform",type="toggle",key="voidPlatform"},{id="blueAura",label="Blue Aura",type="toggle",key="blueAura"},
 {id="feAnim",label="FE Anim",type="toggle",key="feAnimEnabled"},{id="autoKillNear",label="Auto Kill Near",type="toggle",key="autoKillMurdererNearby"},
-{id="spinBot",label="Spin Bot",type="toggle",key="spinBot"},{id="sheriffFlickT",label="Sheriff Flick",type="toggle",key="sheriffFlickToggle"}}
+{id="spinBot",label="Spin Bot",type="toggle",key="spinBot"},{id="sheriffFlickT",label="Sheriff Flick",type="toggle",key="sheriffFlickToggle"},
+{id="removeKorbloxT",label="Remove Korblox",type="toggle",key="removeKorblox"}}
 FBM={} for _,d in ipairs(FBD) do FBM[d.id]=d end
 state.floatEnabledButtons=state.floatEnabledButtons or {}
 for _,d in ipairs(FBD) do if state.floatEnabledButtons[d.id]==nil then state.floatEnabledButtons[d.id]=false end end
@@ -941,6 +943,7 @@ ob.MouseButton1Click:Connect(function() cur=o vl.Text=tostring(o) SO(false) if o
 hd.MouseButton1Click:Connect(function() SO(not op) end)
 return wr,function() return cur end,function(nv) cur=nv vl.Text=tostring(nv) end end
 
+-- SECRET TAB
 ASEC(pages[SEC],"Barriers / Kill Bricks",1)
 TGG(pages[SEC],"Auto Remove Barriers + Kill Bricks",2,"removeBarriers")
 ABN(pages[SEC],"Remove Now",3,removeBarriersNow)
@@ -964,7 +967,7 @@ TGG(pages[SEC],"Enable Wall Hop (Infinite Jump on Wall)",41,"wallHop")
 TGG(pages[SEC],"Wall Hop Flick (90 Camera)",42,"wallHopFlick")
 ASEC(pages[SEC],"Spin Bot",100)
 TGG(pages[SEC],"Enable Spin Bot",101,"spinBot")
-MSL(pages[SEC],"Spin Speed (1-1000)",102,state.spinBotSpeed or 20,1,1000,"spinBotSpeed")
+MSL(pages[SEC],"Spin Speed (1-5000)",102,state.spinBotSpeed or 20,1,5000,"spinBotSpeed")
 ASEC(pages[SEC],"Fly / Noclip",70)
 TGG(pages[SEC],"Fly",71,"flyEnabled")
 MSL(pages[SEC],"Fly Speed",72,state.flySpeed or 50,10,300,"flySpeed")
@@ -992,6 +995,18 @@ MSL(pages[SEC],"Aura Range",32,state.blueAuraStuds or 10,5,50,"blueAuraStuds")
 ASEC(pages[SEC],"Korblox",150)
 TGG(pages[SEC],"Korblox",151,"korbloxEnabled")
 TGG(pages[SEC],"FE Korblox",152,"korbloxFE")
+TGG(pages[SEC],"Always Remove Korblox",153,"removeKorblox")
+ABN(pages[SEC],"Force Remove Korblox Now",154,function()
+local ch=LP.Character
+if ch then
+local leg=ch:FindFirstChild("RightUpperLeg") or ch:FindFirstChild("Right Leg")
+local lower=ch:FindFirstChild("RightLowerLeg") or ch:FindFirstChild("Right Leg")
+local foot=ch:FindFirstChild("RightFoot") or ch:FindFirstChild("Right Foot")
+if leg and leg:IsA("BasePart") then pcall(function() leg.Color=Color3.fromRGB(255,255,0) leg.Material=Enum.Material.SmoothPlastic leg.Size=Vector3.new(1,2,1) end) end
+if lower and lower:IsA("BasePart") then pcall(function() lower.Color=Color3.fromRGB(255,255,0) lower.Material=Enum.Material.SmoothPlastic lower.Size=Vector3.new(1,2,1) end) end
+if foot and foot:IsA("BasePart") then pcall(function() foot.Color=Color3.fromRGB(255,255,0) foot.Material=Enum.Material.SmoothPlastic foot.Size=Vector3.new(1,1,1) foot.Transparency=0 end) end
+end
+_G.__AW_NOTIFY("Korblox removed") end)
 ASEC(pages[SEC],"Sign Spam",160)
 TGG(pages[SEC],"Sign Spam",161,"signSpam")
 TGG(pages[SEC],"Auto GG",162,"autoGetGG")
@@ -1011,11 +1026,13 @@ local cb=Instance.new("TextLabel",c2) cb.Size=UDim2.new(1,-20,1,-40) cb.Position
 cb.BackgroundTransparency=1 cb.Text="lzzzx, noir (7yd7)" cb.TextColor3=cc(SC.textColor)
 cb.Font=Enum.Font.Gotham cb.TextSize=12 cb.TextXAlignment=Enum.TextXAlignment.Left cb.TextYAlignment=Enum.TextYAlignment.Top end
 
+-- FARM TAB
 TGG(pages["Farm"],"Farm",1,"farm")
 TGG(pages["Farm"],"XP Farm",2,"xpFarm")
 MSL(pages["Farm"],"Tween Speed",3,SC.tweenSpeed or 25,1,100,"tweenSpeed",function(v) SC.tweenSpeed=v end)
 TGG(pages["Farm"],"Full Bag Gate",6,"fullBagGate")
 
+-- COMBAT TAB
 ASEC(pages["Combat"],"Silent Aim",1)
 TGG(pages["Combat"],"Silent Aim",2,"silentAimEnabled")
 TGG(pages["Combat"],"Silent Aim Wall Check",3,"silentAimWallCheck")
@@ -1078,6 +1095,7 @@ TGG(pages["Combat"],"Aimbot Sheriff",92,"aimbotSheriff")
 MSL(pages["Combat"],"Aimbot FOV",93,state.aimbotFOV or 250,30,800,"aimbotFOV")
 MSL(pages["Combat"],"Aimbot Smoothness",94,state.aimbotSmooth or 4,1,20,"aimbotSmooth")
 
+-- PLAYERS TAB
 ASEC(pages["Players"],"All Players In Server",1)
 playerListToggleBtn=ABN(pages["Players"],"Close Player List",2,function() end)
 refreshBtn=ABN(pages["Players"],"Refresh Player List",3,function() end)
@@ -1130,6 +1148,7 @@ if state.playerListOpen then RPL() end end)
 refreshBtn.MouseButton1Click:Connect(function() RPL() RCL() _G.__AW_NOTIFY("Refreshed") end)
 task.defer(RPL)
 
+-- TELEPORT TAB
 ASEC(pages["Teleport"],"Locations",1)
 ABN(pages["Teleport"],"Teleport to Lobby",2,TTL)
 ABN(pages["Teleport"],"Teleport to Map",3,function() TTM(false) end)
@@ -1145,6 +1164,7 @@ TGG(pages["Teleport"],"Loop TP Murderer",23,"loopTpMurderer")
 TGG(pages["Teleport"],"Loop TP Sheriff",24,"loopTpSheriff")
 TGG(pages["Teleport"],"Loop TP Custom",25,"loopTpCustom")
 
+-- ESP TAB
 ASEC(pages["ESP"],"Player ESP",1)
 TGG(pages["ESP"],"Player ESP",2,"espPlayers")
 TGG(pages["ESP"],"Team Colors",3,"espTeamColor")
@@ -1163,10 +1183,12 @@ MSL(pages["ESP"],"Text Size",32,state.espTextSize or 14,8,30,"espTextSize")
 MSL(pages["ESP"],"Max Distance",33,state.espMaxDistance or 2000,100,5000,"espMaxDistance")
 TGG(pages["ESP"],"Gun Drop ESP",41,"espGunDrop")
 
+-- WEBHOOK TAB
 TGG(pages["Webhook"],"Auto Send",1,"sendOnFull")
 MIN(pages["Webhook"],3,"Webhook URL...",SC.webhookUrl,function(t) SC.webhookUrl=t saveSettings() end)
 MIN(pages["Webhook"],4,"Discord User ID...",SC.discordUserId,function(t) SC.discordUserId=t saveSettings() end)
 
+-- MISC TAB
 TGG(pages["Misc"],"Anti AFK",1,"afk")
 TGG(pages["Misc"],"Anti-Fling",2,"antiFling")
 TGG(pages["Misc"],"Auto Grab Gun",3,"gun")
@@ -1174,6 +1196,7 @@ TGG(pages["Misc"],"Anti-Void",7,"antiVoid")
 TGG(pages["Misc"],"Murderer Predictor",10,"murdererPredictor")
 TGG(pages["Misc"],"Murderer Perk Notify",11,"murdererPerkNotify")
 
+-- VOTING TAB
 ASEC(pages["Voting"],"Live Vote Map Names",1)
 VML={}
 for slot=1,3 do
@@ -1196,6 +1219,7 @@ ABN(pages["Voting"],"Fast Reset ALL 3 Slots",41,function()
 task.spawn(function() for s=1,3 do FVR(s) while voting do task.wait(0.05) end end end) end)
 ABN(pages["Voting"],"Stop All Resets",42,function() voting=false _G.__AW_NOTIFY("Stopped") end)
 
+-- BUTTON TAB
 ASEC(pages["Button"],"Shoot Murderer Button",1)
 TGG(pages["Button"],"Enable Big Button",2,"bigButtonEnabled")
 MSL(pages["Button"],"Button Width",3,state.bigButtonW or 230,80,400,"bigButtonW",function(v) if BW then BW.Size=UDim2.new(0,v,0,state.bigButtonH or 82) end end)
@@ -1222,6 +1246,7 @@ sb.Font=Enum.Font.GothamBold sb.TextSize=11 sb.AutoButtonColor=false
 Instance.new("UICorner",sb).CornerRadius=UDim.new(0,8)
 sb.MouseButton1Click:Connect(function() state.floatButtonShape=sp.id saveSettings() RFB() end) end
 
+-- KEYBINDS TAB
 ASEC(pages["Keybinds"],"Instructions",1)
 do local inf=Instance.new("TextLabel",pages["Keybinds"]) inf.Size=UDim2.new(1,0,0,48) inf.LayoutOrder=2
 inf.BackgroundColor3=cc(SC.cardColor) inf.Text="Click [Set] then press a key."
@@ -1261,21 +1286,21 @@ saveSettings() _G.__AW_NOTIFY("Keybinds reset") end)
 -- HIDE UI FUNCTION
 local uiHidden=false
 local function toggleUI()
-    uiHidden=not uiHidden
-    MW.Visible=not uiHidden
-    if SFV then SFV(not uiHidden) end
-    if BW then BW.Visible=(not uiHidden) and state.bigButtonEnabled end
-    if uiHidden then _G.__AW_NOTIFY("UI Hidden - press "..string.upper(state.keybinds.hideUI or "H").." or type .showui to show")
-    else _G.__AW_NOTIFY("UI Shown") end
+uiHidden=not uiHidden
+MW.Visible=not uiHidden
+if SFV then SFV(not uiHidden) end
+if BW then BW.Visible=(not uiHidden) and state.bigButtonEnabled end
+if uiHidden then _G.__AW_NOTIFY("UI Hidden - press "..string.upper(state.keybinds.hideUI or "H").." or type .showui to show")
+else _G.__AW_NOTIFY("UI Shown") end
 end
 _G.__AW_SHOWUI=function()
-    if uiHidden then uiHidden=false MW.Visible=true if SFV then SFV(true) end
-        if BW then BW.Visible=state.bigButtonEnabled end
-        _G.__AW_NOTIFY("UI Shown") end end
+if uiHidden then uiHidden=false MW.Visible=true if SFV then SFV(true) end
+if BW then BW.Visible=state.bigButtonEnabled end
+_G.__AW_NOTIFY("UI Shown") end end
 _G.__AW_HIDEUI=function()
-    if not uiHidden then uiHidden=true MW.Visible=false if SFV then SFV(false) end
-        if BW then BW.Visible=false end
-        _G.__AW_NOTIFY("UI Hidden") end end
+if not uiHidden then uiHidden=true MW.Visible=false if SFV then SFV(false) end
+if BW then BW.Visible=false end
+_G.__AW_NOTIFY("UI Hidden") end end
 
 UIS.InputBegan:Connect(function(inp,gp)
 if inp.UserInputType~=Enum.UserInputType.Keyboard then return end
@@ -1293,6 +1318,7 @@ _G.__AW_NOTIFY('<font color="'..(ns and "#5aff8c" or "#ff5a5a")..'">'..dn..'</fo
 if ft=="voidPlatform" and not ns then RVP() end
 saveSettings() break end end end end)
 
+-- UI TAB
 ASEC(pages["UI"],"UI Scale",1)
 do local sr=Instance.new("Frame",pages["UI"]) sr.Size=UDim2.new(1,0,0,44) sr.LayoutOrder=2
 sr.BackgroundColor3=cc(SC.cardColor)
@@ -1521,6 +1547,7 @@ task.defer(function() rMV()
 for idStr,on in pairs(state.emoteFloatButtons or {}) do if on then local idN=tonumber(idStr)
 if idN then for _,em in ipairs(EM) do if em.id==idN then bEF(idN,em) break end end end end end end) end
 
+-- FE ANIMATIONS (Fixed default capturing)
 ASEC(pages["Anim/Emot"],"FE Animations",10)
 TGG(pages["Anim/Emot"],"Enable FE Animations",11,"feAnimEnabled")
 do local ASP={idle1={"idle","Animation1"},idle2={"idle","Animation2"},walk={"walk","WalkAnim"},
@@ -1581,6 +1608,7 @@ saveSettings() for _,s in pairs(aSS) do if s then pcall(s,"Default") end end
 APTS("Default",{"idle1","idle2","walk","run","jump","climb","fall","swim"})
 _G.__AW_NOTIFY("Animations reset") end) end
 
+-- OPEN/CLOSE BUTTON
 fb=Instance.new("TextButton",SG2) fb.Size=UDim2.new(0,78,0,34) fb.Position=UDim2.new(state.openX,0,state.openY,0)
 fb.BackgroundColor3=cc(SC.openBtnColor) fb.Text="Close" fb.TextColor3=cc(SC.openBtnTextColor)
 fb.Font=Enum.Font.GothamBold fb.TextSize=12.5 fb.ZIndex=99999 fb.Active=true
@@ -1588,9 +1616,10 @@ Instance.new("UICorner",fb).CornerRadius=UDim.new(0,9)
 fbS=Instance.new("UIStroke",fb) fbS.Color=WK fbS.Transparency=0.4 fbS.Thickness=1.5
 attachSpin(fbS,false,{baseThickness=1.5})
 fb.MouseButton1Click:Connect(function()
-    MW.Visible=not MW.Visible
-    fb.Text=MW.Visible and "Close" or "Open" end)
+MW.Visible=not MW.Visible
+fb.Text=MW.Visible and "Close" or "Open" end)
 
+-- FLY & NOCLIP LOGIC
 flyBV=nil flyBG=nil flyConn=nil flyUpHold=false
 local function startFly()
 local ch=LP.Character if not ch then return end
@@ -1691,75 +1720,71 @@ if tick()-lt>3 then lt=tick() r.Anchored=true r.CFrame=LCF
 r.AssemblyLinearVelocity=Vector3.zero task.wait(0.1)
 if r.Parent then r.Anchored=false end end end end end end)
 
--- SPIN BOT - fixed: keeps spinning while walking/jumping, uses CFrame overwrite preserving position
+-- SPIN BOT (FASTER, FIXED MATH)
 task.spawn(function()
-    local accum=0
-    while true do
-        local dt=RunService.Heartbeat:Wait()
-        if state.spinBot and LP.Character then
-            local hrp=LP.Character:FindFirstChild("HumanoidRootPart")
-            if hrp then
-                accum=accum+dt
-                local rotSpeed=state.spinBotSpeed or 20
-                local rot=math.rad(rotSpeed)*accum
-                local pos=hrp.Position
-                -- Preserve position, only overwrite Y rotation
-                hrp.CFrame=CFrame.new(pos)*CFrame.Angles(0,rot,0)
-            end
-        end
-    end
+local rot=0
+while true do
+local dt=RunService.Heartbeat:Wait()
+if state.spinBot and LP.Character then
+local hrp=LP.Character:FindFirstChild("HumanoidRootPart")
+if hrp then
+rot=(rot+dt*(state.spinBotSpeed or 20))%360
+local pos=hrp.Position
+hrp.CFrame=CFrame.new(pos)*CFrame.Angles(0,math.rad(rot),0)
+end
+end
+end
 end)
 
--- WALL HOP - fixed: no auto jump, only enables infinite jump on wall, camera flick 90
+-- WALL HOP
 do
-    local rp=RaycastParams.new() rp.FilterType=Enum.RaycastFilterType.Exclude
-    local flicking=false
-    task.spawn(function() while true do task.wait(0.03)
-        wallHopInfJump=false
-        if state.wallHop and al() then
-            local ch=LP.Character
-            local rt=ch:FindFirstChild("HumanoidRootPart")
-            local h=ch:FindFirstChildOfClass("Humanoid")
-            if rt and h then
-                rp.FilterDescendantsInstances={ch}
-                local dirs={rt.CFrame.LookVector,-rt.CFrame.LookVector,rt.CFrame.RightVector,-rt.CFrame.RightVector}
-                local hit=nil
-                for _,d in ipairs(dirs) do
-                    if d.Magnitude>0.05 then
-                        local r=Workspace:Raycast(rt.Position,d.Unit*3.5,rp)
-                        if r then hit=r break end
-                    end
-                end
-                if hit then
-                    wallHopInfJump=true
-                    -- If user is holding space AND we haven't flicked recently, flick camera
-                    if state.wallHopFlick and UIS:IsKeyDown(Enum.KeyCode.Space) and not flicking then
-                        flicking=true
-                        local cam=Workspace.CurrentCamera
-                        if cam then
-                            local scf=cam.CFrame
-                            local newCF=CFrame.lookAt(cam.CFrame.Position,cam.CFrame.Position+hit.Normal*10)
-                            cam.CFrame=newCF
-                            task.wait(0.08)
-                            cam.CFrame=scf
-                        end
-                        flicking=false
-                    end
-                end
-            end
-        end
-    end end)
-    -- Infinite jump on wall: player must press space to jump
-    UIS.JumpRequest:Connect(function()
-        if not LP.Character then return end
-        local h=LP.Character:FindFirstChildOfClass("Humanoid")
-        if not h then return end
-        if state.infJumpEnabled or wallHopInfJump then
-            pcall(function() h:ChangeState(Enum.HumanoidStateType.Jumping) end)
-        end
-    end)
+local rp=RaycastParams.new() rp.FilterType=Enum.RaycastFilterType.Exclude
+local flicking=false
+task.spawn(function() while true do task.wait(0.03)
+wallHopInfJump=false
+if state.wallHop and al() then
+local ch=LP.Character
+local rt=ch:FindFirstChild("HumanoidRootPart")
+local h=ch:FindFirstChildOfClass("Humanoid")
+if rt and h then
+rp.FilterDescendantsInstances={ch}
+local dirs={rt.CFrame.LookVector,-rt.CFrame.LookVector,rt.CFrame.RightVector,-rt.CFrame.RightVector}
+local hit=nil
+for _,d in ipairs(dirs) do
+if d.Magnitude>0.05 then
+local r=Workspace:Raycast(rt.Position,d.Unit*3.5,rp)
+if r then hit=r break end
+end
+end
+if hit then
+wallHopInfJump=true
+if state.wallHopFlick and UIS:IsKeyDown(Enum.KeyCode.Space) and not flicking then
+flicking=true
+local cam=Workspace.CurrentCamera
+if cam then
+local scf=cam.CFrame
+local newCF=CFrame.lookAt(cam.CFrame.Position,cam.CFrame.Position+hit.Normal*10)
+cam.CFrame=newCF
+task.wait(0.08)
+cam.CFrame=scf
+end
+flicking=false
+end
+end
+end
+end
+end end)
+UIS.JumpRequest:Connect(function()
+if not LP.Character then return end
+local h=LP.Character:FindFirstChildOfClass("Humanoid")
+if not h then return end
+if state.infJumpEnabled or wallHopInfJump then
+pcall(function() h:ChangeState(Enum.HumanoidStateType.Jumping) end)
+end
+end)
 end
 
+-- INVISIBILITY
 INVIS_POSITION=Vector3.new(-25.95,84,3537.55) invisSeat=nil invisWeld=nil dodgeActive=false
 local function SCIT(ch,t) if not ch then return end
 for _,d in ipairs(ch:GetDescendants()) do if d:IsA("BasePart") or d:IsA("Decal") then pcall(function() d.Transparency=t end) end end end
@@ -1797,6 +1822,7 @@ if not dodgeActive and d<20 then dodgeActive=true
 elseif dodgeActive and d>30 then dodgeActive=false end end end
 elseif dodgeActive then dodgeActive=false end end end)
 
+-- TOUCH FLING
 task.spawn(function()
 if not ReplicatedStorage:FindFirstChild("juisdfj0i32i0eidsuf0iok") then
 local d=Instance.new("Decal") d.Name="juisdfj0i32i0eidsuf0iok" d.Parent=ReplicatedStorage end
@@ -1814,6 +1840,7 @@ RunService.Stepped:Wait()
 if c and c.Parent and hrp and hrp.Parent then
 hrp.Velocity=v+Vector3.new(0,mvl,0) mvl=mvl*-1 end end end end end)
 
+-- AIMBOT
 local CAT=nil
 RunService.RenderStepped:Connect(function(dt)
 if not al() then CAT=nil return end
@@ -1850,6 +1877,7 @@ if sm<=1 then cm.CFrame=ds
 else local al2=math.clamp(1-math.exp(-dt*(60/sm)*0.15),0.05,1)
 cm.CFrame=cm.CFrame:Lerp(ds,al2) end end end)
 
+-- ESP
 EF2=nil EC={} GC2={}
 local function GOE() local f=CoreGui:FindFirstChild("AW_ESP") if f then return f end
 f=PlayerGui:FindFirstChild("AW_ESP") if f then return f end
@@ -1923,6 +1951,7 @@ hl.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop hl.Parent=EF2 hl.Adornee=v GC2[
 for k,v in pairs(GC2) do if not k.Parent or not v.Parent then pcall(function() v:Destroy() end) GC2[k]=nil end end
 else CGE() end end end)
 
+-- FARM LOOP
 HP=CFrame.new(0,-300,0) LCF2=tick() NCO=12 CFT=nil CTC=nil
 local function CCFT() if CFT then pcall(function() CFT:Cancel() end) CFT=nil end CTC=nil end
 task.spawn(function() while true do task.wait(0.05)
@@ -1950,6 +1979,7 @@ local dr=math.clamp(d/(SC.tweenSpeed or 25),0.05,3.3)
 CFT=TweenService:Create(r,TweenInfo.new(dr,Enum.EasingStyle.Linear),{CFrame=tc}) CFT:Play() end end
 elseif tick()-LCF2>NCO then LCF2=tick() if not IL() then TMR() task.wait(1.5) end end end end end end end end)
 
+-- AUTO SHOOT & GUN GRAB
 task.spawn(function() while true do task.wait(0.1)
 if state.autoShootMurderer and IBF() and IIR() and al() then
 if CFF() and GM() then task.spawn(function() pcall(FSS) end) end end end end)
@@ -1959,6 +1989,8 @@ local r=LP.Character:FindFirstChild("HumanoidRootPart")
 if r then for _,v in pairs(Workspace:GetDescendants()) do
 if v.Name=="GunDrop" and v:IsA("BasePart") then
 pcall(function() firetouchinterest(r,v,0) firetouchinterest(r,v,1) end) break end end end end end end)
+
+-- AFK & REJOIN
 pcall(function() local vu=game:GetService("VirtualUser")
 LP.Idled:Connect(function() if state.afk then vu:CaptureController() vu:ClickButton2(Vector2.new()) end end) end)
 QOT=syn and syn.queue_on_teleport or queue_on_teleport or queueonteleport
@@ -1966,6 +1998,8 @@ task.spawn(function() while true do
 if state.autoRejoin and QOT then pcall(function()
 QOT([[task.wait(2) local ts=game:GetService("TeleportService") local p=game:GetService("Players").LocalPlayer ts:Teleport(game.PlaceId, p)]]) end) end
 task.wait(10) end end)
+
+-- AUTO RESET
 task.spawn(function() while true do task.wait(2)
 if al() and IIR() and IBF() then
 local mr=GPR(LP) local sr=false
@@ -1973,6 +2007,8 @@ if state.autoResetMurderer and mr=="Murderer" then sr=true end
 if state.autoResetSheriff and mr=="Sheriff" then sr=true end
 if state.autoResetInnocent and mr=="Innocent" then sr=true end
 if sr then local h=LP.Character:FindFirstChildOfClass("Humanoid") if h then h.Health=0 end end end end end)
+
+-- AUTO KILL & FLING LOOPS
 task.spawn(function() while true do task.wait(1)
 if al() and not state.xpFarm and IBF() then
 if state.autoKillAll then local k=FT("Knife") if k then KAN() end end end end end)
@@ -1990,6 +2026,8 @@ elseif state.loopFlingCustom then
 for _,n in ipairs(SC.flingList) do for _,p in ipairs(Players:GetPlayers()) do
 if PMN(p,n) and not IW(p) and not IRA(p.UserId) then task.spawn(function() RF(p) end) end end end end
 task.wait(1.5) end end end)
+
+-- AURAS
 task.spawn(function() while true do task.wait(0.2)
 if state.killAura and al() then
 local k=FT("Knife")
@@ -2023,10 +2061,14 @@ local pc=p.Character local pr=pc and pc:FindFirstChild("HumanoidRootPart")
 if pr and (mp-pr.Position).Magnitude<=(state.blueAuraStuds or 10) then
 local t=pc:FindFirstChild("UpperTorso") or pc:FindFirstChild("Torso")
 if t then pcall(function() ht:FireServer(t) end) end end end end end end end end end)
+
+-- BARRIERS REMOVAL
 task.spawn(function() while true do task.wait(0.4)
 if state.removeBarriers then pcall(function()
 local parts=collectBarrierParts()
 for _,p in ipairs(parts) do if p and p.Parent then pcall(function() p:Destroy() end) end end end) end end end)
+
+-- VOID PLATFORM
 task.spawn(function() while true do task.wait(0.15)
 if state.voidPlatform then EVP()
 local r=LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
@@ -2036,6 +2078,8 @@ local d=(r.Position-VP).Magnitude
 if d>10 then r.Anchored=true r.CFrame=CFrame.new(VP+Vector3.new(0,3,0))
 task.wait(0.02) if r.Parent then r.Anchored=false end
 r.AssemblyLinearVelocity=Vector3.zero r.AssemblyAngularVelocity=Vector3.zero end end end end end)
+
+-- LOOP TELEPORTS
 task.spawn(function() while true do task.wait(0.6)
 if al() and IIR() and IBF() then
 if state.loopTpMap then pcall(function() TTM(true) end) end
@@ -2043,6 +2087,8 @@ if state.loopTpLobby then pcall(TTL) end
 if state.loopTpMurderer then pcall(TTMU) end
 if state.loopTpSheriff then pcall(TTSH) end
 if state.loopTpCustom then pcall(TTCU) end end end end)
+
+-- ROLE NOTIFICATIONS
 task.spawn(function() local nm=false local ns=false local lp=nil local lr=false
 while true do task.wait(0.3) local ir=IIR()
 if ir and not lr then nm=false ns=false lp=nil end lr=ir
@@ -2054,6 +2100,8 @@ if s then ns=true _G.__AW_NOTIFY('<font color="#5aaaFF"><b>Sheriff:</b></font> '
 if state.murdererPerkNotify then local m=GM()
 if m then local pk=DMP(m)
 if pk and pk~=lp then lp=pk _G.__AW_NOTIFY('<font color="#ffcc66"><b>Perk:</b></font> '..pk) end end end end end end)
+
+-- LOOP RESET ON ROUND START
 task.spawn(function() local wr=false
 local LK={"loopFlingAll","loopFlingMur","loopFlingSheriff","loopFlingCustom"}
 while true do task.wait(0.25)
@@ -2063,6 +2111,7 @@ if next(en) then for k in pairs(en) do state[k]=false end
 task.wait(0.4) for k in pairs(en) do state[k]=true end end end
 wr=nr end end)
 
+-- HITBOX EXPANDER (kept separate for visual modification, not used for kills)
 function getHitboxTargets() local tg={} local md=state.hitboxExpanderTarget or "murderer"
 for _,p in ipairs(Players:GetPlayers()) do
 if p~=LP then local ch=p.Character
@@ -2095,6 +2144,7 @@ for _,p in ipairs(tg) do ts[p]=true applyHitboxToPlayer(p) end
 for _,p in ipairs(Players:GetPlayers()) do if p~=LP and not ts[p] then removeHitboxFromPlayer(p) end end
 else for _,p in ipairs(Players:GetPlayers()) do if p~=LP then removeHitboxFromPlayer(p) end end end end end)
 
+-- BARRIER UTILS
 function isBarrierName(n)
 if n=="THICC" or n=="Glitchproof" or n=="Glitch" then return true end
 if n=="KillBrick" or n=="Kill Brick" or n=="KillBricks" then return true end
@@ -2117,6 +2167,7 @@ local parts=collectBarrierParts() local n=0
 for _,p in ipairs(parts) do if p and p.Parent then pcall(function() p:Destroy() end) n=n+1 end end
 _G.__AW_NOTIFY("Removed "..n.." barrier(s)") end
 
+-- BUTTON LOCKS
 function isIdLocked(id)
 return state.allButtonsLocked or (state.lockedButtons and state.lockedButtons[id]) or false end
 function lockAllButtons(lock)
@@ -2132,6 +2183,7 @@ if not tid then _G.__AW_NOTIFY("Not found") return end
 if lock then state.lockedButtons[tid]=true else state.lockedButtons[tid]=nil end
 _G.__AW_NOTIFY((lock and "Locked " or "Unlocked ")..tid) saveSettings() end
 
+-- FPS & PING MONITOR
 do local Stats=game:GetService("Stats")
 MG=Instance.new("ScreenGui") MG.Name="AW_FPS_Ping" MG.ResetOnSpawn=false MG.DisplayOrder=999992 MG.IgnoreGuiInset=true
 pcall(function() MG.Parent=CoreGui end) if not MG.Parent then MG.Parent=PlayerGui end
@@ -2167,6 +2219,7 @@ else PL.TextColor3=Color3.new(1,1,1) end end end end end)
 task.spawn(function() while true do task.wait(0.3)
 MG.Enabled=state.fpsPingMonitor end end) end
 
+-- SIGN SPAM & AUTO GG
 task.spawn(function()
 local function FST() local ch,bp=LP.Character,LP:FindFirstChild("Backpack")
 for _,c in ipairs((ch and ch:GetChildren()) or {}) do if c:IsA("Tool") and string.find(string.lower(c.Name),"sign",1,true) then return c,ch end end
@@ -2182,8 +2235,10 @@ task.spawn(function() while true do task.wait(1)
 if state.autoGetGG then pcall(function()
 local e=ReplicatedStorage:FindFirstChild("Remotes") e=e and e:FindFirstChild("Extras") e=e and e:FindFirstChild("ReplicateToy")
 if e and e:IsA("RemoteFunction") then e:InvokeServer("GGSign") end end) end end end)
+
+-- KORBLOX & REMOVE KORBLOX
 task.spawn(function() while true do task.wait(0.3)
-if LP.Character and (state.korbloxEnabled or state.korbloxFE) then
+if LP.Character then
 local leg=LP.Character:FindFirstChild("RightUpperLeg") or LP.Character:FindFirstChild("Right Leg")
 local lower=LP.Character:FindFirstChild("RightLowerLeg") or LP.Character:FindFirstChild("Right Leg")
 local foot=LP.Character:FindFirstChild("RightFoot") or LP.Character:FindFirstChild("Right Foot")
@@ -2193,7 +2248,16 @@ if lower and lower:IsA("BasePart") then pcall(function() lower.Color=Color3.from
 if foot and foot:IsA("BasePart") then pcall(function() foot.Color=Color3.fromRGB(0,0,0) foot.Material=Enum.Material.Metal foot.Size=Vector3.new(0.5,0.15,0.8) foot.Transparency=0 end) end
 elseif state.korbloxEnabled then
 if leg and leg:IsA("BasePart") then pcall(function() leg.Color=Color3.fromRGB(0,0,0) leg.Material=Enum.Material.SmoothPlastic leg.Size=Vector3.new(1,0.2,1) end) end
-if foot and foot:IsA("BasePart") then pcall(function() foot.Transparency=1 end) end end end end end)
+if foot and foot:IsA("BasePart") then pcall(function() foot.Transparency=1 end) end
+elseif state.removeKorblox then
+if leg and leg:IsA("BasePart") then pcall(function() leg.Color=Color3.fromRGB(255,255,0) leg.Material=Enum.Material.SmoothPlastic leg.Size=Vector3.new(1,2,1) leg.Transparency=0 end) end
+if lower and lower:IsA("BasePart") then pcall(function() lower.Color=Color3.fromRGB(255,255,0) lower.Material=Enum.Material.SmoothPlastic lower.Size=Vector3.new(1,2,1) lower.Transparency=0 end) end
+if foot and foot:IsA("BasePart") then pcall(function() foot.Color=Color3.fromRGB(255,255,0) foot.Material=Enum.Material.SmoothPlastic foot.Size=Vector3.new(1,1,1) foot.Transparency=0 end) end
+end
+end
+end end)
+
+-- DISABLE TRADING
 task.spawn(function() while true do task.wait(0.5)
 local tr=ReplicatedStorage:FindFirstChild("Trade")
 if tr then local sr=tr:FindFirstChild("SendRequest") local dc=tr:FindFirstChild("DeclineRequest")
@@ -2202,38 +2266,39 @@ if sr and dc and sr:IsA("RemoteFunction") then pcall(function()
 sr.OnClientInvoke=function() pcall(function() dc:FireServer() end) return nil end end) end
 else if sr and sr:IsA("RemoteFunction") then pcall(function() sr.OnClientInvoke=nil end) end end end end end)
 
--- .help command
+-- CHAT COMMANDS
 LP.Chatted:Connect(function(msg)
-    local m=string.lower(msg)
-    if m==".help" then
-        local uk=state.keybinds and state.keybinds.hideUI or "H"
-        if uk=="" then uk="(not set)" end
-        local ht="<b>APPLEWARE COMMANDS</b>\n"
-        ht=ht..".help - show commands\n"
-        ht=ht..".showui - show the main UI\n"
-        ht=ht..".hideui - hide the main UI\n"
-        ht=ht..".unload - unload the script\n\n"
-        ht=ht.."<font color=\"#5aff8c\">UI Toggle Key:</font> "..string.upper(uk).."\n"
-        ht=ht.."Press that key to hide/show UI.\n\n"
-        ht=ht.."<font color=\"#5aaaFF\">Useful Keybinds:</font>\n"
-        ht=ht.."Fly: "..string.upper(state.keybinds.flyEnabled or "-").."\n"
-        ht=ht.."Silent Aim: "..string.upper(state.keybinds.silentAimEnabled or "-").."\n"
-        ht=ht.."Shoot Walls: "..string.upper(state.keybinds.shootThroughWall or "-").."\n"
-        ht=ht.."Noclip: "..string.upper(state.keybinds.noclip or "-").."\n"
-        ht=ht.."Spin Bot: "..string.upper(state.keybinds.spinBot or "-").."\n"
-        ht=ht.."Wall Hop: "..string.upper(state.keybinds.wallHop or "-")
-        _G.__AW_NOTIFY(ht,15)
-    elseif m==".showui" then
-        if _G.__AW_SHOWUI then _G.__AW_SHOWUI() end
-    elseif m==".hideui" then
-        if _G.__AW_HIDEUI then _G.__AW_HIDEUI() end
-    elseif m==".unload" then
-        _G.__AW_NOTIFY("Unloading...")
-        task.wait(0.3)
-        if _G.ApplewareUnload then pcall(function() _G.ApplewareUnload() end) end
-    end
+local m=string.lower(msg)
+if m==".help" then
+local uk=state.keybinds and state.keybinds.hideUI or "H"
+if uk=="" then uk="(not set)" end
+local ht="<b>APPLEWARE COMMANDS</b>\n"
+ht=ht..".help - show commands\n"
+ht=ht..".showui - show the main UI\n"
+ht=ht..".hideui - hide the main UI\n"
+ht=ht..".unload - unload the script\n\n"
+ht=ht.."<font color=\"#5aff8c\">UI Toggle Key:</font> "..string.upper(uk).."\n"
+ht=ht.."Press that key to hide/show UI.\n\n"
+ht=ht.."<font color=\"#5aaaFF\">Useful Keybinds:</font>\n"
+ht=ht.."Fly: "..string.upper(state.keybinds.flyEnabled or "-").."\n"
+ht=ht.."Silent Aim: "..string.upper(state.keybinds.silentAimEnabled or "-").."\n"
+ht=ht.."Shoot Walls: "..string.upper(state.keybinds.shootThroughWall or "-").."\n"
+ht=ht.."Noclip: "..string.upper(state.keybinds.noclip or "-").."\n"
+ht=ht.."Spin Bot: "..string.upper(state.keybinds.spinBot or "-").."\n"
+ht=ht.."Wall Hop: "..string.upper(state.keybinds.wallHop or "-")
+_G.__AW_NOTIFY(ht,15)
+elseif m==".showui" then
+if _G.__AW_SHOWUI then _G.__AW_SHOWUI() end
+elseif m==".hideui" then
+if _G.__AW_HIDEUI then _G.__AW_HIDEUI() end
+elseif m==".unload" then
+_G.__AW_NOTIFY("Unloading...")
+task.wait(0.3)
+if _G.ApplewareUnload then pcall(function() _G.ApplewareUnload() end) end
+end
 end)
 
+-- UNLOAD FUNCTION
 _G.ApplewareUnload=function()
 _G.ApplewareActive=false _G.ApplewareLoaded=false
 local gn={"AWNotes","AWRT","AW_BigShoot","AW_FloatingActions","Appleware","AW_EmoteFloats","AW_FPS_Ping","AW_ESP","AW_ReloadPrompt"}
