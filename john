@@ -1485,6 +1485,7 @@ if s>0.5 then SC.selectedScale=math.floor((s-0.1)*10+0.5)/10 rf() saveSettings()
 pl.MouseButton1Click:Connect(function() local s=SC.selectedScale or 1
 if s<2.0 then SC.selectedScale=math.floor((s+0.1)*10+0.5)/10 rf() saveSettings() end end) end
 ASEC(pages["UI"],"Quick Actions",10)
+TGG(pages["UI"],"Enable Floating Buttons",11,"floatButtonsEnabled")
 TGG(pages["UI"],"Notification Sound",26,"notifySound")
 TGG(pages["UI"],"Enable Animations",27,"animationsEnabled")
 ASEC(pages["UI"],"Danger Zone",30)
@@ -1686,6 +1687,7 @@ task.defer(function() rMV()
 for idStr,on in pairs(state.emoteFloatButtons or {}) do if on then local idN=tonumber(idStr)
 if idN then for _,em in ipairs(EM) do if em.id==idN then bEF(idN,em) break end end end end end end) end
 
+-- FE ANIMATIONS
 ASEC(pages["Anim/Emot"],"FE Animations",10)
 TGG(pages["Anim/Emot"],"Enable FE Animations",11,"feAnimEnabled")
 do local ASP={idle1={"idle","Animation1"},idle2={"idle","Animation2"},walk={"walk","WalkAnim"},
