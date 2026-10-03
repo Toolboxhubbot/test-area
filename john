@@ -1,4 +1,4 @@
--- Appleware - Fully Updated
+-- Appleware
 if _G.ApplewareLoaded and _G.ApplewareUnload then
 local r=nil
 local pg=Instance.new("ScreenGui") pg.Name="AW_ReloadPrompt" pg.ResetOnSpawn=false pg.DisplayOrder=9999999 pg.IgnoreGuiInset=true
@@ -76,7 +76,7 @@ emoteButtonSize=120,emoteSearch="",emoteMenuOpen=false,emoteFloatButtons={},emot
 lockedButtons={},allButtonsLocked=false,voidPlatform=false,
 loopTpMap=false,loopTpLobby=false,loopTpMurderer=false,loopTpSheriff=false,loopTpCustom=false,
 autoKillMurdererNearby=false,spinBot=false,spinBotSpeed=20,
-voteRespawnCount=5,voteRespawnDelay=0.05}
+voteRespawnCount=5,voteRespawnDelay=0.05,radioAutoPlay=false,radioSelectedSongId=""}
 wallHopInfJump=false
 
 KB={
@@ -128,7 +128,7 @@ disableTrading="No Trade",wallHop="Wall Hop",wallHopFlick="Wall Hop Flick",
 removeBarriers="Remove Barriers",blueAura="Blue Aura",feAnimEnabled="FE Anim",
 voidPlatform="Void Platform",loopTpMap="TP Map",loopTpLobby="TP Lobby",
 loopTpMurderer="TP Mur",loopTpSheriff="TP Sher",loopTpCustom="TP Cust",
-autoKillMurdererNearby="Auto Kill Near",spinBot="Spin Bot",hideUI="Hide UI"}
+autoKillMurdererNearby="Auto Kill Near",spinBot="Spin Bot",hideUI="Hide UI",radioAutoPlay="Radio Auto Play"}
 
 local function saveSettings() task.spawn(function() pcall(function()
 local d={state={},settings={}}
@@ -360,7 +360,6 @@ rp.AssemblyLinearVelocity=Vector3.new(0,-50000,0) rp.AssemblyAngularVelocity=Vec
 local d=tr.Position-rp.Position if d.Magnitude>0.01 then bv.Velocity=d.Unit*50000 end bg.CFrame=rp.CFrame end end)
 local to=tick()+RESET_DURATION+1 while activeResets[tp.UserId] and tick()<to do task.wait(0.05) end cln() return true end
 
--- HANDLE TOUCHED KILL (Replaces Hitbox execution for buttons)
 local function FHTK(tg)
 local ch=LP.Character if not ch then return end
 local k=ch:FindFirstChild("Knife") or ET("Knife") if not k then _G.__AW_NOTIFY("No Knife") return end
@@ -623,7 +622,7 @@ state.bigButtonX=BW.Position.X.Scale state.bigButtonY=BW.Position.Y.Scale RSW()
 if state.animationsEnabled then
 local s=Instance.new("UIScale",BW)
 TweenService:Create(s,TweenInfo.new(0.1,EAS),{Scale=0.88}):Play()
-TweenService:Create(s,TweenInfo.new(0.45,Enum.EasingStyle.Elastic,{Scale=1}):Play()
+TweenService:Create(s,TweenInfo.new(0.45,Enum.EasingStyle.Elastic),{Scale=1}):Play()
 task.delay(0.6,function() if s and s.Parent then s:Destroy() end end) end
 else state.bigButtonX=BW.Position.X.Scale state.bigButtonY=BW.Position.Y.Scale saveSettings() end end)
 
@@ -845,6 +844,17 @@ if key=="voidPlatform" and not ns then RVP() end
 if FBM[key] then RFV(FBM[key]) end
 local dn=TD[key] or key
 _G.__AW_NOTIFY('<font color="'..(ns and "#5aff8c" or "#ff5a5a")..'">'..dn..'</font> '..(ns and "on" or "off"))
+if key=="feAnimEnabled" and _G.__AW_SYNC_ANIM_DROPDOWNS then
+pcall(_G.__AW_SYNC_ANIM_DROPDOWNS, state.feAnimAll or "Default")
+end
+if (key=="speedEnabled" or key=="speedGlitch" or key=="jumpEnabled" or key=="flyEnabled") and not ns and LP.Character then
+local h = LP.Character:FindFirstChildOfClass("Humanoid")
+if h then
+if key=="flyEnabled" then h.WalkSpeed = 16; h.PlatformStand = false end
+if key=="speedEnabled" or key=="speedGlitch" then h.WalkSpeed = 16 end
+if key=="jumpEnabled" then h.UseJumpPower = false end
+end
+end
 saveSettings() end) end
 local function ABN(pg,name,order,cb)
 local b=Instance.new("TextButton",pg) b.Size=UDim2.new(1,0,0,38) b.LayoutOrder=order
@@ -1014,6 +1024,126 @@ ASEC(pages[SEC],"FPS & Ping Monitor",170)
 TGG(pages[SEC],"FPS Monitor",171,"fpsPingMonitor")
 TGG(pages[SEC],"Color FPS",172,"fpsPingColor")
 TGG(pages[SEC],"Disable Trading",181,"disableTrading")
+
+-- RADIO ABUSE SECTION
+ASEC(pages[SEC],"Radio Abuse",190)
+local PlaySong = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Inventory") and ReplicatedStorage.Remotes.Inventory:FindFirstChild("PlaySong")
+local songSaveFile = "AW_RadioSongs.json"
+local savedSongs = {}
+if isfile and readfile and isfile(songSaveFile) then
+    local ok, data = pcall(function() return HttpService:JSONDecode(readfile(songSaveFile)) end)
+    if ok and type(data) == "table" then savedSongs = data end
+end
+local function saveSongs() if writefile then writefile(songSaveFile, HttpService:JSONEncode(savedSongs)) end end
+local function getSongNames() local names = {} for _, song in ipairs(savedSongs) do table.insert(names, song.name or song.id) end return names end
+local lastSelectedSong = nil
+
+local radioListScroll = Instance.new("ScrollingFrame", pages[SEC])
+radioListScroll.Size = UDim2.new(1, 0, 0, 120)
+radioListScroll.LayoutOrder = 191
+radioListScroll.BackgroundColor3 = cc(SC.cardColor)
+radioListScroll.BackgroundTransparency = 0.4
+radioListScroll.BorderSizePixel = 0
+radioListScroll.ScrollBarThickness = 3
+radioListScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+radioListScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+Instance.new("UICorner", radioListScroll).CornerRadius = UDim.new(0, 10)
+local rlLayout = Instance.new("UIListLayout", radioListScroll)
+rlLayout.SortOrder = Enum.SortOrder.LayoutOrder
+rlLayout.Padding = UDim.new(0, 4)
+local rlPad = Instance.new("UIPadding", radioListScroll)
+rlPad.PaddingTop = UDim.new(0, 6); rlPad.PaddingBottom = UDim.new(0, 6); rlPad.PaddingLeft = UDim.new(0, 6); rlPad.PaddingRight = UDim.new(0, 6)
+
+local function refreshRadioList()
+    for _, c in ipairs(radioListScroll:GetChildren()) do if c:IsA("GuiObject") and c ~= rlLayout then c:Destroy() end end
+    if #savedSongs == 0 then
+        local empty = Instance.new("TextLabel", radioListScroll)
+        empty.Size = UDim2.new(1, -12, 0, 26); empty.LayoutOrder = 1
+        empty.BackgroundTransparency = 1; empty.Text = "(no saved songs)"
+        empty.TextColor3 = cc(SC.tabTextColor); empty.Font = Enum.Font.Gotham; empty.TextSize = 11
+        return
+    end
+    for i, s in ipairs(savedSongs) do
+        local row = Instance.new("Frame", radioListScroll)
+        row.Size = UDim2.new(1, -12, 0, 30); row.LayoutOrder = i
+        row.BackgroundColor3 = (tostring(s.id) == tostring(lastSelectedSong and lastSelectedSong.id)) and cc(SC.accentColor) or cc(SC.cardHoverColor)
+        Instance.new("UICorner", row).CornerRadius = UDim.new(0, 6)
+        local nl = Instance.new("TextLabel", row)
+        nl.Size = UDim2.new(1, -50, 1, 0); nl.Position = UDim2.new(0, 10, 0, 0)
+        nl.BackgroundTransparency = 1; nl.Text = s.name or s.id
+        nl.TextColor3 = (tostring(s.id) == tostring(lastSelectedSong and lastSelectedSong.id)) and Color3.new(0,0,0) or cc(SC.textColor)
+        nl.Font = Enum.Font.GothamMedium; nl.TextSize = 11.5; nl.TextXAlignment = Enum.TextXAlignment.Left
+        local playBtn = Instance.new("TextButton", row)
+        playBtn.Size = UDim2.new(0, 40, 0, 22); playBtn.Position = UDim2.new(1, -46, 0.5, -11)
+        playBtn.BackgroundColor3 = Color3.fromRGB(35, 140, 65); playBtn.Text = "Play"
+        playBtn.TextColor3 = Color3.new(1, 1, 1); playBtn.Font = Enum.Font.GothamBold; playBtn.TextSize = 10
+        playBtn.AutoButtonColor = false
+        Instance.new("UICorner", playBtn).CornerRadius = UDim.new(0, 6)
+        playBtn.MouseButton1Click:Connect(function()
+            lastSelectedSong = s
+            state.radioSelectedSongId = tostring(s.id)
+            saveSettings()
+            if PlaySong then
+                local url = "https://www.roblox.com/asset/?id=" .. s.id
+                PlaySong:FireServer(url)
+                task.wait(0.1)
+                PlaySong:FireServer(url)
+            end
+        end)
+    end
+end
+
+refreshRadioList()
+
+local radioAddInput = MIN(pages[SEC], 192, "Audio ID to add...", "", function() end)
+ABN(pages[SEC], "Add Audio ID", 193, function()
+    local id = tostring(radioAddInput.Text or ""):match("%d+")
+    if not id then _G.__AW_NOTIFY("Invalid audio ID") return end
+    local success, info = pcall(function() return game:GetService("MarketplaceService"):GetProductInfo(tonumber(id)) end)
+    local name = (success and info and info.Name) or id
+    for _, s in ipairs(savedSongs) do if tostring(s.id) == id then _G.__AW_NOTIFY("Already added") return end end
+    table.insert(savedSongs, {name = name, id = id})
+    saveSongs()
+    refreshRadioList()
+    _G.__AW_NOTIFY("Added: " .. name)
+end)
+
+ABN(pages[SEC], "Play Selected Audio", 194, function()
+    if not lastSelectedSong then _G.__AW_NOTIFY("No song selected") return end
+    if PlaySong then
+        local url = "https://www.roblox.com/asset/?id=" .. lastSelectedSong.id
+        PlaySong:FireServer(url)
+        task.wait(0.1)
+        PlaySong:FireServer(url)
+        _G.__AW_NOTIFY("Playing: " .. lastSelectedSong.name)
+    end
+end)
+
+ABN(pages[SEC], "Delete Selected Audio", 195, function()
+    if not lastSelectedSong then _G.__AW_NOTIFY("No song selected") return end
+    for i, s in ipairs(savedSongs) do
+        if tostring(s.id) == tostring(lastSelectedSong.id) then
+            table.remove(savedSongs, i)
+            saveSongs()
+            lastSelectedSong = nil
+            state.radioSelectedSongId = ""
+            saveSettings()
+            refreshRadioList()
+            _G.__AW_NOTIFY("Removed")
+            return
+        end
+    end
+end)
+
+TGG(pages[SEC], "Auto Play Selected Audio", 196, "radioAutoPlay")
+LP.CharacterAdded:Connect(function()
+    if state.radioAutoPlay and state.radioSelectedSongId and state.radioSelectedSongId ~= "" and PlaySong then
+        task.wait(1.5)
+        local url = "https://www.roblox.com/asset/?id=" .. state.radioSelectedSongId
+        PlaySong:FireServer(url)
+    end
+end)
+
 ASEC(pages[SEC],"Credits",900)
 do local c2=Instance.new("Frame",pages[SEC]) c2.Size=UDim2.new(1,0,0,80) c2.LayoutOrder=901
 c2.BackgroundColor3=cc(SC.cardColor)
@@ -1316,6 +1446,17 @@ local ns=not state[ft] state[ft]=ns
 local dn=TD[ft] or ft
 _G.__AW_NOTIFY('<font color="'..(ns and "#5aff8c" or "#ff5a5a")..'">'..dn..'</font> '..(ns and "on" or "off"))
 if ft=="voidPlatform" and not ns then RVP() end
+if ft=="feAnimEnabled" and _G.__AW_SYNC_ANIM_DROPDOWNS then
+pcall(_G.__AW_SYNC_ANIM_DROPDOWNS, state.feAnimAll or "Default")
+end
+if (ft=="speedEnabled" or ft=="speedGlitch" or ft=="jumpEnabled" or ft=="flyEnabled") and not ns and LP.Character then
+local h = LP.Character:FindFirstChildOfClass("Humanoid")
+if h then
+if ft=="flyEnabled" then h.WalkSpeed = 16; h.PlatformStand = false end
+if ft=="speedEnabled" or ft=="speedGlitch" then h.WalkSpeed = 16 end
+if ft=="jumpEnabled" then h.UseJumpPower = false end
+end
+end
 saveSettings() break end end end end)
 
 -- UI TAB
@@ -1344,8 +1485,6 @@ if s>0.5 then SC.selectedScale=math.floor((s-0.1)*10+0.5)/10 rf() saveSettings()
 pl.MouseButton1Click:Connect(function() local s=SC.selectedScale or 1
 if s<2.0 then SC.selectedScale=math.floor((s+0.1)*10+0.5)/10 rf() saveSettings() end end) end
 ASEC(pages["UI"],"Quick Actions",10)
-ABN(pages["UI"],"Hide UI (toggle)",11,function() toggleUI() end)
-ABN(pages["UI"],"Show UI",12,function() if _G.__AW_SHOWUI then _G.__AW_SHOWUI() end end)
 TGG(pages["UI"],"Notification Sound",26,"notifySound")
 TGG(pages["UI"],"Enable Animations",27,"animationsEnabled")
 ASEC(pages["UI"],"Danger Zone",30)
@@ -1547,7 +1686,6 @@ task.defer(function() rMV()
 for idStr,on in pairs(state.emoteFloatButtons or {}) do if on then local idN=tonumber(idStr)
 if idN then for _,em in ipairs(EM) do if em.id==idN then bEF(idN,em) break end end end end end end) end
 
--- FE ANIMATIONS (Fixed default capturing)
 ASEC(pages["Anim/Emot"],"FE Animations",10)
 TGG(pages["Anim/Emot"],"Enable FE Animations",11,"feAnimEnabled")
 do local ASP={idle1={"idle","Animation1"},idle2={"idle","Animation2"},walk={"walk","WalkAnim"},
@@ -1658,8 +1796,7 @@ if flyBG and flyBG.Parent then flyBG:Destroy() end
 flyBV=nil flyBG=nil
 local ch=LP.Character
 if ch then local h=ch:FindFirstChildOfClass("Humanoid")
-if h then h.PlatformStand=false h.AutoRotate=true
-h.WalkSpeed=(state.speedEnabled and (state.speedValue or 16)) or 16 end
+if h then h.PlatformStand=false h.AutoRotate=true h.WalkSpeed=16 end
 local r=ch:FindFirstChild("HumanoidRootPart")
 if r then r.AssemblyLinearVelocity=Vector3.zero r.AssemblyAngularVelocity=Vector3.zero end end end
 FWE=false
@@ -1680,9 +1817,11 @@ local ia=(hs==Enum.HumanoidStateType.Jumping or hs==Enum.HumanoidStateType.Freef
 if state.flyEnabled then h.WalkSpeed=0
 elseif state.speedGlitch and ia then h.WalkSpeed=state.speedGlitchValue or 200
 elseif state.speedEnabled then h.WalkSpeed=state.speedValue or 16
-else h.WalkSpeed=16 end
+-- Removed the else block to prevent forcing speed back to 16 if the user didn't change it
+end
 if state.jumpEnabled then h.UseJumpPower=true h.JumpPower=state.jumpValue or 50
-else h.UseJumpPower=false end end end end end)
+-- Removed the else block to prevent forcing UseJumpPower to false if the user didn't change it
+end end end end end)
 task.spawn(function() while true do task.wait(0.05)
 if state.bunnyHop and LP.Character then
 local h=LP.Character:FindFirstChildOfClass("Humanoid")
@@ -1720,7 +1859,7 @@ if tick()-lt>3 then lt=tick() r.Anchored=true r.CFrame=LCF
 r.AssemblyLinearVelocity=Vector3.zero task.wait(0.1)
 if r.Parent then r.Anchored=false end end end end end end)
 
--- SPIN BOT (FASTER, FIXED MATH)
+-- SPIN BOT
 task.spawn(function()
 local rot=0
 while true do
@@ -1763,10 +1902,13 @@ flicking=true
 local cam=Workspace.CurrentCamera
 if cam then
 local scf=cam.CFrame
-local newCF=CFrame.lookAt(cam.CFrame.Position,cam.CFrame.Position+hit.Normal*10)
+local flatNormal = Vector3.new(hit.Normal.X, 0, hit.Normal.Z).Unit
+if flatNormal.Magnitude > 0.1 then
+local newCF=CFrame.lookAt(cam.CFrame.Position,cam.CFrame.Position+flatNormal*10)
 cam.CFrame=newCF
 task.wait(0.08)
 cam.CFrame=scf
+end
 end
 flicking=false
 end
@@ -2111,7 +2253,7 @@ if next(en) then for k in pairs(en) do state[k]=false end
 task.wait(0.4) for k in pairs(en) do state[k]=true end end end
 wr=nr end end)
 
--- HITBOX EXPANDER (kept separate for visual modification, not used for kills)
+-- HITBOX EXPANDER
 function getHitboxTargets() local tg={} local md=state.hitboxExpanderTarget or "murderer"
 for _,p in ipairs(Players:GetPlayers()) do
 if p~=LP then local ch=p.Character
