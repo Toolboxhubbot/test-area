@@ -1,4 +1,4 @@
--- Appleware (knife silent aim removed, auto-dodge at 25 studs, npoint.io private chat relay)
+-- Appleware
 if _G.ApplewareLoaded and _G.ApplewareUnload then
     local r=nil
     local pg=Instance.new("ScreenGui") pg.Name="AW_ReloadPrompt" pg.ResetOnSpawn=false pg.DisplayOrder=9999999 pg.IgnoreGuiInset=true
@@ -57,8 +57,8 @@ pcall(function() if makefolder and isfolder and not isfolder(CFG_DIR) then makef
 local function cfgPath() if isfolder and isfolder(CFG_DIR) then return CFG_DIR.."/"..CFG_FILE end return CFG_FILE end
 
 state={
-    farm=false,xpFarm=false,noclip=false,gun=false,afk=false,antiVoid=false,antiFling=false,
-    notifyMapName=false,showRoundTimerCountdown=false,autoKillAll=false,autoShootMurderer=false,
+    farm=false,xpFarm=false,noclip=false,gun=false,afk=false,antiVoid=false,
+    autoKillAll=false,autoShootMurderer=false,
     autoResetMurderer=false,autoResetSheriff=false,autoResetInnocent=false,aimbotMurderer=false,aimbotSheriff=false,
     aimbotFOV=250,aimbotSmooth=4,aimbotPredict=false,
     silentAimEnabled=false,silentAimWallCheck=false,
@@ -77,16 +77,15 @@ state={
     floatButtonsEnabled=false,floatButtonSize=68,floatButtonShape="circle",
     floatButtonPositions={},floatEnabledButtons={},hitboxExpander=false,hitboxExpanderSize=15,
     hitboxExpanderTarget="murderer",keybinds={},playerSearchText="",playerListOpen=true,
-    signSpam=false,autoGetGG=false,
     fpsPingMonitor=false,fpsPingColor=false,disableTrading=false,
     wallHop=false,wallHopFlick=false,removeBarriers=false,
-    blueAura=false,blueAuraStuds=10,feAnimEnabled=false,
+    feAnimEnabled=false,
     feAnimAll="Default",feAnimIdle="Default",feAnimWalk="Default",feAnimRun="Default",
     feAnimJump="Default",feAnimClimb="Default",feAnimFall="Default",feAnimSwim="Default",
     emoteButtonSize=120,emoteSearch="",emoteMenuOpen=false,emoteFloatButtons={},emoteFloatPositions={},
     lockedButtons={},allButtonsLocked=false,voidPlatform=false,
     loopTpMap=false,loopTpLobby=false,loopTpMurderer=false,loopTpSheriff=false,loopTpCustom=false,
-    autoKillMurdererNearby=false,spinBot=false,spinBotSpeed=20,
+    spinBot=false,spinBotSpeed=20,
     voteRespawnCount=5,voteRespawnDelay=0.05,radioAutoPlay=false,radioSelectedSongId="",
     autoRejoin=false,
     headless1=false,headless2=false,headless3=false,
@@ -102,8 +101,6 @@ KB={
     {key="infJumpEnabled",label="Infinite Jump",default="J"},
     {key="bunnyHop",label="Bunny Hop",default="B"},
     {key="speedGlitch",label="Speed Glitch",default="V"},
-    {key="killAura",label="Kill Aura",default="K"},
-    {key="flingAura",label="Fling Aura",default="L"},
     {key="silentAimEnabled",label="Silent Aim",default="C"},
     {key="shootThroughWall",label="Shoot Through Walls",default="X"},
     {key="autoShootMurderer",label="Auto Shoot Murderer",default="Z"},
@@ -117,11 +114,9 @@ KB={
     {key="autoDodge",label="Auto Dodge",default="O"},
     {key="hitboxExpander",label="Hitbox Expander",default="G"},
     {key="wallHop",label="Wall Hop",default="Y"},
-    {key="blueAura",label="Blue Aura",default="U"},
     {key="feAnimEnabled",label="FE Animations",default="Q"},
     {key="removeBarriers",label="Remove Barriers",default="B"},
     {key="voidPlatform",label="Void Platform",default="V"},
-    {key="antiFling",label="Anti-Fling",default="A"},
     {key="spinBot",label="Spin Bot",default="R"},
     {key="sheriffFlickToggle",label="Sheriff Flick",default="RightCtrl"}
 }
@@ -139,9 +134,8 @@ SC={
 
 TD={
     farm="Farm",xpFarm="XP Farm",noclip="Noclip",gun="Auto Grab Gun",afk="Anti AFK",antiVoid="Anti-Void",
-    notifyMapName="Notify Map Name",antiFling="Anti-Fling",showRoundTimerCountdown="Round Timer",
-    autoKillAll="Auto Kill All",autoShootMurderer="Auto Shoot Murderer",autoResetMurderer="Auto Reset Murderer",
-    autoResetSheriff="Auto Reset Sheriff",autoResetInnocent="Auto Reset Innocent",
+    antiFling="Anti-Fling",autoKillAll="Auto Kill All",autoShootMurderer="Auto Shoot Murderer",
+    autoResetMurderer="Auto Reset Murderer",autoResetSheriff="Auto Reset Sheriff",autoResetInnocent="Auto Reset Innocent",
     aimbotMurderer="Aimbot Murderer",aimbotSheriff="Aimbot Sheriff",silentAimEnabled="Silent Aim",
     silentAimWallCheck="Silent Aim WC",silentAimFlickToggle="Silent Aim Flick",sheriffFlickToggle="Sheriff Flick",
     shootThroughWall="Shoot Walls",loopFlingAll="Loop Fling All",loopFlingMur="Loop Fling Mur",
@@ -150,20 +144,17 @@ TD={
     invisibleEnabled="Invisible",killAura="Kill Aura",flingAura="Fling Aura",autoDodge="Auto Dodge",
     freeze="Freeze",fullbright="Fullbright",fovEnabled="FOV",cameraZoomEnabled="Cam Zoom",
     clickTP="Click TP",animationsEnabled="Animations",notifySound="Notify Sound",
-    murdererPredictor="Predicted Murderer",murdererPerkNotify="Perk Notify",
-    predictSheriff="Predicted Sheriff",speedEnabled="Speed",
-    jumpEnabled="Jump Power",bigButtonEnabled="Big Button",fullBagGate="Bag Gate",
+    speedEnabled="Speed",jumpEnabled="Jump Power",bigButtonEnabled="Big Button",fullBagGate="Bag Gate",
     espPlayers="ESP",espGunDrop="Gun ESP",espTeamColor="Team Colors",
     espMurderer="ESP Mur",espSheriff="ESP Sher",espHero="ESP Hero",espInnocent="ESP Inno",
     espHighlight="ESP HL",espOutline="ESP Outline",espFill="ESP Fill",espShowName="ESP Name",
     espShowRole="ESP Role",espShowDistance="ESP Dist",touchFling="Touch Fling",
-    hitboxExpander="Hitbox Exp",signSpam="Sign Spam",autoGetGG="Auto GG",
-    fpsPingMonitor="FPS Monitor",fpsPingColor="Color FPS",
+    hitboxExpander="Hitbox Exp",fpsPingMonitor="FPS Monitor",fpsPingColor="Color FPS",
     disableTrading="No Trade",wallHop="Wall Hop",wallHopFlick="Wall Hop Flick",
-    removeBarriers="Remove Barriers",blueAura="Blue Aura",feAnimEnabled="FE Anim",
+    removeBarriers="Remove Barriers",feAnimEnabled="FE Anim",
     voidPlatform="Void Platform",loopTpMap="TP Map",loopTpLobby="TP Lobby",
     loopTpMurderer="TP Mur",loopTpSheriff="TP Sher",loopTpCustom="TP Cust",
-    autoKillMurdererNearby="Auto Kill Near",spinBot="Spin Bot",hideUI="Hide UI",radioAutoPlay="Radio Auto Play",
+    spinBot="Spin Bot",hideUI="Hide UI",radioAutoPlay="Radio Auto Play",
     headless1="Headless V1",headless2="Headless V2",headless3="Headless V3"
 }
 
@@ -192,7 +183,14 @@ local function loadSettings()
             local d=HttpService:JSONDecode(readfile(cfgPath()))
             if d.state then
                 for k,v in pairs(d.state) do
-                    if state[k]~=nil and not NSK[k] then state[k]=v end
+                    if state[k]~=nil and not NSK[k] then
+                        local t=type(v)
+                        if t=="boolean" then
+                            state[k]=false -- force everything to start off
+                        else
+                            state[k]=v
+                        end
+                    end
                 end
             end
             if d.settings then
@@ -491,27 +489,6 @@ local function SU()
         r.AssemblyAngularVelocity=Vector3.zero
     end
 end
-local function GCC()
-    local candidates={
-        function() return LP:FindFirstChild("Coins") end,
-        function() local ls=LP:FindFirstChild("leaderstats") return ls and ls:FindFirstChild("Coins") end,
-        function() return LP:GetAttribute("Coins") end
-    }
-    for _,fn in ipairs(candidates) do
-        local ok,v=pcall(fn)
-        if ok and v~=nil then
-            local n=tonumber(type(v)=="number" and v or (v.Value or v))
-            if n then return n end
-        end
-    end
-    return nil
-end
-local function IBF()
-    if not state.fullBagGate then return true end
-    local c=GCC()
-    if c==nil then return true end
-    return c>=(state.bagTarget or 40)
-end
 
 -- Role detection
 local cachedRoleModule, cachedRoleModuleAt = nil, 0
@@ -640,57 +617,6 @@ local function RC(role)
     elseif r=="sheriff" or r=="hero" then return Color3.fromRGB(40,130,255)
     else return Color3.fromRGB(40,220,90) end
 end
-local function TMR()
-    pcall(function()
-        VirtualInputManager:SendKeyEvent(true,Enum.KeyCode.Escape,false,game)
-        VirtualInputManager:SendKeyEvent(false,Enum.KeyCode.Escape,false,game)
-        task.wait(0.15)
-        VirtualInputManager:SendKeyEvent(true,Enum.KeyCode.R,false,game)
-        VirtualInputManager:SendKeyEvent(false,Enum.KeyCode.R,false,game)
-        task.wait(0.15)
-        VirtualInputManager:SendKeyEvent(true,Enum.KeyCode.Return,false,game)
-        VirtualInputManager:SendKeyEvent(false,Enum.KeyCode.Return,false,game)
-    end)
-end
-
-antiFlingConns={}
-local function SAF(ch)
-    if not ch then return end
-    local function dc(p)
-        if state.antiFling and p:IsA("BasePart") then
-            pcall(function() p.CanCollide=false end)
-        end
-    end
-    for _,p in ipairs(ch:GetChildren()) do dc(p) end
-    local c1=ch.ChildAdded:Connect(dc)
-    local c2=RunService.Stepped:Connect(function()
-        if state.antiFling and ch:IsDescendantOf(Workspace) then
-            for _,p in ipairs(ch:GetChildren()) do
-                if p:IsA("BasePart") and p.CanCollide then
-                    pcall(function() p.CanCollide=false end)
-                end
-            end
-        end
-    end)
-    ch.Destroying:Connect(function()
-        pcall(function() c1:Disconnect() end)
-        pcall(function() c2:Disconnect() end)
-    end)
-end
-local function TAF(p)
-    if p==LP or antiFlingConns[p] then return end
-    antiFlingConns[p]=p.CharacterAdded:Connect(SAF)
-    if p.Character then SAF(p.Character) end
-end
-local function UAF(p)
-    if antiFlingConns[p] then
-        pcall(function() antiFlingConns[p]:Disconnect() end)
-        antiFlingConns[p]=nil
-    end
-end
-for _,p in ipairs(Players:GetPlayers()) do TAF(p) end
-Players.PlayerAdded:Connect(TAF)
-Players.PlayerRemoving:Connect(UAF)
 
 killLocked={}
 activeResets={}
@@ -797,84 +723,6 @@ local function RF(tp,fm)
     while activeResets[tp.UserId] and tick()<to do task.wait(0.05) end
     cln()
     return true
-end
-
-local function FHTK(tg)
-    local ch=LP.Character
-    if not ch then return end
-    local k=ch:FindFirstChild("Knife") or ET("Knife")
-    if not k then _G.__AW_NOTIFY("No Knife") return end
-    local ev=k:FindFirstChild("Events")
-    local ht=ev and ev:FindFirstChild("HandleTouched")
-    if not ht then _G.__AW_NOTIFY("HandleTouched not found") return end
-    local ps={}
-    for _,p in ipairs(tg) do
-        if p and p~=LP and TIA(p) and not IW(p) then
-            local pc=p.Character
-            if pc then
-                local t=pc:FindFirstChild("UpperTorso") or pc:FindFirstChild("Torso") or pc:FindFirstChild("HumanoidRootPart")
-                if t then table.insert(ps,t) end
-            end
-        end
-    end
-    if #ps==0 then _G.__AW_NOTIFY("No targets") return end
-    task.spawn(function()
-        for _=1,8 do
-            for _,t in ipairs(ps) do
-                pcall(function() ht:FireServer(t) end)
-            end
-            task.wait(0.08)
-        end
-    end)
-end
-
-local function KAN()
-    task.spawn(function()
-        SU()
-        task.wait(0.1)
-        if not (FT("Knife") or ET("Knife")) then _G.__AW_NOTIFY("No Knife") return end
-        local tg={}
-        for _,p in ipairs(Players:GetPlayers()) do
-            if p~=LP and TIA(p) and not IW(p) then table.insert(tg,p) end
-        end
-        if #tg==0 then _G.__AW_NOTIFY("No targets") return end
-        FHTK(tg)
-    end)
-end
-
-local function KSN()
-    task.spawn(function()
-        if not al() then return end
-        SU()
-        task.wait(0.15)
-        if not (FT("Knife") or ET("Knife")) then
-            for _=1,10 do
-                task.wait(0.1)
-                if ET("Knife") then break end
-            end
-        end
-        if not FT("Knife") then _G.__AW_NOTIFY("No Knife") return end
-        local tg=GLSH()
-        if #tg==0 then _G.__AW_NOTIFY("No Sher") return end
-        FHTK(tg)
-    end)
-end
-
-local function KCN()
-    task.spawn(function()
-        if #SC.flingList==0 then _G.__AW_NOTIFY("No custom") return end
-        SU()
-        task.wait(0.15)
-        if not (FT("Knife") or ET("Knife")) then _G.__AW_NOTIFY("No Knife") return end
-        local tg={}
-        for _,n in ipairs(SC.flingList) do
-            for _,p in ipairs(Players:GetPlayers()) do
-                if PMN(p,n) and TIA(p) then table.insert(tg,p) end
-            end
-        end
-        if #tg==0 then _G.__AW_NOTIFY("None in server") return end
-        FHTK(tg)
-    end)
 end
 
 local function FAN()
@@ -1461,6 +1309,175 @@ local function GVN()
     return mn
 end
 
+-- ==========================================
+-- WHAT'S NEW SCREEN
+-- ==========================================
+local whatsNewGui = Instance.new("ScreenGui")
+whatsNewGui.Name = "AW_WhatsNew"
+whatsNewGui.ResetOnSpawn = false
+whatsNewGui.DisplayOrder = 10000001
+whatsNewGui.IgnoreGuiInset = true
+pcall(function() whatsNewGui.Parent = CoreGui end)
+if not whatsNewGui.Parent then whatsNewGui.Parent = PlayerGui end
+
+local wnFrame = Instance.new("Frame", whatsNewGui)
+wnFrame.Size = UDim2.new(0, 520, 0, 480)
+wnFrame.Position = UDim2.new(0.5, -260, 0.5, -240)
+wnFrame.BackgroundColor3 = Color3.fromRGB(8, 8, 10)
+wnFrame.BorderSizePixel = 0
+wnFrame.Active = true
+Instance.new("UICorner", wnFrame).CornerRadius = UDim.new(0, 16)
+
+local wnGrad = Instance.new("UIGradient", wnFrame)
+wnGrad.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(10, 10, 14)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(4, 4, 6))
+})
+wnGrad.Rotation = 90
+
+local wnStroke = Instance.new("UIStroke", wnFrame)
+wnStroke.Color = Color3.fromRGB(190, 190, 195)
+wnStroke.Thickness = 2
+wnStroke.Transparency = 0
+
+task.spawn(function()
+    local p = 0
+    while wnFrame and wnFrame.Parent do
+        local dt = RunService.Heartbeat:Wait()
+        p = (p + dt * 1.6) % (math.pi * 2)
+        local t = (math.sin(p) + 1) * 0.5
+        if wnStroke and wnStroke.Parent then
+            wnStroke.Transparency = 0.2 + t * 0.4
+            wnStroke.Color = Color3.fromRGB(120 + t * 80, 120 + t * 80, 125 + t * 80)
+        end
+    end
+end)
+
+local wnTitle = Instance.new("TextLabel", wnFrame)
+wnTitle.Size = UDim2.new(1, -40, 0, 34)
+wnTitle.Position = UDim2.new(0, 20, 0, 16)
+wnTitle.BackgroundTransparency = 1
+wnTitle.Text = "APPLEWARE - WHAT'S NEW"
+wnTitle.TextColor3 = Color3.fromRGB(235, 235, 240)
+wnTitle.Font = Enum.Font.GothamBold
+wnTitle.TextSize = 20
+wnTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+local wnSubtitle = Instance.new("TextLabel", wnFrame)
+wnSubtitle.Size = UDim2.new(1, -40, 0, 18)
+wnSubtitle.Position = UDim2.new(0, 20, 0, 48)
+wnSubtitle.BackgroundTransparency = 1
+wnSubtitle.Text = "Latest additions and improvements"
+wnSubtitle.TextColor3 = Color3.fromRGB(150, 150, 155)
+wnSubtitle.Font = Enum.Font.Gotham
+wnSubtitle.TextSize = 12
+wnSubtitle.TextXAlignment = Enum.TextXAlignment.Left
+
+local wnBody = Instance.new("ScrollingFrame", wnFrame)
+wnBody.Size = UDim2.new(1, -40, 1, -140)
+wnBody.Position = UDim2.new(0, 20, 0, 76)
+wnBody.BackgroundTransparency = 1
+wnBody.BorderSizePixel = 0
+wnBody.ScrollBarThickness = 4
+wnBody.ScrollBarImageColor3 = Color3.fromRGB(190, 190, 195)
+wnBody.CanvasSize = UDim2.new(0, 0, 0, 0)
+wnBody.AutomaticCanvasSize = Enum.AutomaticSize.Y
+
+local wnBodyLayout = Instance.new("UIListLayout", wnBody)
+wnBodyLayout.SortOrder = Enum.SortOrder.LayoutOrder
+wnBodyLayout.Padding = UDim.new(0, 10)
+
+local whatsNewItems = {
+    {"\240\159\148\165 Remove Barriers", "One-click remove barriers and kill bricks. Toggle auto-remove in the Secret tab."},
+    {"\240\159\148\171 Sheriff Flick", "Flicks your camera onto the sheriff for instant shots. Trigger with RightCtrl."},
+    {"\240\159\140\141 New Teleports", "Teleport to Map, Lobby, Murderer, Sheriff, Custom, and Void Platform."},
+    {"\240\159\145\129\239\184\143 New ESP", "Full ESP rebuild with Highlight, Outline, Fill, Role display and Distance."},
+    {"\240\159\151\179\239\184\143 Better Map Voting", "Live slot names, teleport-to-slot, and fast reset for every vote spot."},
+    {"\240\159\148\146 Lock & Unlock Buttons", "Lock floating buttons so you don't accidentally press them. Lock by ID or all at once."},
+    {"\240\159\140\128 Spin Bot", "Rapidly rotate your character with adjustable speed up to 5000."},
+    {"\240\159\146\172 Secret Commands", "Type \".help\" in chat to open the Commands tab in private chat."},
+    {"\240\159\146\172 \".un\" Commands", "Type \".unfly\" \".unnoclip\" \".unaimbot\" etc. to turn off any feature instantly."},
+    {"\240\159\142\173 More Emotes", "Expanded emote browser with search and floating emote buttons."},
+    {"\240\159\146\172 Private Chat Upgrade", "Cooler animated UI, cross-client messaging via relay, auto-scrolling messages."},
+    {"\240\159\148\167 Everything Starts Off", "All features now default to OFF when you load the script."}
+}
+
+for i, item in ipairs(whatsNewItems) do
+    local card = Instance.new("Frame", wnBody)
+    card.Size = UDim2.new(1, -8, 0, 52)
+    card.LayoutOrder = i
+    card.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
+    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 10)
+    local cst = Instance.new("UIStroke", card)
+    cst.Color = Color3.fromRGB(60, 60, 65)
+    cst.Thickness = 1
+    cst.Transparency = 0.4
+    local bar = Instance.new("Frame", card)
+    bar.Size = UDim2.new(0, 3, 1, -16)
+    bar.Position = UDim2.new(0, 10, 0, 8)
+    bar.BackgroundColor3 = Color3.fromRGB(190, 190, 195)
+    Instance.new("UICorner", bar).CornerRadius = UDim.new(1, 0)
+    local heading = Instance.new("TextLabel", card)
+    heading.Size = UDim2.new(1, -26, 0, 18)
+    heading.Position = UDim2.new(0, 22, 0, 6)
+    heading.BackgroundTransparency = 1
+    heading.Text = item[1]
+    heading.TextColor3 = Color3.fromRGB(235, 235, 240)
+    heading.Font = Enum.Font.GothamBold
+    heading.TextSize = 13
+    heading.TextXAlignment = Enum.TextXAlignment.Left
+    local desc = Instance.new("TextLabel", card)
+    desc.Size = UDim2.new(1, -26, 0, 26)
+    desc.Position = UDim2.new(0, 22, 0, 24)
+    desc.BackgroundTransparency = 1
+    desc.Text = item[2]
+    desc.TextColor3 = Color3.fromRGB(160, 160, 165)
+    desc.Font = Enum.Font.Gotham
+    desc.TextSize = 11
+    desc.TextXAlignment = Enum.TextXAlignment.Left
+    desc.TextYAlignment = Enum.TextYAlignment.Top
+    desc.TextWrapped = true
+end
+
+local wnFooter = Instance.new("TextLabel", wnFrame)
+wnFooter.Size = UDim2.new(1, -40, 0, 22)
+wnFooter.Position = UDim2.new(0, 20, 1, -70)
+wnFooter.BackgroundTransparency = 1
+wnFooter.Text = "\240\159\145\135 Scroll down to continue"
+wnFooter.TextColor3 = Color3.fromRGB(150, 150, 155)
+wnFooter.Font = Enum.Font.GothamMedium
+wnFooter.TextSize = 12
+
+local wnContinue = Instance.new("TextButton", wnFrame)
+wnContinue.Size = UDim2.new(1, -40, 0, 40)
+wnContinue.Position = UDim2.new(0, 20, 1, -42)
+wnContinue.BackgroundColor3 = Color3.fromRGB(190, 190, 195)
+wnContinue.Text = "Continue"
+wnContinue.TextColor3 = Color3.new(0, 0, 0)
+wnContinue.Font = Enum.Font.GothamBold
+wnContinue.TextSize = 14
+wnContinue.AutoButtonColor = false
+Instance.new("UICorner", wnContinue).CornerRadius = UDim.new(0, 10)
+
+local wnContinueStroke = Instance.new("UIStroke", wnContinue)
+wnContinueStroke.Color = Color3.fromRGB(235, 235, 240)
+wnContinueStroke.Thickness = 2
+wnContinueStroke.Transparency = 0.5
+
+wnContinue.MouseEnter:Connect(function()
+    TweenService:Create(wnContinue, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(220, 220, 225)}):Play()
+end)
+wnContinue.MouseLeave:Connect(function()
+    TweenService:Create(wnContinue, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(190, 190, 195)}):Play()
+end)
+
+wnContinue.MouseButton1Click:Connect(function()
+    TweenService:Create(wnFrame, TweenInfo.new(0.4, EAS, EAI), {Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0.5, 0)}):Play()
+    task.delay(0.45, function()
+        whatsNewGui:Destroy()
+    end)
+end)
+
 -- Round timer
 RG=Instance.new("ScreenGui")
 RG.Name="AWRT"
@@ -1588,9 +1605,6 @@ FG.IgnoreGuiInset=true
 FG.Parent=PlayerGui
 
 FBD={
-    {id="killAll",label="Kill All",type="action",cb=KAN},
-    {id="killSheriff",label="Kill Sheriff",type="action",cb=KSN},
-    {id="killCustom",label="Kill Custom",type="action",cb=KCN},
     {id="flingMurAction",label="Fling Murderer",type="action",cb=FMN},
     {id="flingSherAction",label="Fling Sheriff",type="action",cb=FSN},
     {id="flingAllAction",label="Fling All",type="action",cb=FAN},
@@ -1612,7 +1626,6 @@ FBD={
     {id="autoShoot",label="Auto Shoot",type="toggle",key="autoShootMurderer"},
     {id="aimbotMur",label="Aimbot Murderer",type="toggle",key="aimbotMurderer"},
     {id="aimbotSher",label="Aimbot Sheriff",type="toggle",key="aimbotSheriff"},
-    {id="killAura",label="Kill Aura",type="toggle",key="killAura"},
     {id="flingAura",label="Fling Aura",type="toggle",key="flingAura"},
     {id="autoDodge",label="Auto Dodge",type="toggle",key="autoDodge"},
     {id="hitboxExp",label="Hitbox Exp",type="toggle",key="hitboxExpander"},
@@ -1641,19 +1654,14 @@ FBD={
     {id="esp",label="Player ESP",type="toggle",key="espPlayers"},
     {id="gunEsp",label="Gun ESP",type="toggle",key="espGunDrop"},
     {id="antiVoid",label="Anti Void",type="toggle",key="antiVoid"},
-    {id="antiFling",label="Anti Fling",type="toggle",key="antiFling"},
     {id="antiAfk",label="Anti AFK",type="toggle",key="afk"},
     {id="autoGrabGun",label="Auto Gun",type="toggle",key="gun"},
-    {id="murdererPred",label="Murderer Pred",type="toggle",key="murdererPredictor"},
     {id="notifySound",label="Notif Sound",type="toggle",key="notifySound"},
-    {id="signSpam",label="Sign Spam",type="toggle",key="signSpam"},
     {id="wallHop",label="Wall Hop",type="toggle",key="wallHop"},
     {id="wallHopFlick",label="Wall Hop Flick",type="toggle",key="wallHopFlick"},
     {id="removeBarriersT",label="Remove Barriers",type="toggle",key="removeBarriers"},
     {id="voidPlatform",label="Void Platform",type="toggle",key="voidPlatform"},
-    {id="blueAura",label="Blue Aura",type="toggle",key="blueAura"},
     {id="feAnim",label="FE Anim",type="toggle",key="feAnimEnabled"},
-    {id="autoKillNear",label="Auto Kill Near",type="toggle",key="autoKillMurdererNearby"},
     {id="spinBot",label="Spin Bot",type="toggle",key="spinBot"},
     {id="sheriffFlickT",label="Sheriff Flick",type="toggle",key="sheriffFlickToggle"}
 }
@@ -2242,43 +2250,6 @@ local function MIN(pg,order,ph,val,onC)
     return b
 end
 
--- Round tracker
-local lastRoundState = false
-local notifiedMurderer = nil
-local notifiedSheriff = nil
-task.spawn(function()
-    while true do
-        task.wait(0.25)
-        local inRound = IIR()
-        if inRound ~= lastRoundState then
-            lastRoundState = inRound
-            if inRound then
-                notifiedMurderer = nil
-                notifiedSheriff = nil
-            end
-        end
-    end
-end)
-task.spawn(function()
-    while true do
-        task.wait(0.4)
-        if state.murdererPredictor and lastRoundState then
-            local m = GM()
-            if m and m.Name ~= notifiedMurderer then
-                notifiedMurderer = m.Name
-                _G.__AW_NOTIFY('<font color="#ff5a5a"><b>Murderer:</b></font> '..m.Name, 8)
-            end
-        end
-        if state.predictSheriff and lastRoundState then
-            local s = GLSH()[1]
-            if s and s.Name ~= notifiedSheriff then
-                notifiedSheriff = s.Name
-                _G.__AW_NOTIFY('<font color="#5aaaFF"><b>Sheriff:</b></font> '..s.Name, 8)
-            end
-        end
-    end
-end)
-
 -- Headless
 local hlConfigs = {
     {id="78837807518622", on=false, track=nil, freeze=nil, stopped=nil, key="headless1"},
@@ -2343,11 +2314,12 @@ task.spawn(function()
     end
 end)
 
--- Wall hop
+-- Wall hop (fixed)
 do
     local rp = RaycastParams.new()
     rp.FilterType = Enum.RaycastFilterType.Exclude
     local flicking = false
+    local flickCooldown = 0
     task.spawn(function()
         while true do
             task.wait(0.03)
@@ -2376,19 +2348,23 @@ do
                     end
                     if hit then
                         wallHopInfJump = true
-                        if state.wallHopFlick and UIS:IsKeyDown(Enum.KeyCode.Space) and not flicking then
+                        -- Wall hop flick: only flick when pressing space AND on cooldown expired
+                        if state.wallHopFlick and UIS:IsKeyDown(Enum.KeyCode.Space) and not flicking and tick() > flickCooldown then
                             flicking = true
+                            flickCooldown = tick() + 0.35
                             local cam = Workspace.CurrentCamera
                             if cam then
                                 local scf = cam.CFrame
-                                local flatNormal = Vector3.new(hit.Normal.X, 0, hit.Normal.Z).Unit
+                                local flatNormal = Vector3.new(hit.Normal.X, 0, hit.Normal.Z)
                                 if flatNormal.Magnitude > 0.1 then
+                                    flatNormal = flatNormal.Unit
                                     local newCF = CFrame.lookAt(cam.CFrame.Position, cam.CFrame.Position + flatNormal * 10)
                                     cam.CFrame = newCF
-                                    task.wait(0.08)
-                                    cam.CFrame = scf
+                                    task.wait(0.09)
+                                    if cam then cam.CFrame = scf end
                                 end
                             end
+                            task.wait(0.05)
                             flicking = false
                         end
                     end
@@ -2470,21 +2446,14 @@ MSL(pages[SEC],"Jump Power",64,state.jumpValue or 50,50,500,"jumpValue")
 TGG(pages[SEC],"Speed Glitch (Air Only)",51,"speedGlitch")
 MSL(pages[SEC],"Air Speed (max 200)",52,state.speedGlitchValue or 200,16,200,"speedGlitchValue")
 ASEC(pages[SEC],"Combat",80)
-TGG(pages[SEC],"Kill Aura",81,"killAura")
 TGG(pages[SEC],"Fling Aura",82,"flingAura")
-TGG(pages[SEC],"Auto Dodge (25 studs)",83,"autoDodge")
+TGG(pages[SEC],"Auto Dodge",83,"autoDodge")
 MSL(pages[SEC],"Auto Dodge Range",84,state.autoDodgeRange or 25,5,50,"autoDodgeRange")
-TGG(pages[SEC],"Auto Kill Nearby",85,"autoKillMurdererNearby")
 TGG(pages[SEC],"Touch Fling",91,"touchFling")
-TGG(pages[SEC],"Blue Aura",31,"blueAura")
-MSL(pages[SEC],"Aura Range",32,state.blueAuraStuds or 10,5,50,"blueAuraStuds")
 ASEC(pages[SEC],"Headless (FE)",120)
 TGG(pages[SEC],"Headless V1",121,"headless1")
 TGG(pages[SEC],"Headless V2 (small head)",122,"headless2")
 TGG(pages[SEC],"Headless V3 (small head)",123,"headless3")
-ASEC(pages[SEC],"Sign Spam",160)
-TGG(pages[SEC],"Sign Spam",161,"signSpam")
-TGG(pages[SEC],"Auto GG",162,"autoGetGG")
 ASEC(pages[SEC],"FPS & Ping Monitor",170)
 TGG(pages[SEC],"FPS Monitor",171,"fpsPingMonitor")
 TGG(pages[SEC],"Color FPS",172,"fpsPingColor")
@@ -2516,10 +2485,6 @@ TGG(pages["Combat"],"Loop Fling Custom",35,"loopFlingCustom")
 TGG(pages["Combat"],"Auto Reset Murderer",36,"autoResetMurderer")
 TGG(pages["Combat"],"Auto Reset Sheriff",37,"autoResetSheriff")
 TGG(pages["Combat"],"Auto Reset Innocent",38,"autoResetInnocent")
-ASEC(pages["Combat"],"Kill (HandleTouched)",40)
-ABN(pages["Combat"],"Kill All",41,KAN)
-ABN(pages["Combat"],"Kill Sheriff",42,KSN)
-ABN(pages["Combat"],"Kill Custom",43,KCN)
 ASEC(pages["Combat"],"Fling",50)
 ABN(pages["Combat"],"Fling Murderer",51,FMN)
 ABN(pages["Combat"],"Fling Sheriff",52,FSN)
@@ -2786,14 +2751,10 @@ TGG(pages["Webhook"],"Auto Send",1,"sendOnFull")
 MIN(pages["Webhook"],3,"Webhook URL...",SC.webhookUrl,function(t) SC.webhookUrl=t saveSettings() end)
 MIN(pages["Webhook"],4,"Discord User ID...",SC.discordUserId,function(t) SC.discordUserId=t saveSettings() end)
 
--- MISC TAB
+-- MISC TAB (predicted murderer/sheriff and anti-fling removed)
 TGG(pages["Misc"],"Anti AFK",1,"afk")
-TGG(pages["Misc"],"Anti-Fling",2,"antiFling")
 TGG(pages["Misc"],"Auto Grab Gun",3,"gun")
 TGG(pages["Misc"],"Anti-Void",7,"antiVoid")
-TGG(pages["Misc"],"Predicted Murderer",10,"murdererPredictor")
-TGG(pages["Misc"],"Predicted Sheriff",11,"predictSheriff")
-TGG(pages["Misc"],"Murderer Perk Notify",12,"murdererPerkNotify")
 
 -- VOTING TAB
 ASEC(pages["Voting"],"Live Vote Map Names",1)
@@ -3225,18 +3186,79 @@ ABN(pages["UI"],"Unload Script",31,function()
     if _G.ApplewareUnload then pcall(function() _G.ApplewareUnload() end) end
 end)
 
--- ANIM/EMOT TAB
+-- ANIM/EMOT TAB (expanded emote list)
 ASEC(pages["Anim/Emot"],"Emote Browser",1)
 do
     local EM={
         {id=3360689775,name="Salute"},{id=5915779043,name="Applaud"},{id=3360692915,name="Tilt"},
-        {id=15610015346,name="Yungblud"},{id=14353423348,name="Bouncy Twirl"},{id=3823158750,name="Godlike"},
+        {id=15610015346,name="Yungblud"},{id=14353423348,name="Bouncy Twirl"},{id=14353421343,name="Face Frame"},
+        {id=3823158750,name="Godlike"},{id=139021427684680,name="Touch"},{id=133596366979822,name="Biblically"},
         {id=108128682361404,name="Rambunctious"},{id=79127989560307,name="Moon Walk"},{id=5230661597,name="Bored"},
         {id=14353425085,name="Strut"},{id=15694504637,name="Backflip"},{id=104142334418357,name="Gangnam"},
         {id=16553249658,name="Piano Hands"},{id=12507097350,name="Lotus"},{id=15698511500,name="Levitate"},
         {id=4689362868,name="Sleep"},{id=111426928948833,name="Floating"},{id=130245358716273,name="Starboy"},
         {id=120642514156293,name="Handshake"},{id=15506503658,name="Victory"},{id=3576717965,name="Shy"},
-        {id=73796726960568,name="Nyan"},{id=93511411593120,name="Fly"},{id=5917570207,name="Floss"}
+        {id=73796726960568,name="Nyan"},{id=78758922757947,name="Feet Sit"},{id=93511411593120,name="Fly"},
+        {id=114899970878842,name="Death"},{id=5104377791,name="Hero Landing"},{id=5917570207,name="Floss"},
+        {id=131763631172236,name="Xaviersobased"},{id=132074413582912,name="California"},{id=15554010118,name="Head Bop"},
+        {id=112758073578333,name="Bubbly"},{id=3716636630,name="Monkey"},{id=123015710605336,name="Onion"},
+        {id=4646306583,name="Curtsy"},{id=85936805522788,name="Caramell"},{id=14900153406,name="Feel Special"},
+        {id=102492229412911,name="Tenna Dance"},{id=133142324349281,name="Fish"},{id=10214406616,name="Frosty"},
+        {id=120224229260879,name="Cute Crouch"},{id=15679955281,name="Festive"},{id=4849502101,name="Sad"},
+        {id=10214418283,name="V Pose"},{id=92853367837757,name="Garry"},{id=104485625389237,name="Mine"},
+        {id=139830733782518,name="Phut On"},{id=132382355371060,name="Tank"},{id=103046131635200,name="Love Scenario"},
+        {id=15123050663,name="Bone Bop"},{id=124305244640379,name="Shattered"},{id=134311528115559,name="Hit Beat"},
+        {id=17748346932,name="Heart Shuffle"},{id=93105950995997,name="Caramelldansen"},{id=7466046574,name="Quiet"},
+        {id=96557878503341,name="Caramell 2"},{id=139859849852362,name="Dead"},{id=17360720445,name="Lets Drive"},
+        {id=103102322875221,name="Laser Spin"},{id=3576968026,name="Shrug"},{id=130998336536045,name="Gangnam 2"},
+        {id=84555218084038,name="Helicopter Spin"},{id=71302743123422,name="Popular"},{id=133765015173412,name="Ariana"},
+        {id=115319301809339,name="2 Phut Hon"},{id=70635223083942,name="Be Not Afraid"},{id=17746270218,name="Sturdy"},
+        {id=129149402922241,name="Griddy"},{id=3576686446,name="Hello"},{id=113547795536875,name="Gangnam 3"},
+        {id=126614732606871,name="Sit"},{id=3762654854,name="Greatest"},{id=16572756230,name="Hipmotion"},
+        {id=16276506814,name="Samba"},{id=3576823880,name="Point2"},{id=78459263478161,name="Family Man"},
+        {id=14900151704,name="Likey"},{id=3360686498,name="Stadium"},{id=15571540519,name="Starships"},
+        {id=4940597758,name="Cower"},{id=11394056822,name="Elevate"},{id=117734400993750,name="Virtual Singer"},
+        {id=97263450325496,name="Teto"},{id=4102315500,name="Haha"},{id=79312439851071,name="Hot To Go"},
+        {id=105851216004006,name="Electro"},{id=92707348383277,name="Mesmerizer"},{id=103139492736941,name="Tenna Swing"},
+        {id=15571538346,name="Boom Boom"},{id=15554016057,name="Fall Float"},{id=70615023659736,name="Floating 2"},
+        {id=136740085081295,name="Hidden"},{id=119431985170060,name="Helicopter"},{id=87141651594092,name="Speed Pose"},
+        {id=16303091119,name="Beauty"},{id=3934986896,name="Dizzy"},{id=130726889233022,name="Crybaby"},
+        {id=11309263077,name="Heart Skip"},{id=84511772437190,name="Spinning"},{id=14353417553,name="Air Guitar"},
+        {id=15392927897,name="Sliving"},{id=94796833553521,name="Takedown 1"},{id=120437019363089,name="Griffin"},
+        {id=15506506103,name="Flex Walk"},{id=90608224567833,name="Expendable"},{id=18526338976,name="Breaking"},
+        {id=99818263438846,name="Default Dance"},{id=103197720369544,name="Dani"},{id=75017857395637,name="TV Time"},
+        {id=73683655527605,name="Roadkill"},{id=15392932768,name="IT-Grrrl"},{id=82217023310738,name="Thanos"},
+        {id=102610758906338,name="Possessed"},{id=95323795166399,name="Rat Dance"},{id=127562607220778,name="Gangnam 4"},
+        {id=129132611803602,name="Helicopter 2"},{id=82345302788133,name="Dia Delicia"},{id=15392937495,name="Angles"},
+        {id=4212496830,name="Zombie"},{id=113016438012253,name="Best Mates"},{id=110537281410647,name="Wall Lean"},
+        {id=92903522317071,name="Magnetic"},{id=122899100558551,name="TV Time 2"},{id=75528418031928,name="Rambunct 2"},
+        {id=103040723950430,name="Gojo"},{id=70788193750089,name="Kickn"},{id=5915776835,name="High Wave"},
+        {id=84195923658292,name="Jojo"},{id=110731335896907,name="Headless"},{id=139271706064778,name="Hip Bounce"},
+        {id=4849499887,name="Happy"},{id=127271798262177,name="M3GAN"},{id=104304182344567,name="Hop"},
+        {id=85623000473425,name="Takedown 2"},{id=84067050907557,name="Pickle"},{id=86982022610765,name="Caramell 3"},
+        {id=117301403779781,name="Talm Bout"},{id=84822284410814,name="Maraschino"},{id=97847706148165,name="Kawaii"},
+        {id=89174456614428,name="Daydream"},{id=91023138078288,name="Oh Who"},{id=107978036345855,name="Prince"},
+        {id=71363859760586,name="Freddy"},{id=80877772569772,name="Default OG"},{id=80436375269036,name="Headless Hoop"},
+        {id=93262662842394,name="Sit 2"},{id=75703899901487,name="6 7"},{id=100773414188482,name="Water"},
+        {id=131544122623505,name="Car"},{id=99005087791705,name="Death Pose"},{id=132384701706046,name="Fake Dead"},
+        {id=129916107176034,name="Discombob"},{id=88598010609888,name="Angry Stomp"},{id=132508867759412,name="Xavier"},
+        {id=121167704249654,name="Hide"},{id=137873580964093,name="Human Spinner"},{id=76700167742736,name="Belly"},
+        {id=87826892596287,name="Levitate 2"},{id=70972410468289,name="Fake Dead 2"},{id=134615135651900,name="Head Spin"},
+        {id=13823339506,name="Archer"},{id=109755476052324,name="IShowSpeed"},{id=124828909173982,name="Skibidi"},
+        {id=4272351660,name="Fast Hands"},{id=137006085779408,name="Glitch Plus"},{id=89633087256727,name="Weird Spin"},
+        {id=125032357496729,name="Death Best"},{id=81177294287826,name="Hug"},{id=88721672617892,name="PBJT"},
+        {id=121259524934987,name="Xavier Jig"},{id=121067808279598,name="Parrot"},{id=7202898984,name="Wrists"},
+        {id=120377619472998,name="Macarena"},{id=4940602656,name="Jump Wave"},{id=94663026124741,name="Torture"},
+        {id=120896030393583,name="Get Sturdy"},{id=137261874619072,name="Sponge"},{id=119746055344304,name="Plane"},
+        {id=78620443286892,name="Laying"},{id=108922782921118,name="Pose"},{id=131221550165951,name="Heart Hands"},
+        {id=119454955259757,name="Caramel Hip"},{id=7202900159,name="Wake Up"},{id=79752538807060,name="Griddy 2"},
+        {id=140466682449054,name="Head Spin 2"},{id=107899954696611,name="Spongebob"},{id=96405718067779,name="Cute Sit"},
+        {id=4849497510,name="Power Blast"},{id=89413575288931,name="Blue Shirt"},{id=112924687333965,name="Aura Farm"},
+        {id=100782362883099,name="Car Transform"},{id=102323907950469,name="Space Dance"},{id=110521067391235,name="Jitterbug"},
+        {id=111304332281521,name="Druski"},{id=133600250245899,name="Soda Pop"},{id=133477296392756,name="Rasputin"},
+        {id=122949892043249,name="Sit Idle"},{id=82739386299071,name="Jackpot"},{id=80422524668416,name="Dreamer"},
+        {id=97968838104258,name="Subject 3"},{id=91274761264433,name="Macarena 2"},{id=3994130516,name="Bodybuilder"},
+        {id=5938365243,name="Dolphin"},{id=99563839802389,name="Jumpstyle"},{id=85361710130557,name="Caramell 4"}
     }
     local efG=Instance.new("ScreenGui")
     efG.Name="AW_EmoteFloats"
@@ -3853,7 +3875,6 @@ task.spawn(function()
         end
     end
 end)
--- Auto dodge: activates at autoDodgeRange studs (default 25), deactivates at range+8
 task.spawn(function()
     while true do
         task.wait(0.1)
@@ -4375,28 +4396,6 @@ task.spawn(function()
 end)
 task.spawn(function()
     while true do
-        task.wait(0.2)
-        if state.killAura and al() then
-            local k=FT("Knife")
-            if k then
-                local mr=LP.Character:FindFirstChild("HumanoidRootPart")
-                if mr then
-                    for _,p in ipairs(Players:GetPlayers()) do
-                        if p~=LP and TIA(p) then
-                            local pr=p.Character and p.Character:FindFirstChild("HumanoidRootPart")
-                            if pr and (mr.Position-pr.Position).Magnitude<=8 then
-                                KAN()
-                                break
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-end)
-task.spawn(function()
-    while true do
         task.wait(0.5)
         if state.flingAura and al() then
             local mr=LP.Character:FindFirstChild("HumanoidRootPart")
@@ -4406,46 +4405,6 @@ task.spawn(function()
                         local pr=p.Character and p.Character:FindFirstChild("HumanoidRootPart")
                         if pr and (mr.Position-pr.Position).Magnitude<=10 then
                             task.spawn(function() RF(p) end)
-                        end
-                    end
-                end
-            end
-        end
-    end
-end)
-task.spawn(function()
-    while true do
-        task.wait(0.5)
-        if state.autoKillMurdererNearby and al() then
-            local m=GM()
-            local mr=LP.Character:FindFirstChild("HumanoidRootPart")
-            if m and m.Character and mr then
-                local mm=m.Character:FindFirstChild("HumanoidRootPart")
-                if mm and (mr.Position-mm.Position).Magnitude<=8 then KAN() end
-            end
-        end
-    end
-end)
-task.spawn(function()
-    while true do
-        task.wait(0.5)
-        if state.blueAura and al() then
-            local ch=LP.Character
-            local rt=ch:FindFirstChild("HumanoidRootPart")
-            local k=ch:FindFirstChild("Knife") or (LP:FindFirstChild("Backpack") and LP.Backpack:FindFirstChild("Knife"))
-            if rt and k then
-                local ev=k:FindFirstChild("Events")
-                local ht=ev and ev:FindFirstChild("HandleTouched")
-                if ht then
-                    local mp=rt.Position
-                    for _,p in ipairs(Players:GetPlayers()) do
-                        if p~=LP and TIA(p) and not IW(p) then
-                            local pc=p.Character
-                            local pr=pc and pc:FindFirstChild("HumanoidRootPart")
-                            if pr and (mp-pr.Position).Magnitude<=(state.blueAuraStuds or 10) then
-                                local t=pc:FindFirstChild("UpperTorso") or pc:FindFirstChild("Torso")
-                                if t then pcall(function() ht:FireServer(t) end) end
-                            end
                         end
                     end
                 end
@@ -4768,47 +4727,6 @@ do
 end
 
 task.spawn(function()
-    local function FST()
-        local ch,bp=LP.Character,LP:FindFirstChild("Backpack")
-        for _,c in ipairs((ch and ch:GetChildren()) or {}) do
-            if c:IsA("Tool") and string.find(string.lower(c.Name),"sign",1,true) then return c,ch end
-        end
-        for _,c in ipairs((bp and bp:GetChildren()) or {}) do
-            if c:IsA("Tool") and string.find(string.lower(c.Name),"sign",1,true) then return c,bp end
-        end
-        return nil,nil
-    end
-    while true do
-        task.wait(0.05)
-        if state.signSpam and al() then
-            local h=LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-            if h then
-                local t,l=FST()
-                if t then
-                    if l==LP:FindFirstChild("Backpack") then
-                        pcall(function() h:EquipTool(t) end)
-                    end
-                    task.wait(0.04)
-                    pcall(function() h:UnequipTools() end)
-                end
-            end
-        end
-    end
-end)
-task.spawn(function()
-    while true do
-        task.wait(1)
-        if state.autoGetGG then
-            pcall(function()
-                local e=ReplicatedStorage:FindFirstChild("Remotes")
-                e=e and e:FindFirstChild("Extras")
-                e=e and e:FindFirstChild("ReplicateToy")
-                if e and e:IsA("RemoteFunction") then e:InvokeServer("GGSign") end
-            end)
-        end
-    end
-end)
-task.spawn(function()
     while true do
         task.wait(0.5)
         local tr=ReplicatedStorage:FindFirstChild("Trade")
@@ -4834,7 +4752,7 @@ task.spawn(function()
 end)
 
 -- ==========================================
--- PRIVATE CHAT (npoint.io relay — only script users see it)
+-- PRIVATE CHAT (npoint.io relay — cooler UI)
 -- ==========================================
 local privateChatGui = Instance.new("ScreenGui")
 privateChatGui.Name = "AW_PrivateChat"
@@ -4845,16 +4763,25 @@ pcall(function() privateChatGui.Parent = CoreGui end)
 if not privateChatGui.Parent then privateChatGui.Parent = PlayerGui end
 
 local privateChatFrame = Instance.new("Frame", privateChatGui)
-privateChatFrame.Size = UDim2.new(0, 470, 0, 400)
-privateChatFrame.Position = UDim2.new(0.5, -235, 0.5, -200)
+privateChatFrame.Size = UDim2.new(0, 500, 0, 440)
+privateChatFrame.Position = UDim2.new(0.5, -250, 0.5, -220)
 privateChatFrame.BackgroundColor3 = Color3.fromRGB(6, 6, 8)
 privateChatFrame.BorderSizePixel = 0
 privateChatFrame.Visible = false
 privateChatFrame.Active = true
 privateChatFrame.ClipsDescendants = true
-Instance.new("UICorner", privateChatFrame).CornerRadius = UDim.new(0, 12)
+Instance.new("UICorner", privateChatFrame).CornerRadius = UDim.new(0, 14)
+
+local pcGradient = Instance.new("UIGradient", privateChatFrame)
+pcGradient.Color = ColorSequence.new({
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(10, 10, 14)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(6, 6, 8)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(4, 4, 6))
+})
+pcGradient.Rotation = 45
+
 local pcStroke = Instance.new("UIStroke", privateChatFrame)
-pcStroke.Color = Color3.fromRGB(190, 190, 195)
+pcStroke.Color = Color3.fromRGB(200, 200, 205)
 pcStroke.Thickness = 2
 task.spawn(function()
     local p = 0
@@ -4863,48 +4790,62 @@ task.spawn(function()
         p = (p + dt * 1.4) % (math.pi * 2)
         local t = (math.sin(p) + 1) * 0.5
         if pcStroke and pcStroke.Parent then
-            pcStroke.Transparency = 0.4 - t * 0.4
-            pcStroke.Color = Color3.fromRGB(110 + t * 110, 110 + t * 110, 115 + t * 110)
+            pcStroke.Transparency = 0.3 - t * 0.3
+            pcStroke.Color = Color3.fromRGB(120 + t * 110, 120 + t * 110, 125 + t * 110)
         end
     end
 end)
 
 local pcDragBar = Instance.new("TextButton", privateChatFrame)
-pcDragBar.Size = UDim2.new(1, -46, 0, 32)
+pcDragBar.Size = UDim2.new(1, -46, 0, 44)
 pcDragBar.Position = UDim2.new(0, 8, 0, 4)
 pcDragBar.BackgroundTransparency = 1
 pcDragBar.Text = ""
 pcDragBar.ZIndex = 3
+
+local pcTitleIcon = Instance.new("Frame", pcDragBar)
+pcTitleIcon.Size = UDim2.new(0, 28, 0, 28)
+pcTitleIcon.Position = UDim2.new(0, 6, 0.5, -14)
+pcTitleIcon.BackgroundColor3 = Color3.fromRGB(190, 190, 195)
+Instance.new("UICorner", pcTitleIcon).CornerRadius = UDim.new(0, 8)
+local pcIconLabel = Instance.new("TextLabel", pcTitleIcon)
+pcIconLabel.Size = UDim2.new(1, 0, 1, 0)
+pcIconLabel.BackgroundTransparency = 1
+pcIconLabel.Text = "A"
+pcIconLabel.TextColor3 = Color3.new(0, 0, 0)
+pcIconLabel.Font = Enum.Font.GothamBold
+pcIconLabel.TextSize = 16
+
 local pcTitle = Instance.new("TextLabel", pcDragBar)
-pcTitle.Size = UDim2.new(1, -4, 1, 0)
-pcTitle.Position = UDim2.new(0, 4, 0, 0)
+pcTitle.Size = UDim2.new(1, -80, 0, 20)
+pcTitle.Position = UDim2.new(0, 42, 0, 6)
 pcTitle.BackgroundTransparency = 1
-pcTitle.Text = "APPLEWARE PRIVATE CHAT"
+pcTitle.Text = "AppleWare Private Chat"
 pcTitle.TextColor3 = Color3.fromRGB(235, 235, 240)
 pcTitle.Font = Enum.Font.GothamBold
-pcTitle.TextSize = 14
+pcTitle.TextSize = 15
 pcTitle.TextXAlignment = Enum.TextXAlignment.Left
 
-local pcStatus = Instance.new("TextLabel", pcDragBar)
-pcStatus.Size = UDim2.new(1, -8, 0, 12)
-pcStatus.Position = UDim2.new(0, 4, 1, -14)
-pcStatus.BackgroundTransparency = 1
-pcStatus.Text = "connecting..."
-pcStatus.TextColor3 = Color3.fromRGB(150, 150, 155)
-pcStatus.Font = Enum.Font.Gotham
-pcStatus.TextSize = 9
-pcStatus.TextXAlignment = Enum.TextXAlignment.Left
+local pcSubtitle = Instance.new("TextLabel", pcDragBar)
+pcSubtitle.Size = UDim2.new(1, -80, 0, 14)
+pcSubtitle.Position = UDim2.new(0, 42, 0, 24)
+pcSubtitle.BackgroundTransparency = 1
+pcSubtitle.Text = "script users only"
+pcSubtitle.TextColor3 = Color3.fromRGB(140, 140, 145)
+pcSubtitle.Font = Enum.Font.Gotham
+pcSubtitle.TextSize = 10
+pcSubtitle.TextXAlignment = Enum.TextXAlignment.Left
 
 local pcClose = Instance.new("TextButton", privateChatFrame)
 pcClose.Size = UDim2.new(0, 30, 0, 30)
-pcClose.Position = UDim2.new(1, -36, 0, 5)
+pcClose.Position = UDim2.new(1, -36, 0, 8)
 pcClose.BackgroundColor3 = Color3.fromRGB(40, 40, 44)
 pcClose.Text = "X"
 pcClose.TextColor3 = Color3.new(1, 1, 1)
 pcClose.Font = Enum.Font.GothamBold
 pcClose.TextSize = 14
 pcClose.AutoButtonColor = false
-Instance.new("UICorner", pcClose).CornerRadius = UDim.new(0, 6)
+Instance.new("UICorner", pcClose).CornerRadius = UDim.new(0, 8)
 pcClose.MouseButton1Click:Connect(function() privateChatFrame.Visible = false end)
 
 local pcDragState = nil
@@ -4927,8 +4868,8 @@ UIS.InputEnded:Connect(function(i)
 end)
 
 local pcTabRow = Instance.new("Frame", privateChatFrame)
-pcTabRow.Size = UDim2.new(1, -20, 0, 28)
-pcTabRow.Position = UDim2.new(0, 10, 0, 38)
+pcTabRow.Size = UDim2.new(1, -20, 0, 32)
+pcTabRow.Position = UDim2.new(0, 10, 0, 54)
 pcTabRow.BackgroundTransparency = 1
 local pcTabChat = Instance.new("TextButton", pcTabRow)
 pcTabChat.Size = UDim2.new(0, 110, 1, 0)
@@ -4936,7 +4877,7 @@ pcTabChat.Text = "Chat"
 pcTabChat.Font = Enum.Font.GothamBold
 pcTabChat.TextSize = 12
 pcTabChat.AutoButtonColor = false
-Instance.new("UICorner", pcTabChat).CornerRadius = UDim.new(0, 6)
+Instance.new("UICorner", pcTabChat).CornerRadius = UDim.new(0, 8)
 local pcTabCmds = Instance.new("TextButton", pcTabRow)
 pcTabCmds.Size = UDim2.new(0, 110, 1, 0)
 pcTabCmds.Position = UDim2.new(0, 116, 0, 0)
@@ -4944,15 +4885,15 @@ pcTabCmds.Text = "Commands"
 pcTabCmds.Font = Enum.Font.GothamBold
 pcTabCmds.TextSize = 12
 pcTabCmds.AutoButtonColor = false
-Instance.new("UICorner", pcTabCmds).CornerRadius = UDim.new(0, 6)
+Instance.new("UICorner", pcTabCmds).CornerRadius = UDim.new(0, 8)
 
 local pcBody = Instance.new("Frame", privateChatFrame)
-pcBody.Size = UDim2.new(1, -20, 1, -132)
-pcBody.Position = UDim2.new(0, 10, 0, 72)
-pcBody.BackgroundColor3 = Color3.fromRGB(14, 14, 16)
+pcBody.Size = UDim2.new(1, -20, 1, -152)
+pcBody.Position = UDim2.new(0, 10, 0, 92)
+pcBody.BackgroundColor3 = Color3.fromRGB(12, 12, 14)
 pcBody.BorderSizePixel = 0
 pcBody.ClipsDescendants = true
-Instance.new("UICorner", pcBody).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", pcBody).CornerRadius = UDim.new(0, 10)
 
 local pcChatPage = Instance.new("Frame", pcBody)
 pcChatPage.Size = UDim2.new(1, 0, 1, 0)
@@ -4963,16 +4904,17 @@ pcScroll.Size = UDim2.new(1, 0, 1, 0)
 pcScroll.BackgroundTransparency = 1
 pcScroll.BorderSizePixel = 0
 pcScroll.ScrollBarThickness = 4
+pcScroll.ScrollBarImageColor3 = Color3.fromRGB(160, 160, 165)
 pcScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 pcScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 local pcLayout = Instance.new("UIListLayout", pcScroll)
 pcLayout.SortOrder = Enum.SortOrder.LayoutOrder
-pcLayout.Padding = UDim.new(0, 4)
+pcLayout.Padding = UDim.new(0, 6)
 local pcPad2 = Instance.new("UIPadding", pcScroll)
-pcPad2.PaddingTop = UDim.new(0, 8)
-pcPad2.PaddingBottom = UDim.new(0, 8)
-pcPad2.PaddingLeft = UDim.new(0, 10)
-pcPad2.PaddingRight = UDim.new(0, 10)
+pcPad2.PaddingTop = UDim.new(0, 10)
+pcPad2.PaddingBottom = UDim.new(0, 10)
+pcPad2.PaddingLeft = UDim.new(0, 12)
+pcPad2.PaddingRight = UDim.new(0, 12)
 
 local pcCmdsPage = Instance.new("Frame", pcBody)
 pcCmdsPage.Size = UDim2.new(1, 0, 1, 0)
@@ -4988,26 +4930,54 @@ local pcCmdLayout = Instance.new("UIListLayout", pcCmdScroll)
 pcCmdLayout.SortOrder = Enum.SortOrder.LayoutOrder
 pcCmdLayout.Padding = UDim.new(0, 4)
 local pcCmdPad = Instance.new("UIPadding", pcCmdScroll)
-pcCmdPad.PaddingTop = UDim.new(0, 8)
-pcCmdPad.PaddingBottom = UDim.new(0, 8)
-pcCmdPad.PaddingLeft = UDim.new(0, 10)
-pcCmdPad.PaddingRight = UDim.new(0, 10)
+pcCmdPad.PaddingTop = UDim.new(0, 10)
+pcCmdPad.PaddingBottom = UDim.new(0, 10)
+pcCmdPad.PaddingLeft = UDim.new(0, 12)
+pcCmdPad.PaddingRight = UDim.new(0, 12)
 
-local pcInput = Instance.new("TextBox", privateChatFrame)
-pcInput.Size = UDim2.new(1, -20, 0, 34)
-pcInput.Position = UDim2.new(0, 10, 1, -44)
-pcInput.BackgroundColor3 = Color3.fromRGB(22, 22, 26)
+local pcStatusBar = Instance.new("Frame", privateChatFrame)
+pcStatusBar.Size = UDim2.new(1, -20, 0, 18)
+pcStatusBar.Position = UDim2.new(0, 10, 1, -50)
+pcStatusBar.BackgroundTransparency = 1
+local pcStatus = Instance.new("TextLabel", pcStatusBar)
+pcStatus.Size = UDim2.new(1, 0, 1, 0)
+pcStatus.BackgroundTransparency = 1
+pcStatus.Text = "connecting..."
+pcStatus.TextColor3 = Color3.fromRGB(140, 140, 145)
+pcStatus.Font = Enum.Font.Gotham
+pcStatus.TextSize = 10
+pcStatus.TextXAlignment = Enum.TextXAlignment.Left
+
+local pcInputWrap = Instance.new("Frame", privateChatFrame)
+pcInputWrap.Size = UDim2.new(1, -20, 0, 38)
+pcInputWrap.Position = UDim2.new(0, 10, 1, -38)
+pcInputWrap.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
+Instance.new("UICorner", pcInputWrap).CornerRadius = UDim.new(0, 10)
+local pcInputStroke = Instance.new("UIStroke", pcInputWrap)
+pcInputStroke.Color = Color3.fromRGB(60, 60, 65)
+pcInputStroke.Thickness = 1
+
+local pcInput = Instance.new("TextBox", pcInputWrap)
+pcInput.Size = UDim2.new(1, -16, 1, 0)
+pcInput.Position = UDim2.new(0, 12, 0, 0)
+pcInput.BackgroundTransparency = 1
 pcInput.PlaceholderText = "Type a message or .command..."
-pcInput.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+pcInput.PlaceholderColor3 = Color3.fromRGB(120, 120, 125)
 pcInput.Text = ""
 pcInput.TextColor3 = Color3.new(1, 1, 1)
 pcInput.Font = Enum.Font.Gotham
 pcInput.TextSize = 12
 pcInput.ClearTextOnFocus = false
 pcInput.TextXAlignment = Enum.TextXAlignment.Left
-Instance.new("UICorner", pcInput).CornerRadius = UDim.new(0, 8)
-local pcPad = Instance.new("UIPadding", pcInput)
-pcPad.PaddingLeft = UDim.new(0, 10)
+
+pcInput.Focused:Connect(function()
+    TweenService:Create(pcInputStroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(190, 190, 195)}):Play()
+    TweenService:Create(pcInputWrap, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(28, 28, 32)}):Play()
+end)
+pcInput.FocusLost:Connect(function()
+    TweenService:Create(pcInputStroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(60, 60, 65)}):Play()
+    TweenService:Create(pcInputWrap, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(20, 20, 24)}):Play()
+end)
 
 local pcMsgCount = 0
 local seenMsgIds = {}
@@ -5015,25 +4985,46 @@ local function addPrivateMessage(sender, message, isSystem, msgId)
     if msgId and seenMsgIds[msgId] then return end
     if msgId then seenMsgIds[msgId] = true end
     pcMsgCount = pcMsgCount + 1
-    local label = Instance.new("TextLabel", pcScroll)
-    label.Size = UDim2.new(1, -10, 0, 20)
-    label.BackgroundTransparency = 1
-    label.Text = "[" .. tostring(sender) .. "]: " .. tostring(message)
-    label.TextColor3 = Color3.fromRGB(210, 210, 215)
-    label.Font = Enum.Font.Gotham
-    label.TextSize = 12
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.TextWrapped = true
-    label.RichText = true
-    label.LayoutOrder = pcMsgCount
-    if isSystem then
-        label.TextColor3 = Color3.fromRGB(255, 200, 80)
-    elseif sender == LP.Name or sender == LP.DisplayName then
-        label.TextColor3 = Color3.fromRGB(120, 255, 140)
+    local isOwn = (sender == LP.Name or sender == LP.DisplayName)
+    local msg = Instance.new("Frame", pcScroll)
+    msg.Size = UDim2.new(1, -12, 0, 24)
+    msg.BackgroundTransparency = 1
+    msg.LayoutOrder = pcMsgCount
+    local bubble = Instance.new("Frame", msg)
+    bubble.AnchorPoint = isOwn and Vector2.new(1, 0) or Vector2.new(0, 0)
+    bubble.Position = isOwn and UDim2.new(1, 0, 0, 0) or UDim2.new(0, 0, 0, 0)
+    bubble.AutomaticSize = Enum.AutomaticSize.X
+    bubble.Size = UDim2.new(0, 0, 1, 0)
+    bubble.BackgroundColor3 = isSystem and Color3.fromRGB(50, 40, 20) or (isOwn and Color3.fromRGB(30, 60, 40) or Color3.fromRGB(24, 24, 28))
+    Instance.new("UICorner", bubble).CornerRadius = UDim.new(0, 10)
+    local bpad = Instance.new("UIPadding", bubble)
+    bpad.PaddingLeft = UDim.new(0, 10)
+    bpad.PaddingRight = UDim.new(0, 10)
+    local lbl = Instance.new("TextLabel", bubble)
+    lbl.BackgroundTransparency = 1
+    lbl.AutomaticSize = Enum.AutomaticSize.X
+    lbl.Size = UDim2.new(0, 0, 1, 0)
+    lbl.Text = tostring(sender) .. ": " .. tostring(message)
+    lbl.TextColor3 = isSystem and Color3.fromRGB(255, 200, 100) or (isOwn and Color3.fromRGB(200, 255, 210) or Color3.fromRGB(215, 215, 220))
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextSize = 12
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.TextWrapped = false
+    -- cap width
+    local maxW = pcScroll.AbsoluteSize.X - 24
+    local textLen = #lbl.Text
+    if textLen * 7 > maxW then
+        bubble.AutomaticSize = Enum.AutomaticSize.None
+        bubble.Size = UDim2.new(1, 0, 0, 0)
+        bubble.AutomaticSize = Enum.AutomaticSize.Y
+        lbl.AutomaticSize = Enum.AutomaticSize.None
+        lbl.Size = UDim2.new(1, -20, 0, 0)
+        lbl.AutomaticSize = Enum.AutomaticSize.Y
+        lbl.TextWrapped = true
     end
     task.defer(function()
         if pcScroll and pcScroll.Parent then
-            pcScroll.CanvasPosition = Vector2.new(0, math.max(0, label.AbsolutePosition.Y + label.AbsoluteSize.Y))
+            pcScroll.CanvasPosition = Vector2.new(0, math.max(0, pcScroll.AbsoluteCanvasSize.Y - pcScroll.AbsoluteWindowSize.Y))
         end
     end)
 end
@@ -5043,7 +5034,7 @@ local function setPcTab(t)
     pcActiveTab = t
     pcChatPage.Visible = (t == "chat")
     pcCmdsPage.Visible = (t == "cmds")
-    pcInput.Visible = (t == "chat")
+    pcInputWrap.Visible = (t == "chat")
     local function style(btn, active)
         if active then
             btn.BackgroundColor3 = Color3.fromRGB(190, 190, 195)
@@ -5061,36 +5052,40 @@ pcTabCmds.MouseButton1Click:Connect(function() setPcTab("cmds") end)
 
 local helpEntries = {
     {"General", "header"},
-    {".help", "Open this Commands tab"},
-    {".showui", "Show main UI"},
-    {".hideui", "Hide main UI"},
+    {".help", "Open Commands tab"},
+    {".showui / .hideui", "Show/hide main UI"},
     {".private", "Toggle private chat"},
-    {".unload", "Unload the script"},
-    {"Movement", "header"},
-    {".fly", "Toggle fly"},
-    {".noclip", "Toggle noclip"},
-    {".speed <n>", "Set walk speed"},
-    {".jump <n>", "Set jump power"},
-    {".infjump", "Toggle infinite jump"},
-    {".bhop", "Toggle bunny hop"},
-    {".clicktp", "Toggle click teleport"},
+    {".unload", "Unload the entire script"},
+    {"Turn Off Any Feature", "header"},
+    {".unfly / .unnoclip", "Turn off fly / noclip"},
+    {".unaimbot", "Turn off aimbot murderer + sheriff"},
+    {".unsilentaim", "Turn off silent aim"},
+    {".unshootwall", "Turn off shoot through walls"},
+    {".unesp / .ungesp", "Turn off player / gun ESP"},
+    {".unhitbox", "Turn off hitbox expander"},
+    {".unspinbot", "Turn off spin bot"},
+    {".unwallhop", "Turn off wall hop"},
+    {".uninvis", "Turn off invisible"},
+    {".unspeed / .unjump", "Turn off speed / jump power"},
+    {".unfullbright", "Turn off fullbright"},
+    {".unfov", "Turn off FOV changer"},
+    {".undodge", "Turn off auto dodge"},
+    {".unflingaura", "Turn off fling aura"},
     {"Combat", "header"},
-    {".aimbot", "Toggle aimbot murderer"},
-    {".aimbot sheriff", "Toggle aimbot sheriff"},
+    {".aimbot [sheriff]", "Toggle aimbot"},
     {".silentaim", "Toggle silent aim"},
     {".shoot", "Fire at murderer"},
     {".shootwall", "Shoot through walls"},
-    {".fling <user>", "Fling user (or murderer)"},
-    {".flingall", "Fling everyone"},
-    {".flingmur", "Fling murderer"},
-    {".flingsher", "Fling sheriff"},
-    {".killall", "Kill everyone"},
-    {".killsher", "Kill sheriff"},
+    {".fling <user>", "Fling a player"},
+    {".flingall / .flingmur", "Fling all / murderer"},
+    {".killsher / .killall", "Kill sheriff / all"},
+    {"Movement", "header"},
+    {".fly / .noclip", "Toggle fly / noclip"},
+    {".speed <n>", "Set walk speed"},
+    {".jump <n>", "Set jump power"},
     {"Teleport", "header"},
-    {".tpmap", "TP to map"},
-    {".tplobby", "TP to lobby"},
-    {".tpmur", "TP to murderer"},
-    {".tpsher", "TP to sheriff"},
+    {".tpmap / .tplobby", "TP to map / lobby"},
+    {".tpmur / .tpsher", "TP to murderer / sheriff"},
     {"Utility", "header"},
     {".grabgun", "Grab nearest gun"},
     {".removebarriers", "Remove barriers"},
@@ -5107,7 +5102,7 @@ for i, entry in ipairs(helpEntries) do
         local tl = Instance.new("TextLabel", row)
         tl.Size = UDim2.new(1, 0, 1, 0)
         tl.BackgroundTransparency = 1
-        tl.Text = "--- " .. n .. " ---"
+        tl.Text = "-- " .. n .. " --"
         tl.TextColor3 = Color3.fromRGB(200, 200, 205)
         tl.Font = Enum.Font.GothamBold
         tl.TextSize = 12
@@ -5115,7 +5110,7 @@ for i, entry in ipairs(helpEntries) do
     else
         row.Size = UDim2.new(1, 0, 0, 20)
         local cl = Instance.new("TextLabel", row)
-        cl.Size = UDim2.new(0, 170, 1, 0)
+        cl.Size = UDim2.new(0, 180, 1, 0)
         cl.BackgroundTransparency = 1
         cl.Text = n
         cl.TextColor3 = Color3.fromRGB(120, 255, 140)
@@ -5123,8 +5118,8 @@ for i, entry in ipairs(helpEntries) do
         cl.TextSize = 12
         cl.TextXAlignment = Enum.TextXAlignment.Left
         local dl = Instance.new("TextLabel", row)
-        dl.Size = UDim2.new(1, -180, 1, 0)
-        dl.Position = UDim2.new(0, 180, 0, 0)
+        dl.Size = UDim2.new(1, -190, 1, 0)
+        dl.Position = UDim2.new(0, 190, 0, 0)
         dl.BackgroundTransparency = 1
         dl.Text = d
         dl.TextColor3 = Color3.fromRGB(180, 180, 185)
@@ -5162,23 +5157,11 @@ local function httpPostJson(url, tbl)
     local body = HttpService:JSONEncode(tbl)
     local ok, res = pcall(function()
         if syn and syn.request then
-            return syn.request({
-                Url = url, Method = "POST",
-                Headers = {["Content-Type"] = "application/json"},
-                Body = body
-            })
+            return syn.request({Url=url, Method="POST", Headers={["Content-Type"]="application/json"}, Body=body})
         elseif request then
-            return request({
-                Url = url, Method = "POST",
-                Headers = {["Content-Type"] = "application/json"},
-                Body = body
-            })
+            return request({Url=url, Method="POST", Headers={["Content-Type"]="application/json"}, Body=body})
         elseif http_request then
-            return http_request({
-                Url = url, Method = "POST",
-                Headers = {["Content-Type"] = "application/json"},
-                Body = body
-            })
+            return http_request({Url=url, Method="POST", Headers={["Content-Type"]="application/json"}, Body=body})
         else
             return {Body = game:HttpGet(url, true, body)}
         end
@@ -5242,7 +5225,76 @@ _G.__AW_RUN_COMMAND = function(raw)
         _G.__AW_NOTIFY('<font color="'..(state[key] and "#5aff8c" or "#ff5a5a")..'">'..(label or key)..'</font> '..(state[key] and "on" or "off"))
         saveSettings()
     end
-    if cmd == "help" or cmd == "h" or cmd == "?" then
+    local function turnOff(key, label)
+        if state[key] == true then
+            state[key] = false
+            if FBM[key] then RFV(FBM[key]) end
+            if key == "flyEnabled" then stopFly() end
+            if key == "voidPlatform" then RVP() end
+            _G.__AW_NOTIFY('<font color="#ff5a5a">'..(label or key)..' off</font>')
+            saveSettings()
+        else
+            _G.__AW_NOTIFY((label or key)..' already off')
+        end
+    end
+
+    -- .un commands (turn off)
+    if cmd == "unfly" then turnOff("flyEnabled","Fly")
+    elseif cmd == "unnoclip" then turnOff("noclip","Noclip")
+    elseif cmd == "uninfjump" then turnOff("infJumpEnabled","Inf Jump")
+    elseif cmd == "unbhop" then turnOff("bunnyHop","Bunny Hop")
+    elseif cmd == "unspeedglitch" then turnOff("speedGlitch","Speed Glitch")
+    elseif cmd == "unspeed" then turnOff("speedEnabled","Speed")
+    elseif cmd == "unjump" then turnOff("jumpEnabled","Jump Power")
+    elseif cmd == "uninvis" or cmd == "uninvisible" then turnOff("invisibleEnabled","Invisible")
+    elseif cmd == "unfreeze" then turnOff("freeze","Freeze")
+    elseif cmd == "unfullbright" then turnOff("fullbright","Fullbright")
+    elseif cmd == "unfov" then turnOff("fovEnabled","FOV")
+    elseif cmd == "unclicktp" then turnOff("clickTP","Click TP")
+    elseif cmd == "unaimbot" then
+        state.aimbotMurderer=false
+        state.aimbotSheriff=false
+        if FBM["aimbotMur"] then RFV(FBM["aimbotMur"]) end
+        if FBM["aimbotSher"] then RFV(FBM["aimbotSher"]) end
+        _G.__AW_NOTIFY("Aimbot off")
+        saveSettings()
+    elseif cmd == "unsilentaim" then turnOff("silentAimEnabled","Silent Aim")
+    elseif cmd == "unshootwall" or cmd == "unshootthrough" then turnOff("shootThroughWall","Shoot Through Walls")
+    elseif cmd == "unautoshoot" then turnOff("autoShootMurderer","Auto Shoot")
+    elseif cmd == "unesp" then turnOff("espPlayers","Player ESP")
+    elseif cmd == "ungesp" or cmd == "unespgun" then turnOff("espGunDrop","Gun ESP")
+    elseif cmd == "unhitbox" then turnOff("hitboxExpander","Hitbox Expander")
+    elseif cmd == "unspinbot" then turnOff("spinBot","Spin Bot")
+    elseif cmd == "unwallhop" then turnOff("wallHop","Wall Hop")
+    elseif cmd == "unwallhopflick" then turnOff("wallHopFlick","Wall Hop Flick")
+    elseif cmd == "undodge" or cmd == "unautododge" then turnOff("autoDodge","Auto Dodge")
+    elseif cmd == "unflingaura" then turnOff("flingAura","Fling Aura")
+    elseif cmd == "unloopflingall" then turnOff("loopFlingAll","Loop Fling All")
+    elseif cmd == "unloopflingmur" then turnOff("loopFlingMur","Loop Fling Mur")
+    elseif cmd == "unloopflingsher" then turnOff("loopFlingSheriff","Loop Fling Sher")
+    elseif cmd == "unloopflingcust" then turnOff("loopFlingCustom","Loop Fling Cust")
+    elseif cmd == "unremovebarriers" then turnOff("removeBarriers","Remove Barriers")
+    elseif cmd == "unvoid" then turnOff("voidPlatform","Void Platform")
+    elseif cmd == "unheadless" then
+        state.headless1=false; state.headless2=false; state.headless3=false
+        saveSettings()
+        _G.__AW_NOTIFY("Headless off")
+    elseif cmd == "unfeanim" then turnOff("feAnimEnabled","FE Anim")
+    elseif cmd == "unafk" then turnOff("afk","Anti AFK")
+    elseif cmd == "unantivoid" then turnOff("antiVoid","Anti-Void")
+    elseif cmd == "ungun" or cmd == "unautogun" then turnOff("gun","Auto Grab Gun")
+    elseif cmd == "unnotifysound" then turnOff("notifySound","Notify Sound")
+    elseif cmd == "unfps" then turnOff("fpsPingMonitor","FPS Monitor")
+    elseif cmd == "unnotrade" then turnOff("disableTrading","Disable Trading")
+    elseif cmd == "untp" then
+        state.loopTpMap=false; state.loopTpLobby=false; state.loopTpMurderer=false
+        state.loopTpSheriff=false; state.loopTpCustom=false
+        saveSettings()
+        _G.__AW_NOTIFY("Loop teleports off")
+    elseif cmd == "unsheriff" then turnOff("sheriffFlickToggle","Sheriff Flick")
+
+    -- normal commands
+    elseif cmd == "help" or cmd == "h" or cmd == "?" then
         if not privateChatFrame.Visible then privateChatFrame.Visible = true end
         setPcTab("cmds")
     elseif cmd == "showui" then
@@ -5341,23 +5393,19 @@ LP.Chatted:Connect(function(msg)
     end
 end)
 
--- UNLOAD
+-- UNLOAD (turns off EVERYTHING including ESP)
 _G.ApplewareUnload = function()
     _G.ApplewareActive = false
     _G.ApplewareLoaded = false
-    local gn = {"AWNotes", "AWRT", "AW_BigShoot", "AW_FloatingActions", "Appleware", "AW_EmoteFloats", "AW_FPS_Ping", "AW_ESP", "AW_ReloadPrompt", "AW_PrivateChat"}
-    local function KG(par)
-        for _, n in ipairs(gn) do
-            local g = par:FindFirstChild(n)
-            if g then pcall(function() g:Destroy() end) end
+
+    -- turn off every feature explicitly
+    for k, v in pairs(state) do
+        if type(v) == "boolean" then
+            state[k] = false
         end
     end
-    pcall(KG, CoreGui)
-    pcall(KG, PlayerGui)
-    for _, n in ipairs({"AW_VoidPlatform", "invischair"}) do
-        local o = workspace:FindFirstChild(n)
-        if o then pcall(function() o:Destroy() end) end
-    end
+
+    -- reset character
     pcall(function()
         local ch = LP.Character
         if ch then
@@ -5367,9 +5415,79 @@ _G.ApplewareUnload = function()
                 h.WalkSpeed = 16
                 h.JumpPower = 50
                 h.UseJumpPower = false
+                h.AutoRotate = true
             end
+            local r = ch:FindFirstChild("HumanoidRootPart")
+            if r then
+                r.Anchored = false
+                r.AssemblyLinearVelocity = Vector3.zero
+                r.AssemblyAngularVelocity = Vector3.zero
+            end
+            -- remove invisibility
+            for _, d in ipairs(ch:GetDescendants()) do
+                if d:IsA("BasePart") or d:IsA("Decal") then
+                    pcall(function() d.Transparency = 0 end)
+                end
+            end
+            -- remove hitboxes
+            local hb = ch:FindFirstChild("AW_Hitbox")
+            if hb then pcall(function() hb:Destroy() end) end
         end
     end)
+
+    -- stop fly body movers
+    if flyConn then pcall(function() flyConn:Disconnect() end) end
+    if flyBV and flyBV.Parent then pcall(function() flyBV:Destroy() end) end
+    if flyBG and flyBG.Parent then pcall(function() flyBG:Destroy() end) end
+
+    -- clear ESP
+    pcall(function()
+        for p, e in pairs(EC) do
+            if e then
+                if e.hl then pcall(function() e.hl:Destroy() end) end
+                if e.bb then pcall(function() e.bb:Destroy() end) end
+            end
+        end
+        EC = {}
+        for k, v in pairs(GC2) do
+            if v then
+                if v.hl then pcall(function() v.hl:Destroy() end) end
+                if v.bb then pcall(function() v.bb:Destroy() end) end
+            end
+        end
+        GC2 = {}
+    end)
+
+    -- clear floating buttons
+    pcall(function()
+        for _, d in pairs(FBs) do
+            if d.btn and d.btn.Parent then pcall(function() d.btn:Destroy() end) end
+            if d.outer and d.outer.Parent then pcall(function() d.outer:Destroy() end) end
+        end
+        FBs = {}
+    end)
+
+    -- destroy all GUI
+    local gn = {"AWNotes", "AWRT", "AW_BigShoot", "AW_FloatingActions", "Appleware", "AW_EmoteFloats", "AW_FPS_Ping", "AW_ESP", "AW_ReloadPrompt", "AW_PrivateChat", "AW_WhatsNew"}
+    local function KG(par)
+        for _, n in ipairs(gn) do
+            local g = par:FindFirstChild(n)
+            if g then pcall(function() g:Destroy() end) end
+        end
+    end
+    pcall(KG, CoreGui)
+    pcall(KG, PlayerGui)
+
+    -- destroy workspace objects
+    for _, n in ipairs({"AW_VoidPlatform", "invischair"}) do
+        local o = workspace:FindFirstChild(n)
+        if o then pcall(function() o:Destroy() end) end
+    end
+
+    -- reset invis state
+    dodgeActive = false
+    invisApplied = false
+
     print("[Appleware] Unloaded.")
 end
 
