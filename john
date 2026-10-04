@@ -39,7 +39,6 @@ local CoreGui=game:GetService("CoreGui")
 local TeleportService=game:GetService("TeleportService")
 local Lighting=game:GetService("Lighting")
 local UIS=game:GetService("UserInputService")
-local InsertService=game:GetService("InsertService")
 local LP=Players.LocalPlayer
 local PlaceId=game.PlaceId
 local PlayerGui=LP:WaitForChild("PlayerGui",10)
@@ -159,7 +158,7 @@ SC.cardColor={r=14,g=14,b=16}; SC.cardHoverColor={r=28,g=28,b=32}
 SC.borderColor={r=80,g=80,b=85}; SC.accentColor={r=190,g=190,b=195}
 SC.tabBgColor={r=2,g=2,b=3}; SC.tabTextColor={r=150,g=150,b=155}
 SC.tabTextActiveColor={r=255,g=255,b=255}
-SC.openBtnColor={r=8,g=8,b=10}; SC.openBtnTextColor={r=255,255,255}
+SC.openBtnColor={r=8,g=8,b=10}; SC.openBtnTextColor={r=255,g=255,b=255}
 
 for _,k in ipairs(KB) do if state.keybinds[k.key]==nil then state.keybinds[k.key]=k.default end end
 
@@ -1044,9 +1043,6 @@ local function TGG(pg,name,order,key)
         if FBM[key] then RFV(FBM[key]) end
         local dn=TD[key] or key
         _G.__AW_NOTIFY('<font color="'..(ns and "#5aff8c" or "#ff5a5a")..'">'..dn..'</font> '..(ns and "on" or "off"))
-        if key=="feAnimEnabled" and _G.__AW_SYNC_ANIM_DROPDOWNS then
-            pcall(_G.__AW_SYNC_ANIM_DROPDOWNS, state.feAnimAll or "Default")
-        end
         if (key=="speedEnabled" or key=="speedGlitch" or key=="jumpEnabled" or key=="flyEnabled") and not ns and LP.Character then
             local h=LP.Character:FindFirstChildOfClass("Humanoid")
             if h then
@@ -1163,10 +1159,7 @@ task.spawn(function()
         local inRound = IIR()
         if inRound ~= lastRoundState then
             lastRoundState = inRound
-            if inRound then
-                notifiedMurderer = nil
-                notifiedSheriff = nil
-            end
+            if inRound then notifiedMurderer = nil; notifiedSheriff = nil end
         end
     end
 end)
@@ -1738,9 +1731,6 @@ UIS.InputBegan:Connect(function(inp,gp)
                 local dn=TD[ft] or ft
                 _G.__AW_NOTIFY('<font color="'..(ns and "#5aff8c" or "#ff5a5a")..'">'..dn..'</font> '..(ns and "on" or "off"))
                 if ft=="voidPlatform" and not ns then RVP() end
-                if ft=="feAnimEnabled" and _G.__AW_SYNC_ANIM_DROPDOWNS then
-                    pcall(_G.__AW_SYNC_ANIM_DROPDOWNS, state.feAnimAll or "Default")
-                end
                 if (ft=="speedEnabled" or ft=="speedGlitch" or ft=="jumpEnabled" or ft=="flyEnabled") and not ns and LP.Character then
                     local h=LP.Character:FindFirstChildOfClass("Humanoid")
                     if h then
@@ -2595,7 +2585,7 @@ task.spawn(function() while true do task.wait(0.5)
         else if sr and sr:IsA("RemoteFunction") then pcall(function() sr.OnClientInvoke=nil end) end end end end end)
 
 -- ==========================================
--- PRIVATE CHAT (npoint.io relay — only script users see it)
+-- PRIVATE CHAT (Roblox chat with hidden prefix — only script users see it in their window)
 -- ==========================================
 local privateChatGui = Instance.new("ScreenGui")
 privateChatGui.Name = "AW_PrivateChat"
@@ -2649,7 +2639,7 @@ local pcStatus = Instance.new("TextLabel", pcDragBar)
 pcStatus.Size = UDim2.new(1, -8, 0, 12)
 pcStatus.Position = UDim2.new(0, 4, 1, -14)
 pcStatus.BackgroundTransparency = 1
-pcStatus.Text = "connecting..."
+pcStatus.Text = "ready"
 pcStatus.TextColor3 = Color3.fromRGB(150, 150, 155)
 pcStatus.Font = Enum.Font.Gotham
 pcStatus.TextSize = 9
@@ -2766,10 +2756,7 @@ local pcPad = Instance.new("UIPadding", pcInput)
 pcPad.PaddingLeft = UDim.new(0, 10)
 
 local pcMsgCount = 0
-local seenMsgIds = {}
-local function addPrivateMessage(sender, message, isSystem, msgId)
-    if msgId and seenMsgIds[msgId] then return end
-    if msgId then seenMsgIds[msgId] = true end
+local function addPrivateMessage(sender, message, isSystem)
     pcMsgCount = pcMsgCount + 1
     local label = Instance.new("TextLabel", pcScroll)
     label.Size = UDim2.new(1, -10, 0, 20)
@@ -2889,85 +2876,39 @@ for i, entry in ipairs(helpEntries) do
 end
 setPcTab("chat")
 
--- ============ NPOINT RELAY ============
-local RELAY_URL = "https://api.npoint.io/795defab3ba6f023d5bc"
+-- ============ CROSS-CLIENT CHAT VIA ROBLOX CHAT (hidden prefix) ============
+local PREFIX = "\226\128\139\226\128\139[AWPC]"  -- zero-width chars + prefix, hard to see for non-script users
+local pcGuard = false
 
-local function httpGetJson(url)
-    local ok, res = pcall(function()
-        if syn and syn.request then
-            return syn.request({Url=url, Method="GET"})
-        elseif request then
-            return request({Url=url, Method="GET"})
-        elseif http_request then
-            return http_request({Url=url, Method="GET"})
-        else
-            return {Body = game:HttpGet(url)}
-        end
+local function fireCrossClient(name, message)
+    if pcGuard then return end
+    pcGuard = true
+    local full = PREFIX .. name .. "\30" .. message
+    pcall(function()
+        local ce = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
+        local sayReq = ce and ce:FindFirstChild("SayMessageRequest")
+        if sayReq then sayReq:FireServer(full, "All") end
     end)
-    if not ok or not res then return nil end
-    local body = type(res) == "table" and (res.Body or res.body) or res
-    if type(body) ~= "string" or body == "" then return nil end
-    local parseOk, data = pcall(function() return HttpService:JSONDecode(body) end)
-    if not parseOk or type(data) ~= "table" then return nil end
-    return data
-end
-
-local function httpPostJson(url, tbl)
-    local body = HttpService:JSONEncode(tbl)
-    local ok, res = pcall(function()
-        if syn and syn.request then
-            return syn.request({Url=url, Method="POST",
-                Headers={["Content-Type"]="application/json"}, Body=body})
-        elseif request then
-            return request({Url=url, Method="POST",
-                Headers={["Content-Type"]="application/json"}, Body=body})
-        elseif http_request then
-            return http_request({Url=url, Method="POST",
-                Headers={["Content-Type"]="application/json"}, Body=body})
-        else
-            return {Body = game:HttpGet(url, true, body)}
-        end
-    end)
-    return ok, res
-end
-
-local function sendToRelay(name, message)
-    task.spawn(function()
-        task.wait(math.random() * 0.5)
-        local data = httpGetJson(RELAY_URL) or {}
-        local msgs = data.messages
-        if type(msgs) ~= "table" then msgs = {} end
-        local entry = {
-            id = tostring(tick()) .. "_" .. tostring(math.random(100000, 999999)),
-            name = tostring(name),
-            message = tostring(message),
-            ts = os.time(),
-        }
-        table.insert(msgs, entry)
-        while #msgs > 200 do table.remove(msgs, 1) end
-        local ok = httpPostJson(RELAY_URL, {messages = msgs})
-        if ok then pcStatus.Text = "Sent at " .. os.date("%H:%M:%S")
-        else pcStatus.Text = "Send failed" end
-    end)
+    task.delay(0.15, function() pcGuard = false end)
 end
 
 task.spawn(function()
-    while true do
-        task.wait(3)
-        local data = httpGetJson(RELAY_URL)
-        if data and type(data.messages) == "table" then
-            for _, entry in ipairs(data.messages) do
-                if type(entry) == "table" and entry.id and entry.name and entry.message then
-                    local id = tostring(entry.id)
-                    if not seenMsgIds[id] and entry.name ~= LP.Name then
-                        addPrivateMessage(entry.name, entry.message, false, id)
-                    elseif not seenMsgIds[id] and entry.name == LP.Name then
-                        seenMsgIds[id] = true
-                    end
+    local ce = ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents", 10)
+    if not ce then return end
+    local onMessage = ce:FindFirstChild("OnMessageDoneFiltering")
+    if onMessage then
+        onMessage.OnClientEvent:Connect(function(data)
+            if type(data) ~= "table" then return end
+            local msg = tostring(data.Message or "")
+            local speaker = data.FromSpeaker or "?"
+            if string.sub(msg, 1, #PREFIX) == PREFIX then
+                local rest = string.sub(msg, #PREFIX + 1)
+                local name, text = rest:match("^(.-)\30(.*)$")
+                if name and text and name ~= LP.Name then
+                    addPrivateMessage(name, text, false)
                 end
             end
-            pcStatus.Text = "Synced at " .. os.date("%H:%M:%S")
-        end
+        end)
     end
 end)
 
@@ -3046,7 +2987,7 @@ pcInput.FocusLost:Connect(function(enterPressed)
         return
     end
     addPrivateMessage(LP.Name, msg, false)
-    sendToRelay(LP.Name, msg)
+    fireCrossClient(LP.Name, msg)
 end)
 
 LP.Chatted:Connect(function(msg)
