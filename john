@@ -39,6 +39,7 @@ local CoreGui=game:GetService("CoreGui")
 local TeleportService=game:GetService("TeleportService")
 local Lighting=game:GetService("Lighting")
 local UIS=game:GetService("UserInputService")
+local InsertService=game:GetService("InsertService")
 local LP=Players.LocalPlayer
 local PlaceId=game.PlaceId
 local PlayerGui=LP:WaitForChild("PlayerGui",10)
@@ -60,13 +61,13 @@ flyEnabled=false,flySpeed=50,speedEnabled=false,speedValue=16,speedGlitch=false,
 jumpEnabled=false,jumpValue=50,infJumpEnabled=false,invisibleEnabled=false,
 cameraZoomEnabled=false,cameraMaxZoom=500,freeze=false,fullbright=false,fovEnabled=false,fovValue=70,clickTP=false,
 killAura=false,flingAura=false,autoDodge=false,bunnyHop=false,touchFling=false,
-murdererPredictor=false,murdererPerkNotify=false,notifySound=false,animationsEnabled=false,
+murdererPredictor=false,murdererPerkNotify=false,predictSheriff=false,notifySound=false,animationsEnabled=true,
 bigButtonEnabled=false,bigButtonW=230,bigButtonH=82,bigButtonX=0.72,bigButtonY=0.42,
 mainX=0.5,mainY=0.5,openX=0.014,openY=0.28,fullBagGate=false,bagTarget=40,
 floatButtonsEnabled=false,floatButtonSize=68,floatButtonShape="circle",
 floatButtonPositions={},floatEnabledButtons={},hitboxExpander=false,hitboxExpanderSize=15,
 hitboxExpanderTarget="murderer",keybinds={},playerSearchText="",playerListOpen=true,
-korbloxEnabled=false,korbloxFE=false,removeKorblox=false,signSpam=false,autoGetGG=false,
+korbloxEnabled=false,korbloxFE=false,useRealKorblox=false,removeKorblox=false,signSpam=false,autoGetGG=false,
 fpsPingMonitor=false,fpsPingColor=false,disableTrading=false,
 wallHop=false,wallHopFlick=false,removeBarriers=false,
 blueAura=false,blueAuraStuds=10,feAnimEnabled=false,
@@ -116,13 +117,13 @@ flyEnabled="Fly",infJumpEnabled="Inf Jump",bunnyHop="Bunny Hop",speedGlitch="Spe
 invisibleEnabled="Invisible",killAura="Kill Aura",flingAura="Fling Aura",autoDodge="Auto Dodge",
 freeze="Freeze",fullbright="Fullbright",fovEnabled="FOV",cameraZoomEnabled="Cam Zoom",
 clickTP="Click TP",animationsEnabled="Animations",notifySound="Notify Sound",
-murdererPredictor="Murderer Predictor",murdererPerkNotify="Perk Notify",speedEnabled="Speed",
+murdererPredictor="Predicted Murderer",murdererPerkNotify="Perk Notify",predictSheriff="Predicted Sheriff",speedEnabled="Speed",
 jumpEnabled="Jump Power",bigButtonEnabled="Big Button",fullBagGate="Bag Gate",
 espPlayers="ESP",espGunDrop="Gun ESP",espTeamColor="Team Colors",
 espMurderer="ESP Mur",espSheriff="ESP Sher",espHero="ESP Hero",espInnocent="ESP Inno",
 espHighlight="ESP HL",espOutline="ESP Outline",espFill="ESP Fill",espShowName="ESP Name",
 espShowRole="ESP Role",espShowDistance="ESP Dist",touchFling="Touch Fling",
-hitboxExpander="Hitbox Exp",korbloxEnabled="Korblox",korbloxFE="FE Korblox",removeKorblox="Remove Korblox",
+hitboxExpander="Hitbox Exp",korbloxEnabled="Korblox",korbloxFE="FE Korblox",useRealKorblox="Real Korblox",removeKorblox="Remove Korblox",
 signSpam="Sign Spam",autoGetGG="Auto GG",fpsPingMonitor="FPS Monitor",fpsPingColor="Color FPS",
 disableTrading="No Trade",wallHop="Wall Hop",wallHopFlick="Wall Hop Flick",
 removeBarriers="Remove Barriers",blueAura="Blue Aura",feAnimEnabled="FE Anim",
@@ -242,17 +243,47 @@ function() local ls=LP:FindFirstChild("leaderstats") return ls and ls:FindFirstC
 function() return LP:GetAttribute("Coins") end}
 for _,fn in ipairs(cd) do local ok,v=pcall(fn) if ok and v~=nil then local n=tonumber(type(v)=="number" and v or (v.Value or v)) if n then return n end end end return nil end
 local function IBF() if not state.fullBagGate then return true end local c=GCC() if c==nil then return true end return c>=(state.bagTarget or 40) end
-local cRM,cRMT=nil,0
-local function GCRD() local now=tick() if cRM and (now-cRMT)<2 then return cRM end
-local ok,d=pcall(function()
-local m=ReplicatedStorage:FindFirstChild("Modules")
-if m then local p=m:FindFirstChild("PlayerData") or m:FindFirstChild("Roles") or m:FindFirstChild("RoleData") or m:FindFirstChild("RoundData")
-if p then return require(p) end end
-local di=ReplicatedStorage:FindFirstChild("PlayerData") or ReplicatedStorage:FindFirstChild("Roles")
-if di then return require(di) end end)
-if ok and type(d)=="table" then cRM=d cRMT=now return d end return nil end
+
+-- ==========================================
+-- FASTEST ROLE DETECTION SYSTEM
+-- ==========================================
+local roleCache = {}
+local lastRoleFetch = 0
+local roleFetchCooldown = 0.02 -- 20ms updates (faster than the game can even render)
+
+local function updateRoleCache()
+    local now = tick()
+    if now - lastRoleFetch < roleFetchCooldown then return end
+    lastRoleFetch = now
+    
+    task.spawn(function()
+        local ok, data = pcall(function()
+            local remote = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("GetPlayerData")
+            if remote then
+                return remote:InvokeServer()
+            end
+        end)
+        
+        if ok and data and type(data) == "table" then
+            for name, info in pairs(data) do
+                if type(info) == "table" then
+                    local r = info.Role or info.role or info.RoleName or info.roleName
+                    if r and type(r) == "string" and r ~= "" and r ~= "None" then
+                        roleCache[name] = r
+                    end
+                elseif type(info) == "string" and info ~= "" and info ~= "None" then
+                    roleCache[name] = info
+                end
+            end
+        end
+    end)
+end
+
 local function GPR(plr)
 if not plr or not plr.Parent then return "Innocent" end
+-- 1. Fastest: Check our aggressive cache (Prediction)
+if roleCache[plr.Name] then return roleCache[plr.Name] end
+-- 2. Check player attributes
 local ch=plr.Character local bp=plr:FindFirstChild("Backpack")
 for _,an in ipairs({"Role","role","RoleName","roleName","Murderer","IsMurderer","Sheriff","IsSheriff","Hero","IsHero","Team","team"}) do
 local a=plr:GetAttribute(an)
@@ -265,25 +296,21 @@ elseif type(a)=="string" and a~="" then local sl=string.lower(a)
 if string.find(sl,"murder") then return "Murderer" end if string.find(sl,"sheriff") then return "Sheriff" end
 if string.find(sl,"hero") then return "Hero" end if string.find(sl,"innocent") then return "Innocent" end
 if sl~="none" and sl~="default" then return a end end end end
+-- 3. Check character attributes
 if ch then for _,an in ipairs({"Role","role","RoleName","roleName","Team"}) do
 local a=ch:GetAttribute(an)
 if type(a)=="string" and a~="" then local sl=string.lower(a)
 if string.find(sl,"murder") then return "Murderer" end if string.find(sl,"sheriff") then return "Sheriff" end
 if string.find(sl,"hero") then return "Hero" end if string.find(sl,"innocent") then return "Innocent" end return a end end end
+-- 4. Check Team
 if plr.Team and plr.Team.Name~="" then local tn=string.lower(plr.Team.Name)
 if string.find(tn,"murder") then return "Murderer" end if string.find(tn,"sheriff") then return "Sheriff" end if string.find(tn,"hero") then return "Hero" end end
+-- 5. Check Tools (Knife/Gun)
 if (ch and ch:FindFirstChild("Knife")) or (bp and bp:FindFirstChild("Knife")) then return "Murderer" end
 if (ch and ch:FindFirstChild("Gun")) or (bp and bp:FindFirstChild("Gun")) then return "Sheriff" end
-local rd=GCRD()
-if rd and type(rd)=="table" then local pd=rd[plr.Name] or rd[tostring(plr.UserId)] or rd[plr.UserId]
-if pd then if type(pd)=="string" then local sl=string.lower(pd)
-if string.find(sl,"murder") then return "Murderer" end if string.find(sl,"sheriff") then return "Sheriff" end
-if string.find(sl,"hero") then return "Hero" end if string.find(sl,"innocent") then return "Innocent" end return pd end
-if type(pd)=="table" then local r=pd.Role or pd.role or pd.RoleName or pd.roleName or pd.Team or pd[1]
-if r and tostring(r)~="" then local sl=string.lower(tostring(r))
-if string.find(sl,"murder") then return "Murderer" end if string.find(sl,"sheriff") then return "Sheriff" end
-if string.find(sl,"hero") then return "Hero" end if string.find(sl,"innocent") then return "Innocent" end return tostring(r) end end end end
 return "Innocent" end
+-- ==========================================
+
 local function FPBR(r) for _,p in ipairs(Players:GetPlayers()) do
 if p~=LP and p.Character and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health>0 and GPR(p)==r then return p end end return nil end
 local function GM() return FPBR("Murderer") end
@@ -1005,8 +1032,9 @@ MSL(pages[SEC],"Aura Range",32,state.blueAuraStuds or 10,5,50,"blueAuraStuds")
 ASEC(pages[SEC],"Korblox",150)
 TGG(pages[SEC],"Korblox",151,"korbloxEnabled")
 TGG(pages[SEC],"FE Korblox",152,"korbloxFE")
-TGG(pages[SEC],"Always Remove Korblox",153,"removeKorblox")
-ABN(pages[SEC],"Force Remove Korblox Now",154,function()
+TGG(pages[SEC],"Use Real Korblox Asset",153,"useRealKorblox")
+TGG(pages[SEC],"Always Remove Korblox",154,"removeKorblox")
+ABN(pages[SEC],"Force Remove Korblox Now",155,function()
 local ch=LP.Character
 if ch then
 local leg=ch:FindFirstChild("RightUpperLeg") or ch:FindFirstChild("Right Leg")
@@ -1035,7 +1063,6 @@ if isfile and readfile and isfile(songSaveFile) then
     if ok and type(data) == "table" then savedSongs = data end
 end
 local function saveSongs() if writefile then writefile(songSaveFile, HttpService:JSONEncode(savedSongs)) end end
-local function getSongNames() local names = {} for _, song in ipairs(savedSongs) do table.insert(names, song.name or song.id) end return names end
 local lastSelectedSong = nil
 
 local radioListScroll = Instance.new("ScrollingFrame", pages[SEC])
@@ -1083,6 +1110,7 @@ local function refreshRadioList()
             lastSelectedSong = s
             state.radioSelectedSongId = tostring(s.id)
             saveSettings()
+            refreshRadioList()
             if PlaySong then
                 local url = "https://www.roblox.com/asset/?id=" .. s.id
                 PlaySong:FireServer(url)
@@ -1092,7 +1120,6 @@ local function refreshRadioList()
         end)
     end
 end
-
 refreshRadioList()
 
 local radioAddInput = MIN(pages[SEC], 192, "Audio ID to add...", "", function() end)
@@ -1119,7 +1146,19 @@ ABN(pages[SEC], "Play Selected Audio", 194, function()
     end
 end)
 
-ABN(pages[SEC], "Delete Selected Audio", 195, function()
+-- ADDED STOP AUDIO BUTTON
+ABN(pages[SEC], "Stop Audio", 195, function()
+    if PlaySong then
+        pcall(function() PlaySong:FireServer(0) end)
+        task.wait(0.1)
+        pcall(function() PlaySong:FireServer("") end)
+        _G.__AW_NOTIFY("Audio Stopped")
+    else
+        _G.__AW_NOTIFY("PlaySong remote not found")
+    end
+end)
+
+ABN(pages[SEC], "Delete Selected Audio", 196, function()
     if not lastSelectedSong then _G.__AW_NOTIFY("No song selected") return end
     for i, s in ipairs(savedSongs) do
         if tostring(s.id) == tostring(lastSelectedSong.id) then
@@ -1135,7 +1174,7 @@ ABN(pages[SEC], "Delete Selected Audio", 195, function()
     end
 end)
 
-TGG(pages[SEC], "Auto Play Selected Audio", 196, "radioAutoPlay")
+TGG(pages[SEC], "Auto Play Selected Audio", 197, "radioAutoPlay")
 LP.CharacterAdded:Connect(function()
     if state.radioAutoPlay and state.radioSelectedSongId and state.radioSelectedSongId ~= "" and PlaySong then
         task.wait(1.5)
@@ -1323,8 +1362,9 @@ TGG(pages["Misc"],"Anti AFK",1,"afk")
 TGG(pages["Misc"],"Anti-Fling",2,"antiFling")
 TGG(pages["Misc"],"Auto Grab Gun",3,"gun")
 TGG(pages["Misc"],"Anti-Void",7,"antiVoid")
-TGG(pages["Misc"],"Murderer Predictor",10,"murdererPredictor")
-TGG(pages["Misc"],"Murderer Perk Notify",11,"murdererPerkNotify")
+TGG(pages["Misc"],"Predicted Murderer",10,"murdererPredictor")
+TGG(pages["Misc"],"Predicted Sheriff",11,"predictSheriff")
+TGG(pages["Misc"],"Murderer Perk Notify",12,"murdererPerkNotify")
 
 -- VOTING TAB
 ASEC(pages["Voting"],"Live Vote Map Names",1)
@@ -1375,6 +1415,75 @@ sb.BackgroundColor3=(state.floatButtonShape==sp.id) and cc(SC.accentColor) or cc
 sb.Font=Enum.Font.GothamBold sb.TextSize=11 sb.AutoButtonColor=false
 Instance.new("UICorner",sb).CornerRadius=UDim.new(0,8)
 sb.MouseButton1Click:Connect(function() state.floatButtonShape=sp.id saveSettings() RFB() end) end
+ASEC(pages["Button"],"Manage Floating Buttons",30)
+do
+local mSearch = Instance.new("TextBox", pages["Button"])
+mSearch.Size = UDim2.new(1, 0, 0, 34)
+mSearch.LayoutOrder = 31
+mSearch.BackgroundColor3 = cc(SC.cardColor)
+mSearch.PlaceholderText = "Search..."
+mSearch.PlaceholderColor3 = cc(SC.tabTextColor)
+mSearch.Text = ""
+mSearch.TextColor3 = cc(SC.textColor)
+mSearch.Font = Enum.Font.Gotham
+mSearch.TextSize = 12
+mSearch.ClearTextOnFocus = false
+Instance.new("UICorner", mSearch).CornerRadius = UDim.new(0, 10)
+local mList = Instance.new("ScrollingFrame", pages["Button"])
+mList.Size = UDim2.new(1, 0, 0, 300)
+mList.LayoutOrder = 32
+mList.BackgroundTransparency = 1
+mList.ScrollBarThickness = 3
+mList.CanvasSize = UDim2.new(0, 0, 0, 0)
+mList.AutomaticCanvasSize = Enum.AutomaticSize.Y
+local mLayout = Instance.new("UIListLayout", mList)
+mLayout.SortOrder = Enum.SortOrder.LayoutOrder
+mLayout.Padding = UDim.new(0, 5)
+local refreshManagerFB
+refreshManagerFB = function(filter)
+for _, c in ipairs(mList:GetChildren()) do if c:IsA("GuiObject") and c ~= mLayout then c:Destroy() end end
+filter = string.lower(filter or "")
+local i = 0
+for _, def in ipairs(FBD) do
+if filter == "" or string.find(string.lower(def.label), filter, 1, true) then
+i = i + 1
+local isOn = state.floatEnabledButtons[def.id]
+local row = Instance.new("Frame", mList)
+row.Size = UDim2.new(1, 0, 0, 32)
+row.LayoutOrder = i
+row.BackgroundColor3 = cc(SC.cardColor)
+Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
+local nl = Instance.new("TextLabel", row)
+nl.Size = UDim2.new(0.6, 0, 1, 0)
+nl.Position = UDim2.new(0, 10, 0, 0)
+nl.BackgroundTransparency = 1
+nl.Text = def.label
+nl.TextColor3 = cc(SC.textColor)
+nl.Font = Enum.Font.GothamMedium
+nl.TextSize = 11.5
+nl.TextXAlignment = Enum.TextXAlignment.Left
+local ab = Instance.new("TextButton", row)
+ab.Size = UDim2.new(0, 62, 0, 24)
+ab.Position = UDim2.new(1, -70, 0.5, -12)
+ab.BackgroundColor3 = isOn and Color3.fromRGB(160, 40, 40) or Color3.fromRGB(35, 140, 65)
+ab.Text = isOn and "Remove" or "Add"
+ab.TextColor3 = Color3.new(1, 1, 1)
+ab.Font = Enum.Font.GothamBold
+ab.TextSize = 10.5
+Instance.new("UICorner", ab).CornerRadius = UDim.new(0, 6)
+ab.MouseButton1Click:Connect(function()
+state.floatEnabledButtons[def.id] = not state.floatEnabledButtons[def.id]
+if state.floatEnabledButtons[def.id] then state.floatButtonPositions[def.id] = nil end
+rebuildFloatButtons()
+refreshManagerFB(mSearch.Text)
+saveSettings()
+end)
+end
+end
+end
+mSearch:GetPropertyChangedSignal("Text"):Connect(function() refreshManagerFB(mSearch.Text) end)
+refreshManagerFB("")
+end
 
 -- KEYBINDS TAB
 ASEC(pages["Keybinds"],"Instructions",1)
@@ -1485,7 +1594,6 @@ if s>0.5 then SC.selectedScale=math.floor((s-0.1)*10+0.5)/10 rf() saveSettings()
 pl.MouseButton1Click:Connect(function() local s=SC.selectedScale or 1
 if s<2.0 then SC.selectedScale=math.floor((s+0.1)*10+0.5)/10 rf() saveSettings() end end) end
 ASEC(pages["UI"],"Quick Actions",10)
-TGG(pages["UI"],"Enable Floating Buttons",11,"floatButtonsEnabled")
 TGG(pages["UI"],"Notification Sound",26,"notifySound")
 TGG(pages["UI"],"Enable Animations",27,"animationsEnabled")
 ASEC(pages["UI"],"Danger Zone",30)
@@ -1687,7 +1795,6 @@ task.defer(function() rMV()
 for idStr,on in pairs(state.emoteFloatButtons or {}) do if on then local idN=tonumber(idStr)
 if idN then for _,em in ipairs(EM) do if em.id==idN then bEF(idN,em) break end end end end end end) end
 
--- FE ANIMATIONS
 ASEC(pages["Anim/Emot"],"FE Animations",10)
 TGG(pages["Anim/Emot"],"Enable FE Animations",11,"feAnimEnabled")
 do local ASP={idle1={"idle","Animation1"},idle2={"idle","Animation2"},walk={"walk","WalkAnim"},
@@ -1819,10 +1926,8 @@ local ia=(hs==Enum.HumanoidStateType.Jumping or hs==Enum.HumanoidStateType.Freef
 if state.flyEnabled then h.WalkSpeed=0
 elseif state.speedGlitch and ia then h.WalkSpeed=state.speedGlitchValue or 200
 elseif state.speedEnabled then h.WalkSpeed=state.speedValue or 16
--- Removed the else block to prevent forcing speed back to 16 if the user didn't change it
 end
 if state.jumpEnabled then h.UseJumpPower=true h.JumpPower=state.jumpValue or 50
--- Removed the else block to prevent forcing UseJumpPower to false if the user didn't change it
 end end end end end)
 task.spawn(function() while true do task.wait(0.05)
 if state.bunnyHop and LP.Character then
@@ -2021,7 +2126,7 @@ if sm<=1 then cm.CFrame=ds
 else local al2=math.clamp(1-math.exp(-dt*(60/sm)*0.15),0.05,1)
 cm.CFrame=cm.CFrame:Lerp(ds,al2) end end end)
 
--- ESP
+-- ESP (Updated for early role detection)
 EF2=nil EC={} GC2={}
 local function GOE() local f=CoreGui:FindFirstChild("AW_ESP") if f then return f end
 f=PlayerGui:FindFirstChild("AW_ESP") if f then return f end
@@ -2031,13 +2136,15 @@ EF2=GOE()
 local function DE2(e) if not e then return end
 pcall(function() if e.hl then e.hl:Destroy() end if e.bb then e.bb:Destroy() end end) end
 local function CE(p) local e=EC[p] if not e then return end DE2(e) EC[p]=nil end
-local function CGE() for k,v in pairs(GC2) do pcall(function() v:Destroy() end) GC2[k]=nil end end
+local function CGE() for k,v in pairs(GC2) do pcall(function() if v.hl then v.hl:Destroy() end if v.bb then v.bb:Destroy() end end) GC2[k]=nil end end
 Players.PlayerRemoving:Connect(function(p) CE(p) end)
 EFU=0
 task.spawn(function() local wr=false while true do task.wait(0.05)
 local ni=IIR() if ni and not wr then EFU=tick()+10 end wr=ni end end)
 task.spawn(function() while true do
 local pdl=(tick()<EFU) and 0.02 or 0.1 task.wait(pdl)
+-- Continuously update role cache for early detection
+updateRoleCache()
 if not EF2 or not EF2.Parent then EF2=GOE() EC={} GC2={} end
 if not state.espPlayers then for p,_ in pairs(EC) do CE(p) end
 else for _,p in ipairs(Players:GetPlayers()) do
@@ -2050,9 +2157,12 @@ elseif rl=="sheriff" then sh=state.espSheriff
 elseif rl=="hero" then sh=state.espHero
 else sh=state.espInnocent end
 if ch and hrp and hm and hm.Health>0 and sh then
-local col
-if IIL(hrp.Position) then role="Dead" col=Color3.fromRGB(150,150,150)
-else col=RC(role) end
+local col = RC(role)
+-- Only override color to grey if they are actually dead or in the lobby AND their role is unknown/innocent
+if IIL(hrp.Position) and role == "Innocent" then
+role = "Dead"
+col = Color3.fromRGB(150,150,150)
+end
 local hd=ch:FindFirstChild("Head") or hrp
 local e=EC[p]
 if e and (not e.bb or not e.bb.Parent or (e.hl and not e.hl.Parent) or (e.hl and e.hl.Adornee~=ch) or e.bb.Adornee~=hd) then
@@ -2091,9 +2201,72 @@ for _,v in pairs(Workspace:GetDescendants()) do
 if v.Name=="GunDrop" and v:IsA("BasePart") and not GC2[v] then
 local hl=Instance.new("Highlight") hl.FillColor=Color3.fromRGB(255,255,0)
 hl.FillTransparency=0.5 hl.OutlineColor=Color3.fromRGB(255,255,0)
-hl.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop hl.Parent=EF2 hl.Adornee=v GC2[v]=hl end end
-for k,v in pairs(GC2) do if not k.Parent or not v.Parent then pcall(function() v:Destroy() end) GC2[k]=nil end end
+hl.DepthMode=Enum.HighlightDepthMode.AlwaysOnTop hl.Parent=EF2 hl.Adornee=v
+
+local bb=Instance.new("BillboardGui")
+bb.Size=UDim2.new(0,100,0,30)
+bb.StudsOffset=Vector3.new(0,2,0)
+bb.AlwaysOnTop=true
+bb.Parent=EF2
+bb.Adornee=v
+
+local txt=Instance.new("TextLabel")
+txt.Size=UDim2.new(1,0,1,0)
+txt.BackgroundTransparency=1
+txt.Text="Gun Drop"
+txt.TextColor3=Color3.fromRGB(255,255,0)
+txt.TextStrokeTransparency=0
+txt.Font=Enum.Font.GothamBold
+txt.TextSize=12
+txt.Parent=bb
+
+GC2[v]={hl=hl, bb=bb}
+end end
+for k,v in pairs(GC2) do
+if not k.Parent or not v.hl.Parent or not v.bb.Parent then
+pcall(function() v.hl:Destroy() end)
+pcall(function() v.bb:Destroy() end)
+GC2[k]=nil
+end
+end
 else CGE() end end end)
+
+-- PREDICTED MURDERER/SHERIFF NOTIFICATION LOOP
+task.spawn(function()
+    local notifiedMurderer = nil
+    local notifiedSheriff = nil
+    local lastRoundState = false
+    while true do
+        task.wait(0.05)
+        local inRound = IIR()
+        
+        -- Reset when round ends
+        if not inRound then
+            notifiedMurderer = nil
+            notifiedSheriff = nil
+        end
+        
+        if inRound then
+            -- Check Murderer
+            if state.murdererPredictor then
+                local m = GM()
+                if m and m.Name ~= notifiedMurderer then
+                    notifiedMurderer = m.Name
+                    _G.__AW_NOTIFY('<font color="#ff5a5a"><b>Predicted Murderer:</b></font> '..m.Name)
+                end
+            end
+            
+            -- Check Sheriff
+            if state.predictSheriff then
+                local s = GLSH()[1]
+                if s and s.Name ~= notifiedSheriff then
+                    notifiedSheriff = s.Name
+                    _G.__AW_NOTIFY('<font color="#5aaaFF"><b>Predicted Sheriff:</b></font> '..s.Name)
+                end
+            end
+        end
+    end
+end)
 
 -- FARM LOOP
 HP=CFrame.new(0,-300,0) LCF2=tick() NCO=12 CFT=nil CTC=nil
@@ -2232,19 +2405,6 @@ if state.loopTpMurderer then pcall(TTMU) end
 if state.loopTpSheriff then pcall(TTSH) end
 if state.loopTpCustom then pcall(TTCU) end end end end)
 
--- ROLE NOTIFICATIONS
-task.spawn(function() local nm=false local ns=false local lp=nil local lr=false
-while true do task.wait(0.3) local ir=IIR()
-if ir and not lr then nm=false ns=false lp=nil end lr=ir
-if ir then
-if state.murdererPredictor and not nm then local m=GM()
-if m then nm=true _G.__AW_NOTIFY('<font color="#ff5a5a"><b>Murderer:</b></font> '..m.Name) end end
-if not ns then local s=FPBR("Sheriff") or FPBR("Hero")
-if s then ns=true _G.__AW_NOTIFY('<font color="#5aaaFF"><b>Sheriff:</b></font> '..s.Name) end end
-if state.murdererPerkNotify then local m=GM()
-if m then local pk=DMP(m)
-if pk and pk~=lp then lp=pk _G.__AW_NOTIFY('<font color="#ffcc66"><b>Perk:</b></font> '..pk) end end end end end end)
-
 -- LOOP RESET ON ROUND START
 task.spawn(function() local wr=false
 local LK={"loopFlingAll","loopFlingMur","loopFlingSheriff","loopFlingCustom"}
@@ -2381,11 +2541,35 @@ local e=ReplicatedStorage:FindFirstChild("Remotes") e=e and e:FindFirstChild("Ex
 if e and e:IsA("RemoteFunction") then e:InvokeServer("GGSign") end end) end end end)
 
 -- KORBLOX & REMOVE KORBLOX
+local realKorbloxWelded = false
 task.spawn(function() while true do task.wait(0.3)
 if LP.Character then
 local leg=LP.Character:FindFirstChild("RightUpperLeg") or LP.Character:FindFirstChild("Right Leg")
 local lower=LP.Character:FindFirstChild("RightLowerLeg") or LP.Character:FindFirstChild("Right Leg")
 local foot=LP.Character:FindFirstChild("RightFoot") or LP.Character:FindFirstChild("Right Foot")
+
+if state.useRealKorblox and not realKorbloxWelded then
+    realKorbloxWelded = true
+    task.spawn(function()
+        pcall(function()
+            local asset = InsertService:LoadAsset(139607718)
+            local korblox = asset:GetChildren()[1]
+            if korblox and leg then
+                korblox.Parent = LP.Character
+                local weld = Instance.new("Weld")
+                weld.Part0 = leg
+                weld.Part1 = korblox
+                weld.C0 = CFrame.new(0, -0.5, 0)
+                weld.Parent = leg
+            end
+        end)
+    end)
+elseif not state.useRealKorblox then
+    realKorbloxWelded = false
+    local kr = LP.Character:FindFirstChild("KorbloxDeathspeakerRightLeg") or LP.Character:FindFirstChild("Right Leg")
+    if kr and kr:IsA("BasePart") then kr:Destroy() end
+end
+
 if state.korbloxFE then
 if leg and leg:IsA("BasePart") then pcall(function() leg.Color=Color3.fromRGB(0,0,0) leg.Material=Enum.Material.Metal leg.Size=Vector3.new(0.6,0.6,0.6) leg.Transparency=0 end) end
 if lower and lower:IsA("BasePart") then pcall(function() lower.Color=Color3.fromRGB(0,0,0) lower.Material=Enum.Material.Metal lower.Size=Vector3.new(0.35,1,0.35) lower.Transparency=0 end) end
@@ -2410,51 +2594,196 @@ if sr and dc and sr:IsA("RemoteFunction") then pcall(function()
 sr.OnClientInvoke=function() pcall(function() dc:FireServer() end) return nil end end) end
 else if sr and sr:IsA("RemoteFunction") then pcall(function() sr.OnClientInvoke=nil end) end end end end end)
 
--- CHAT COMMANDS
-LP.Chatted:Connect(function(msg)
-local m=string.lower(msg)
-if m==".help" then
-local uk=state.keybinds and state.keybinds.hideUI or "H"
-if uk=="" then uk="(not set)" end
-local ht="<b>APPLEWARE COMMANDS</b>\n"
-ht=ht..".help - show commands\n"
-ht=ht..".showui - show the main UI\n"
-ht=ht..".hideui - hide the main UI\n"
-ht=ht..".unload - unload the script\n\n"
-ht=ht.."<font color=\"#5aff8c\">UI Toggle Key:</font> "..string.upper(uk).."\n"
-ht=ht.."Press that key to hide/show UI.\n\n"
-ht=ht.."<font color=\"#5aaaFF\">Useful Keybinds:</font>\n"
-ht=ht.."Fly: "..string.upper(state.keybinds.flyEnabled or "-").."\n"
-ht=ht.."Silent Aim: "..string.upper(state.keybinds.silentAimEnabled or "-").."\n"
-ht=ht.."Shoot Walls: "..string.upper(state.keybinds.shootThroughWall or "-").."\n"
-ht=ht.."Noclip: "..string.upper(state.keybinds.noclip or "-").."\n"
-ht=ht.."Spin Bot: "..string.upper(state.keybinds.spinBot or "-").."\n"
-ht=ht.."Wall Hop: "..string.upper(state.keybinds.wallHop or "-")
-_G.__AW_NOTIFY(ht,15)
-elseif m==".showui" then
-if _G.__AW_SHOWUI then _G.__AW_SHOWUI() end
-elseif m==".hideui" then
-if _G.__AW_HIDEUI then _G.__AW_HIDEUI() end
-elseif m==".unload" then
-_G.__AW_NOTIFY("Unloading...")
-task.wait(0.3)
-if _G.ApplewareUnload then pcall(function() _G.ApplewareUnload() end) end
+-- PRIVATE CHAT & COMMANDS
+local privateChatGui = Instance.new("ScreenGui")
+privateChatGui.Name = "AW_PrivateChat"
+privateChatGui.ResetOnSpawn = false
+privateChatGui.DisplayOrder = 9999998
+privateChatGui.IgnoreGuiInset = true
+pcall(function() privateChatGui.Parent = CoreGui end)
+if not privateChatGui.Parent then privateChatGui.Parent = PlayerGui end
+
+local privateChatFrame = Instance.new("Frame", privateChatGui)
+privateChatFrame.Size = UDim2.new(0, 400, 0, 300)
+privateChatFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
+privateChatFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+privateChatFrame.BorderSizePixel = 0
+privateChatFrame.Visible = false
+Instance.new("UICorner", privateChatFrame).CornerRadius = UDim.new(0, 12)
+local pcStroke = Instance.new("UIStroke", privateChatFrame)
+pcStroke.Color = Color3.fromRGB(255, 80, 80)
+pcStroke.Thickness = 2
+
+local pcTitle = Instance.new("TextLabel", privateChatFrame)
+pcTitle.Size = UDim2.new(1, -40, 0, 30)
+pcTitle.Position = UDim2.new(0, 10, 0, 5)
+pcTitle.BackgroundTransparency = 1
+pcTitle.Text = "APPLEWARE PRIVATE CHAT"
+pcTitle.TextColor3 = Color3.fromRGB(255, 80, 80)
+pcTitle.Font = Enum.Font.GothamBold
+pcTitle.TextSize = 14
+pcTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+local pcClose = Instance.new("TextButton", privateChatFrame)
+pcClose.Size = UDim2.new(0, 30, 0, 30)
+pcClose.Position = UDim2.new(1, -35, 0, 5)
+pcClose.BackgroundColor3 = Color3.fromRGB(160, 40, 40)
+pcClose.Text = "X"
+pcClose.TextColor3 = Color3.new(1, 1, 1)
+pcClose.Font = Enum.Font.GothamBold
+pcClose.TextSize = 14
+pcClose.AutoButtonColor = false
+Instance.new("UICorner", pcClose).CornerRadius = UDim.new(0, 6)
+pcClose.MouseButton1Click:Connect(function() privateChatFrame.Visible = false end)
+
+local pcScroll = Instance.new("ScrollingFrame", privateChatFrame)
+pcScroll.Size = UDim2.new(1, -20, 1, -80)
+pcScroll.Position = UDim2.new(0, 10, 0, 40)
+pcScroll.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+pcScroll.BorderSizePixel = 0
+pcScroll.ScrollBarThickness = 4
+pcScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+pcScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+Instance.new("UICorner", pcScroll).CornerRadius = UDim.new(0, 8)
+
+local pcLayout = Instance.new("UIListLayout", pcScroll)
+pcLayout.SortOrder = Enum.SortOrder.LayoutOrder
+pcLayout.Padding = UDim.new(0, 4)
+
+local pcInput = Instance.new("TextBox", privateChatFrame)
+pcInput.Size = UDim2.new(1, -20, 0, 30)
+pcInput.Position = UDim2.new(0, 10, 1, -40)
+pcInput.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+pcInput.PlaceholderText = "Type here or use .command..."
+pcInput.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+pcInput.Text = ""
+pcInput.TextColor3 = Color3.new(1, 1, 1)
+pcInput.Font = Enum.Font.Gotham
+pcInput.TextSize = 12
+pcInput.ClearTextOnFocus = false
+pcInput.TextXAlignment = Enum.TextXAlignment.Left
+Instance.new("UICorner", pcInput).CornerRadius = UDim.new(0, 8)
+local pcPad = Instance.new("UIPadding", pcInput)
+pcPad.PaddingLeft = UDim.new(0, 10)
+
+local function addPrivateMessage(sender, message)
+    local label = Instance.new("TextLabel", pcScroll)
+    label.Size = UDim2.new(1, -10, 0, 20)
+    label.BackgroundTransparency = 1
+    label.Text = "[" .. sender .. "]: " .. message
+    label.TextColor3 = Color3.fromRGB(200, 200, 200)
+    label.Font = Enum.Font.Gotham
+    label.TextSize = 12
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.TextWrapped = true
+    label.RichText = true
+    
+    if sender == LP.Name then
+        label.TextColor3 = Color3.fromRGB(100, 255, 100)
+    end
 end
+
+pcInput.FocusLost:Connect(function(enterPressed)
+    if enterPressed and pcInput.Text ~= "" then
+        local msg = pcInput.Text
+        pcInput.Text = ""
+        
+        -- Add locally
+        addPrivateMessage(LP.Name, msg)
+        
+        -- Send to game chat so others can see
+        pcall(function()
+            local chatRemote = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents") and ReplicatedStorage.DefaultChatSystemChatEvents:FindFirstChild("SayMessageRequest")
+            if chatRemote then
+                chatRemote:FireServer("[PRIVATE] " .. msg, "All")
+            end
+        end)
+        
+        -- Check if it's a command
+        if string.sub(msg, 1, 1) == "." then
+            local cmd = string.lower(msg)
+            if cmd == ".help" then
+                addPrivateMessage("SYSTEM", "Commands: .help, .showui, .hideui, .private, .unload")
+            elseif cmd == ".showui" then
+                if _G.__AW_SHOWUI then _G.__AW_SHOWUI() end
+            elseif cmd == ".hideui" then
+                if _G.__AW_HIDEUI then _G.__AW_HIDEUI() end
+            elseif cmd == ".private" then
+                privateChatFrame.Visible = not privateChatFrame.Visible
+            elseif cmd == ".unload" then
+                if _G.ApplewareUnload then _G.ApplewareUnload() end
+            end
+        end
+    end
+end)
+
+LP.Chatted:Connect(function(msg)
+    if string.sub(msg, 1, 1) == "." then
+        local cmd = string.lower(msg)
+        if cmd == ".private" then
+            privateChatFrame.Visible = not privateChatFrame.Visible
+        elseif cmd == ".help" then
+            local uk = state.keybinds and state.keybinds.hideUI or "H"
+            if uk == "" then uk = "(not set)" end
+            local ht = "<b>APPLEWARE COMMANDS</b>\n"
+            ht = ht..".help - show commands\n"
+            ht = ht..".showui - show the main UI\n"
+            ht = ht..".hideui - hide the main UI\n"
+            ht = ht..".private - open private chat\n"
+            ht = ht..".unload - unload the script\n\n"
+            ht = ht.."<font color=\"#5aff8c\">UI Toggle Key:</font> " .. string.upper(uk) .. "\n"
+            ht = ht.."Press that key to hide/show UI.\n\n"
+            ht = ht.."<font color=\"#5aaaFF\">Useful Keybinds:</font>\n"
+            ht = ht.."Fly: " .. string.upper(state.keybinds.flyEnabled or "-") .. "\n"
+            ht = ht.."Silent Aim: " .. string.upper(state.keybinds.silentAimEnabled or "-") .. "\n"
+            ht = ht.."Shoot Walls: " .. string.upper(state.keybinds.shootThroughWall or "-") .. "\n"
+            ht = ht.."Noclip: " .. string.upper(state.keybinds.noclip or "-") .. "\n"
+            ht = ht.."Spin Bot: " .. string.upper(state.keybinds.spinBot or "-") .. "\n"
+            ht = ht.."Wall Hop: " .. string.upper(state.keybinds.wallHop or "-")
+            _G.__AW_NOTIFY(ht, 15)
+        elseif cmd == ".showui" then
+            if _G.__AW_SHOWUI then _G.__AW_SHOWUI() end
+        elseif cmd == ".hideui" then
+            if _G.__AW_HIDEUI then _G.__AW_HIDEUI() end
+        elseif cmd == ".unload" then
+            _G.__AW_NOTIFY("Unloading...")
+            task.wait(0.3)
+            if _G.ApplewareUnload then pcall(function() _G.ApplewareUnload() end) end
+        end
+    end
 end)
 
 -- UNLOAD FUNCTION
-_G.ApplewareUnload=function()
-_G.ApplewareActive=false _G.ApplewareLoaded=false
-local gn={"AWNotes","AWRT","AW_BigShoot","AW_FloatingActions","Appleware","AW_EmoteFloats","AW_FPS_Ping","AW_ESP","AW_ReloadPrompt"}
-local function KG(par) for _,n in ipairs(gn) do
-local g=par:FindFirstChild(n) if g then pcall(function() g:Destroy() end) end end end
-pcall(KG,CoreGui) pcall(KG,PlayerGui)
-for _,n in ipairs({"AW_VoidPlatform","invischair"}) do
-local o=workspace:FindFirstChild(n) if o then pcall(function() o:Destroy() end) end end
-pcall(function() local ch=LP.Character
-if ch then local h=ch:FindFirstChildOfClass("Humanoid")
-if h then h.PlatformStand=false h.WalkSpeed=16 h.JumpPower=50 h.UseJumpPower=false end end end)
-print("[Appleware] Unloaded.") end
+_G.ApplewareUnload = function()
+    _G.ApplewareActive = false
+    _G.ApplewareLoaded = false
+    local gn = {"AWNotes", "AWRT", "AW_BigShoot", "AW_FloatingActions", "Appleware", "AW_EmoteFloats", "AW_FPS_Ping", "AW_ESP", "AW_ReloadPrompt", "AW_PrivateChat"}
+    local function KG(par)
+        for _, n in ipairs(gn) do
+            local g = par:FindFirstChild(n)
+            if g then pcall(function() g:Destroy() end) end
+        end
+    end
+    pcall(KG, CoreGui)
+    pcall(KG, PlayerGui)
+    for _, n in ipairs({"AW_VoidPlatform", "invischair"}) do
+        local o = workspace:FindFirstChild(n)
+        if o then pcall(function() o:Destroy() end) end
+    end
+    pcall(function()
+        local ch = LP.Character
+        if ch then
+            local h = ch:FindFirstChildOfClass("Humanoid")
+            if h then
+                h.PlatformStand = false
+                h.WalkSpeed = 16
+                h.JumpPower = 50
+                h.UseJumpPower = false
+            end
+        end
+    end)
+    print("[Appleware] Unloaded.")
+end
 
 print("[Appleware] Loaded. Type .help for commands")
 print("Credits: lzzzx, noir (7yd7)")
