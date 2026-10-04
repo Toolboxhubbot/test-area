@@ -56,6 +56,129 @@ local CFG_FILE="Appleware.json"
 pcall(function() if makefolder and isfolder and not isfolder(CFG_DIR) then makefolder(CFG_DIR) end end)
 local function cfgPath() if isfolder and isfolder(CFG_DIR) then return CFG_DIR.."/"..CFG_FILE end return CFG_FILE end
 
+-- ==========================================
+-- ANIMATED LOADING SCREEN
+-- ==========================================
+task.spawn(function()
+    local loadGui=Instance.new("ScreenGui")
+    loadGui.Name="AW_Loading"
+    loadGui.ResetOnSpawn=false
+    loadGui.DisplayOrder=10000002
+    loadGui.IgnoreGuiInset=true
+    pcall(function() loadGui.Parent=CoreGui end)
+    if not loadGui.Parent then loadGui.Parent=PlayerGui end
+
+    local loadFrame=Instance.new("Frame",loadGui)
+    loadFrame.Size=UDim2.new(1,0,1,0)
+    loadFrame.BackgroundColor3=Color3.fromRGB(4,4,6)
+    loadFrame.BorderSizePixel=0
+
+    local grad=Instance.new("UIGradient",loadFrame)
+    grad.Color=ColorSequence.new({
+        ColorSequenceKeypoint.new(0,Color3.fromRGB(8,8,12)),
+        ColorSequenceKeypoint.new(0.5,Color3.fromRGB(2,2,4)),
+        ColorSequenceKeypoint.new(1,Color3.fromRGB(8,8,12))
+    })
+    grad.Rotation=90
+
+    local title=Instance.new("TextLabel",loadFrame)
+    title.Size=UDim2.new(1,0,0,44)
+    title.Position=UDim2.new(0,0,0.42,-24)
+    title.BackgroundTransparency=1
+    title.Text="APPLEWARE"
+    title.TextColor3=Color3.fromRGB(235,235,240)
+    title.Font=Enum.Font.GothamBold
+    title.TextSize=34
+    title.TextTransparency=1
+    local tgs=Instance.new("UIStroke",title)
+    tgs.Thickness=0
+    tgs.Color=Color3.fromRGB(200,200,205)
+
+    local url=Instance.new("TextLabel",loadFrame)
+    url.Size=UDim2.new(1,0,0,20)
+    url.Position=UDim2.new(0,0,0.42,26)
+    url.BackgroundTransparency=1
+    url.Text="https://awh.filho.wtf"
+    url.TextColor3=Color3.fromRGB(150,150,155)
+    url.Font=Enum.Font.Gotham
+    url.TextSize=14
+    url.TextTransparency=1
+
+    local status=Instance.new("TextLabel",loadFrame)
+    status.Size=UDim2.new(1,0,0,18)
+    status.Position=UDim2.new(0,0,0.42,50)
+    status.BackgroundTransparency=1
+    status.Text="loading..."
+    status.TextColor3=Color3.fromRGB(120,120,125)
+    status.Font=Enum.Font.Gotham
+    status.TextSize=11
+    status.TextTransparency=1
+
+    local barBg=Instance.new("Frame",loadFrame)
+    barBg.Size=UDim2.new(0,260,0,4)
+    barBg.Position=UDim2.new(0.5,-130,0.6,0)
+    barBg.BackgroundColor3=Color3.fromRGB(30,30,34)
+    barBg.BorderSizePixel=0
+    barBg.BackgroundTransparency=1
+    Instance.new("UICorner",barBg).CornerRadius=UDim.new(1,0)
+
+    local barFill=Instance.new("Frame",barBg)
+    barFill.Size=UDim2.new(0,0,1,0)
+    barFill.BackgroundColor3=Color3.fromRGB(220,220,225)
+    barFill.BorderSizePixel=0
+    Instance.new("UICorner",barFill).CornerRadius=UDim.new(1,0)
+    local bfGrad=Instance.new("UIGradient",barFill)
+    bfGrad.Color=ColorSequence.new({
+        ColorSequenceKeypoint.new(0,Color3.fromRGB(140,140,150)),
+        ColorSequenceKeypoint.new(0.5,Color3.fromRGB(255,255,255)),
+        ColorSequenceKeypoint.new(1,Color3.fromRGB(140,140,150))
+    })
+    task.spawn(function()
+        local r=0
+        while barFill and barFill.Parent do
+            local dt=RunService.Heartbeat:Wait()
+            r=(r+dt*180)%360
+            bfGrad.Rotation=r
+        end
+    end)
+
+    -- entrance animation
+    TweenService:Create(title,TweenInfo.new(0.6,Enum.EasingStyle.Quint,Enum.EasingDirection.Out),{TextTransparency=0}):Play()
+    task.wait(0.15)
+    TweenService:Create(url,TweenInfo.new(0.5),{TextTransparency=0}):Play()
+    task.wait(0.1)
+    TweenService:Create(status,TweenInfo.new(0.4),{TextTransparency=0}):Play()
+    task.wait(0.1)
+    TweenService:Create(barBg,TweenInfo.new(0.4),{BackgroundTransparency=0}):Play()
+
+    task.wait(0.4)
+    local stages={"loading...","fetching modules...","initializing...","ready."}
+    for i,s in ipairs(stages) do
+        status.Text=s
+        TweenService:Create(barFill,TweenInfo.new(0.45,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{Size=UDim2.new(i/#stages,0,1,0)}):Play()
+        task.wait(0.5)
+    end
+
+    task.wait(0.3)
+    TweenService:Create(loadFrame,TweenInfo.new(0.6),{BackgroundTransparency=1}):Play()
+    TweenService:Create(title,TweenInfo.new(0.5),{TextTransparency=1}):Play()
+    TweenService:Create(url,TweenInfo.new(0.5),{TextTransparency=1}):Play()
+    TweenService:Create(status,TweenInfo.new(0.5),{TextTransparency=1}):Play()
+    TweenService:Create(barBg,TweenInfo.new(0.5),{BackgroundTransparency=1}):Play()
+    TweenService:Create(barFill,TweenInfo.new(0.5),{BackgroundTransparency=1}):Play()
+    task.wait(0.7)
+    pcall(function() loadGui:Destroy() end)
+    _G.__AW_LOADING_DONE=true
+end)
+
+-- first-load / one-time flags
+local FIRST_FLAG = CFG_DIR.."/AW_FirstLoad.txt"
+local WN_FLAG = CFG_DIR.."/AW_ShownWhatsNew.txt"
+local isFirstLoad = true
+pcall(function() if isfile and isfile(FIRST_FLAG) then isFirstLoad=false end end)
+local shouldShowWhatsNew = true
+pcall(function() if isfile and isfile(WN_FLAG) then shouldShowWhatsNew=false end end)
+
 state={
     farm=false,xpFarm=false,noclip=false,gun=false,afk=false,antiVoid=false,
     autoKillAll=false,autoShootMurderer=false,
@@ -185,8 +308,9 @@ local function loadSettings()
                 for k,v in pairs(d.state) do
                     if state[k]~=nil and not NSK[k] then
                         local t=type(v)
-                        if t=="boolean" then
-                            state[k]=false -- force everything to start off
+                        if t=="boolean" and isFirstLoad then
+                            -- first time loading: everything defaults to OFF
+                            state[k]=false
                         else
                             state[k]=v
                         end
@@ -199,6 +323,16 @@ local function loadSettings()
                 end
             end
         end
+    end)
+    if isFirstLoad then
+        -- force all boolean features off on first load regardless
+        for k,v in pairs(state) do
+            if type(v)=="boolean" then state[k]=false end
+        end
+    end
+    -- write first-load flag so next run preserves saved settings
+    pcall(function()
+        if isFirstLoad and writefile then writefile(FIRST_FLAG,"1") end
     end)
 end
 loadSettings()
@@ -957,6 +1091,10 @@ local function TTCU()
     _G.__AW_NOTIFY("No custom")
 end
 
+-- ADDED: missing helper aliases so nothing errors
+local function IBF() return al() and IIR() end
+local function TMR() return TTM(false) end
+
 local VP=Vector3.new(100,5000,200)
 local VPP=nil
 local function EVP()
@@ -1110,6 +1248,42 @@ local function TSM()
     if state.shootThroughWall then return FTW() else return FSAM() end
 end
 local function FSS() return TSM() end
+
+-- Kill aliases (were previously undefined)
+local function KAN()
+    task.spawn(function()
+        local k=FT("Knife")
+        if not k then return end
+        for _,p in ipairs(Players:GetPlayers()) do
+            if p~=LP and TIA(p) and not IW(p) then
+                local hrp=LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+                local tr=p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+                if hrp and tr then
+                    hrp.CFrame=tr.CFrame*CFrame.new(0,0,1.5)
+                    task.wait(0.05)
+                end
+            end
+        end
+    end)
+end
+local function KSN()
+    task.spawn(function()
+        local k=FT("Knife")
+        if not k then return end
+        local lv=GLSH()
+        for _,p in ipairs(lv) do
+            if TIA(p) and not IW(p) then
+                local hrp=LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+                local tr=p.Character and p.Character:FindFirstChild("HumanoidRootPart")
+                if hrp and tr then
+                    hrp.CFrame=tr.CFrame*CFrame.new(0,0,1.5)
+                    task.wait(0.1)
+                end
+            end
+            break
+        end
+    end)
+end
 
 local function SHF()
     if not al() then return end
@@ -1310,173 +1484,187 @@ local function GVN()
 end
 
 -- ==========================================
--- WHAT'S NEW SCREEN
+-- WHAT'S NEW SCREEN (no emojis, shows once, "Scroll down" button)
 -- ==========================================
-local whatsNewGui = Instance.new("ScreenGui")
-whatsNewGui.Name = "AW_WhatsNew"
-whatsNewGui.ResetOnSpawn = false
-whatsNewGui.DisplayOrder = 10000001
-whatsNewGui.IgnoreGuiInset = true
-pcall(function() whatsNewGui.Parent = CoreGui end)
-if not whatsNewGui.Parent then whatsNewGui.Parent = PlayerGui end
+if shouldShowWhatsNew then
+    pcall(function() if writefile then writefile(WN_FLAG,"1") end end)
 
-local wnFrame = Instance.new("Frame", whatsNewGui)
-wnFrame.Size = UDim2.new(0, 520, 0, 480)
-wnFrame.Position = UDim2.new(0.5, -260, 0.5, -240)
-wnFrame.BackgroundColor3 = Color3.fromRGB(8, 8, 10)
-wnFrame.BorderSizePixel = 0
-wnFrame.Active = true
-Instance.new("UICorner", wnFrame).CornerRadius = UDim.new(0, 16)
-
-local wnGrad = Instance.new("UIGradient", wnFrame)
-wnGrad.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(10, 10, 14)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(4, 4, 6))
-})
-wnGrad.Rotation = 90
-
-local wnStroke = Instance.new("UIStroke", wnFrame)
-wnStroke.Color = Color3.fromRGB(190, 190, 195)
-wnStroke.Thickness = 2
-wnStroke.Transparency = 0
-
-task.spawn(function()
-    local p = 0
-    while wnFrame and wnFrame.Parent do
-        local dt = RunService.Heartbeat:Wait()
-        p = (p + dt * 1.6) % (math.pi * 2)
-        local t = (math.sin(p) + 1) * 0.5
-        if wnStroke and wnStroke.Parent then
-            wnStroke.Transparency = 0.2 + t * 0.4
-            wnStroke.Color = Color3.fromRGB(120 + t * 80, 120 + t * 80, 125 + t * 80)
+    task.spawn(function()
+        -- wait for loading screen to finish
+        local t=0
+        while not _G.__AW_LOADING_DONE and t<6 do
+            task.wait(0.1)
+            t=t+0.1
         end
-    end
-end)
+        task.wait(0.15)
 
-local wnTitle = Instance.new("TextLabel", wnFrame)
-wnTitle.Size = UDim2.new(1, -40, 0, 34)
-wnTitle.Position = UDim2.new(0, 20, 0, 16)
-wnTitle.BackgroundTransparency = 1
-wnTitle.Text = "APPLEWARE - WHAT'S NEW"
-wnTitle.TextColor3 = Color3.fromRGB(235, 235, 240)
-wnTitle.Font = Enum.Font.GothamBold
-wnTitle.TextSize = 20
-wnTitle.TextXAlignment = Enum.TextXAlignment.Left
+        local whatsNewGui = Instance.new("ScreenGui")
+        whatsNewGui.Name = "AW_WhatsNew"
+        whatsNewGui.ResetOnSpawn = false
+        whatsNewGui.DisplayOrder = 10000001
+        whatsNewGui.IgnoreGuiInset = true
+        pcall(function() whatsNewGui.Parent = CoreGui end)
+        if not whatsNewGui.Parent then whatsNewGui.Parent = PlayerGui end
 
-local wnSubtitle = Instance.new("TextLabel", wnFrame)
-wnSubtitle.Size = UDim2.new(1, -40, 0, 18)
-wnSubtitle.Position = UDim2.new(0, 20, 0, 48)
-wnSubtitle.BackgroundTransparency = 1
-wnSubtitle.Text = "Latest additions and improvements"
-wnSubtitle.TextColor3 = Color3.fromRGB(150, 150, 155)
-wnSubtitle.Font = Enum.Font.Gotham
-wnSubtitle.TextSize = 12
-wnSubtitle.TextXAlignment = Enum.TextXAlignment.Left
+        local wnFrame = Instance.new("Frame", whatsNewGui)
+        wnFrame.Size = UDim2.new(0, 520, 0, 480)
+        wnFrame.Position = UDim2.new(0.5, -260, 0.5, -240)
+        wnFrame.BackgroundColor3 = Color3.fromRGB(8, 8, 10)
+        wnFrame.BorderSizePixel = 0
+        wnFrame.Active = true
+        Instance.new("UICorner", wnFrame).CornerRadius = UDim.new(0, 16)
 
-local wnBody = Instance.new("ScrollingFrame", wnFrame)
-wnBody.Size = UDim2.new(1, -40, 1, -140)
-wnBody.Position = UDim2.new(0, 20, 0, 76)
-wnBody.BackgroundTransparency = 1
-wnBody.BorderSizePixel = 0
-wnBody.ScrollBarThickness = 4
-wnBody.ScrollBarImageColor3 = Color3.fromRGB(190, 190, 195)
-wnBody.CanvasSize = UDim2.new(0, 0, 0, 0)
-wnBody.AutomaticCanvasSize = Enum.AutomaticSize.Y
+        local wnGrad = Instance.new("UIGradient", wnFrame)
+        wnGrad.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(10, 10, 14)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(4, 4, 6))
+        })
+        wnGrad.Rotation = 90
 
-local wnBodyLayout = Instance.new("UIListLayout", wnBody)
-wnBodyLayout.SortOrder = Enum.SortOrder.LayoutOrder
-wnBodyLayout.Padding = UDim.new(0, 10)
+        local wnStroke = Instance.new("UIStroke", wnFrame)
+        wnStroke.Color = Color3.fromRGB(190, 190, 195)
+        wnStroke.Thickness = 2
+        wnStroke.Transparency = 0
 
-local whatsNewItems = {
-    {"\240\159\148\165 Remove Barriers", "One-click remove barriers and kill bricks. Toggle auto-remove in the Secret tab."},
-    {"\240\159\148\171 Sheriff Flick", "Flicks your camera onto the sheriff for instant shots. Trigger with RightCtrl."},
-    {"\240\159\140\141 New Teleports", "Teleport to Map, Lobby, Murderer, Sheriff, Custom, and Void Platform."},
-    {"\240\159\145\129\239\184\143 New ESP", "Full ESP rebuild with Highlight, Outline, Fill, Role display and Distance."},
-    {"\240\159\151\179\239\184\143 Better Map Voting", "Live slot names, teleport-to-slot, and fast reset for every vote spot."},
-    {"\240\159\148\146 Lock & Unlock Buttons", "Lock floating buttons so you don't accidentally press them. Lock by ID or all at once."},
-    {"\240\159\140\128 Spin Bot", "Rapidly rotate your character with adjustable speed up to 5000."},
-    {"\240\159\146\172 Secret Commands", "Type \".help\" in chat to open the Commands tab in private chat."},
-    {"\240\159\146\172 \".un\" Commands", "Type \".unfly\" \".unnoclip\" \".unaimbot\" etc. to turn off any feature instantly."},
-    {"\240\159\142\173 More Emotes", "Expanded emote browser with search and floating emote buttons."},
-    {"\240\159\146\172 Private Chat Upgrade", "Cooler animated UI, cross-client messaging via relay, auto-scrolling messages."},
-    {"\240\159\148\167 Everything Starts Off", "All features now default to OFF when you load the script."}
-}
+        task.spawn(function()
+            local p = 0
+            while wnFrame and wnFrame.Parent do
+                local dt = RunService.Heartbeat:Wait()
+                p = (p + dt * 1.6) % (math.pi * 2)
+                local t2 = (math.sin(p) + 1) * 0.5
+                if wnStroke and wnStroke.Parent then
+                    wnStroke.Transparency = 0.2 + t2 * 0.4
+                    wnStroke.Color = Color3.fromRGB(120 + t2 * 80, 120 + t2 * 80, 125 + t2 * 80)
+                end
+            end
+        end)
 
-for i, item in ipairs(whatsNewItems) do
-    local card = Instance.new("Frame", wnBody)
-    card.Size = UDim2.new(1, -8, 0, 52)
-    card.LayoutOrder = i
-    card.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
-    Instance.new("UICorner", card).CornerRadius = UDim.new(0, 10)
-    local cst = Instance.new("UIStroke", card)
-    cst.Color = Color3.fromRGB(60, 60, 65)
-    cst.Thickness = 1
-    cst.Transparency = 0.4
-    local bar = Instance.new("Frame", card)
-    bar.Size = UDim2.new(0, 3, 1, -16)
-    bar.Position = UDim2.new(0, 10, 0, 8)
-    bar.BackgroundColor3 = Color3.fromRGB(190, 190, 195)
-    Instance.new("UICorner", bar).CornerRadius = UDim.new(1, 0)
-    local heading = Instance.new("TextLabel", card)
-    heading.Size = UDim2.new(1, -26, 0, 18)
-    heading.Position = UDim2.new(0, 22, 0, 6)
-    heading.BackgroundTransparency = 1
-    heading.Text = item[1]
-    heading.TextColor3 = Color3.fromRGB(235, 235, 240)
-    heading.Font = Enum.Font.GothamBold
-    heading.TextSize = 13
-    heading.TextXAlignment = Enum.TextXAlignment.Left
-    local desc = Instance.new("TextLabel", card)
-    desc.Size = UDim2.new(1, -26, 0, 26)
-    desc.Position = UDim2.new(0, 22, 0, 24)
-    desc.BackgroundTransparency = 1
-    desc.Text = item[2]
-    desc.TextColor3 = Color3.fromRGB(160, 160, 165)
-    desc.Font = Enum.Font.Gotham
-    desc.TextSize = 11
-    desc.TextXAlignment = Enum.TextXAlignment.Left
-    desc.TextYAlignment = Enum.TextYAlignment.Top
-    desc.TextWrapped = true
-end
+        local wnTitle = Instance.new("TextLabel", wnFrame)
+        wnTitle.Size = UDim2.new(1, -40, 0, 34)
+        wnTitle.Position = UDim2.new(0, 20, 0, 16)
+        wnTitle.BackgroundTransparency = 1
+        wnTitle.Text = "APPLEWARE - WHAT'S NEW"
+        wnTitle.TextColor3 = Color3.fromRGB(235, 235, 240)
+        wnTitle.Font = Enum.Font.GothamBold
+        wnTitle.TextSize = 20
+        wnTitle.TextXAlignment = Enum.TextXAlignment.Left
 
-local wnFooter = Instance.new("TextLabel", wnFrame)
-wnFooter.Size = UDim2.new(1, -40, 0, 22)
-wnFooter.Position = UDim2.new(0, 20, 1, -70)
-wnFooter.BackgroundTransparency = 1
-wnFooter.Text = "\240\159\145\135 Scroll down to continue"
-wnFooter.TextColor3 = Color3.fromRGB(150, 150, 155)
-wnFooter.Font = Enum.Font.GothamMedium
-wnFooter.TextSize = 12
+        local wnSubtitle = Instance.new("TextLabel", wnFrame)
+        wnSubtitle.Size = UDim2.new(1, -40, 0, 16)
+        wnSubtitle.Position = UDim2.new(0, 20, 0, 48)
+        wnSubtitle.BackgroundTransparency = 1
+        wnSubtitle.Text = "https://awh.filho.wtf"
+        wnSubtitle.TextColor3 = Color3.fromRGB(150, 150, 155)
+        wnSubtitle.Font = Enum.Font.Gotham
+        wnSubtitle.TextSize = 11
+        wnSubtitle.TextXAlignment = Enum.TextXAlignment.Left
 
-local wnContinue = Instance.new("TextButton", wnFrame)
-wnContinue.Size = UDim2.new(1, -40, 0, 40)
-wnContinue.Position = UDim2.new(0, 20, 1, -42)
-wnContinue.BackgroundColor3 = Color3.fromRGB(190, 190, 195)
-wnContinue.Text = "Continue"
-wnContinue.TextColor3 = Color3.new(0, 0, 0)
-wnContinue.Font = Enum.Font.GothamBold
-wnContinue.TextSize = 14
-wnContinue.AutoButtonColor = false
-Instance.new("UICorner", wnContinue).CornerRadius = UDim.new(0, 10)
+        local wnBody = Instance.new("ScrollingFrame", wnFrame)
+        wnBody.Size = UDim2.new(1, -40, 1, -140)
+        wnBody.Position = UDim2.new(0, 20, 0, 78)
+        wnBody.BackgroundTransparency = 1
+        wnBody.BorderSizePixel = 0
+        wnBody.ScrollBarThickness = 4
+        wnBody.ScrollBarImageColor3 = Color3.fromRGB(190, 190, 195)
+        wnBody.CanvasSize = UDim2.new(0, 0, 0, 0)
+        wnBody.AutomaticCanvasSize = Enum.AutomaticSize.Y
 
-local wnContinueStroke = Instance.new("UIStroke", wnContinue)
-wnContinueStroke.Color = Color3.fromRGB(235, 235, 240)
-wnContinueStroke.Thickness = 2
-wnContinueStroke.Transparency = 0.5
+        local wnBodyLayout = Instance.new("UIListLayout", wnBody)
+        wnBodyLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        wnBodyLayout.Padding = UDim.new(0, 10)
 
-wnContinue.MouseEnter:Connect(function()
-    TweenService:Create(wnContinue, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(220, 220, 225)}):Play()
-end)
-wnContinue.MouseLeave:Connect(function()
-    TweenService:Create(wnContinue, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(190, 190, 195)}):Play()
-end)
+        local whatsNewItems = {
+            {"Remove Barriers", "One-click remove barriers and kill bricks. Toggle auto-remove in the Secret tab."},
+            {"Sheriff Flick", "Flicks your camera onto the sheriff for instant shots. Trigger with RightCtrl."},
+            {"New Teleports", "Teleport to Map, Lobby, Murderer, Sheriff, Custom, and Void Platform."},
+            {"New ESP", "Full ESP rebuild with Highlight, Outline, Fill, Role display and Distance."},
+            {"Better Map Voting", "Live slot names, teleport-to-slot, and fast reset for every vote spot."},
+            {"Lock & Unlock Buttons", "Lock floating buttons so you don't accidentally press them. Lock by ID or all at once."},
+            {"Spin Bot", "Rapidly rotate your character with adjustable speed up to 5000."},
+            {"Secret Commands", "Type .help in chat to open the Commands tab in private chat."},
+            {".un Commands", "Type .unfly, .unnoclip, .unaimbot etc. to turn off any feature instantly."},
+            {"More Emotes", "Expanded emote browser with search and floating emote buttons."},
+            {"Private Chat Upgrade", "Cooler animated UI, cross-client messaging via relay, auto-scrolling messages."},
+            {"Everything Starts Off", "All features default to OFF on first load."}
+        }
 
-wnContinue.MouseButton1Click:Connect(function()
-    TweenService:Create(wnFrame, TweenInfo.new(0.4, EAS, EAI), {Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0.5, 0)}):Play()
-    task.delay(0.45, function()
-        whatsNewGui:Destroy()
+        for i, item in ipairs(whatsNewItems) do
+            local card = Instance.new("Frame", wnBody)
+            card.Size = UDim2.new(1, -8, 0, 52)
+            card.LayoutOrder = i
+            card.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
+            Instance.new("UICorner", card).CornerRadius = UDim.new(0, 10)
+            local cst = Instance.new("UIStroke", card)
+            cst.Color = Color3.fromRGB(60, 60, 65)
+            cst.Thickness = 1
+            cst.Transparency = 0.4
+            local bar = Instance.new("Frame", card)
+            bar.Size = UDim2.new(0, 3, 1, -16)
+            bar.Position = UDim2.new(0, 10, 0, 8)
+            bar.BackgroundColor3 = Color3.fromRGB(190, 190, 195)
+            Instance.new("UICorner", bar).CornerRadius = UDim.new(1, 0)
+            local heading = Instance.new("TextLabel", card)
+            heading.Size = UDim2.new(1, -26, 0, 18)
+            heading.Position = UDim2.new(0, 22, 0, 6)
+            heading.BackgroundTransparency = 1
+            heading.Text = item[1]
+            heading.TextColor3 = Color3.fromRGB(235, 235, 240)
+            heading.Font = Enum.Font.GothamBold
+            heading.TextSize = 13
+            heading.TextXAlignment = Enum.TextXAlignment.Left
+            local desc = Instance.new("TextLabel", card)
+            desc.Size = UDim2.new(1, -26, 0, 26)
+            desc.Position = UDim2.new(0, 22, 0, 24)
+            desc.BackgroundTransparency = 1
+            desc.Text = item[2]
+            desc.TextColor3 = Color3.fromRGB(160, 160, 165)
+            desc.Font = Enum.Font.Gotham
+            desc.TextSize = 11
+            desc.TextXAlignment = Enum.TextXAlignment.Left
+            desc.TextYAlignment = Enum.TextYAlignment.Top
+            desc.TextWrapped = true
+        end
+
+        local wnFooter = Instance.new("TextLabel", wnFrame)
+        wnFooter.Size = UDim2.new(1, -40, 0, 22)
+        wnFooter.Position = UDim2.new(0, 20, 1, -70)
+        wnFooter.BackgroundTransparency = 1
+        wnFooter.Text = "Check the list then continue"
+        wnFooter.TextColor3 = Color3.fromRGB(150, 150, 155)
+        wnFooter.Font = Enum.Font.GothamMedium
+        wnFooter.TextSize = 12
+
+        local wnContinue = Instance.new("TextButton", wnFrame)
+        wnContinue.Size = UDim2.new(1, -40, 0, 40)
+        wnContinue.Position = UDim2.new(0, 20, 1, -42)
+        wnContinue.BackgroundColor3 = Color3.fromRGB(190, 190, 195)
+        wnContinue.Text = "Scroll down"
+        wnContinue.TextColor3 = Color3.new(0, 0, 0)
+        wnContinue.Font = Enum.Font.GothamBold
+        wnContinue.TextSize = 14
+        wnContinue.AutoButtonColor = false
+        Instance.new("UICorner", wnContinue).CornerRadius = UDim.new(0, 10)
+
+        local wnContinueStroke = Instance.new("UIStroke", wnContinue)
+        wnContinueStroke.Color = Color3.fromRGB(235, 235, 240)
+        wnContinueStroke.Thickness = 2
+        wnContinueStroke.Transparency = 0.5
+
+        wnContinue.MouseEnter:Connect(function()
+            TweenService:Create(wnContinue, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(220, 220, 225)}):Play()
+        end)
+        wnContinue.MouseLeave:Connect(function()
+            TweenService:Create(wnContinue, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(190, 190, 195)}):Play()
+        end)
+
+        wnContinue.MouseButton1Click:Connect(function()
+            TweenService:Create(wnFrame, TweenInfo.new(0.4, EAS, EAI), {Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0.5, 0)}):Play()
+            task.delay(0.45, function()
+                whatsNewGui:Destroy()
+            end)
+        end)
     end)
-end)
+end
 
 -- Round timer
 RG=Instance.new("ScreenGui")
@@ -1904,7 +2092,7 @@ SB.Size=UDim2.new(0,138,1,0)
 SB.BackgroundColor3=cc(SC.tabBgColor)
 Instance.new("UICorner",SB).CornerRadius=UDim.new(0,14)
 LG=Instance.new("TextButton",SB)
-LG.Size=UDim2.new(1,-12,0,48)
+LG.Size=UDim2.new(1,-12,0,30)
 LG.Position=UDim2.new(0,6,0,4)
 LG.BackgroundTransparency=1
 LG.Text="Appleware"
@@ -1916,6 +2104,17 @@ LG.AutoButtonColor=false
 LG.InputBegan:Connect(function(i)
     if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then BMD(i) end
 end)
+
+-- URL under title
+URLBL=Instance.new("TextLabel",SB)
+URLBL.Size=UDim2.new(1,-12,0,12)
+URLBL.Position=UDim2.new(0,6,0,34)
+URLBL.BackgroundTransparency=1
+URLBL.Text="https://awh.filho.wtf"
+URLBL.TextColor3=cc(SC.tabTextColor)
+URLBL.Font=Enum.Font.Gotham
+URLBL.TextSize=9
+URLBL.TextXAlignment=Enum.TextXAlignment.Left
 
 TLB=Instance.new("ScrollingFrame",SB)
 TLB.Size=UDim2.new(1,-12,1,-68)
@@ -2314,7 +2513,7 @@ task.spawn(function()
     end
 end)
 
--- Wall hop (fixed)
+-- Wall hop
 do
     local rp = RaycastParams.new()
     rp.FilterType = Enum.RaycastFilterType.Exclude
@@ -2348,7 +2547,6 @@ do
                     end
                     if hit then
                         wallHopInfJump = true
-                        -- Wall hop flick: only flick when pressing space AND on cooldown expired
                         if state.wallHopFlick and UIS:IsKeyDown(Enum.KeyCode.Space) and not flicking and tick() > flickCooldown then
                             flicking = true
                             flickCooldown = tick() + 0.35
@@ -2751,7 +2949,7 @@ TGG(pages["Webhook"],"Auto Send",1,"sendOnFull")
 MIN(pages["Webhook"],3,"Webhook URL...",SC.webhookUrl,function(t) SC.webhookUrl=t saveSettings() end)
 MIN(pages["Webhook"],4,"Discord User ID...",SC.discordUserId,function(t) SC.discordUserId=t saveSettings() end)
 
--- MISC TAB (predicted murderer/sheriff and anti-fling removed)
+-- MISC TAB
 TGG(pages["Misc"],"Anti AFK",1,"afk")
 TGG(pages["Misc"],"Auto Grab Gun",3,"gun")
 TGG(pages["Misc"],"Anti-Void",7,"antiVoid")
@@ -3186,7 +3384,7 @@ ABN(pages["UI"],"Unload Script",31,function()
     if _G.ApplewareUnload then pcall(function() _G.ApplewareUnload() end) end
 end)
 
--- ANIM/EMOT TAB (expanded emote list)
+-- ANIM/EMOT TAB
 ASEC(pages["Anim/Emot"],"Emote Browser",1)
 do
     local EM={
@@ -4296,7 +4494,7 @@ end)
 task.spawn(function()
     while true do
         task.wait(0.1)
-        if state.autoShootMurderer and IBF() and IIR() and al() then
+        if state.autoShootMurderer and IBF() and al() then
             if CFF() and GM() then
                 task.spawn(function() pcall(FSS) end)
             end
@@ -4752,7 +4950,7 @@ task.spawn(function()
 end)
 
 -- ==========================================
--- PRIVATE CHAT (npoint.io relay — cooler UI)
+-- PRIVATE CHAT
 -- ==========================================
 local privateChatGui = Instance.new("ScreenGui")
 privateChatGui.Name = "AW_PrivateChat"
@@ -4830,7 +5028,7 @@ local pcSubtitle = Instance.new("TextLabel", pcDragBar)
 pcSubtitle.Size = UDim2.new(1, -80, 0, 14)
 pcSubtitle.Position = UDim2.new(0, 42, 0, 24)
 pcSubtitle.BackgroundTransparency = 1
-pcSubtitle.Text = "script users only"
+pcSubtitle.Text = "https://awh.filho.wtf"
 pcSubtitle.TextColor3 = Color3.fromRGB(140, 140, 145)
 pcSubtitle.Font = Enum.Font.Gotham
 pcSubtitle.TextSize = 10
@@ -5010,7 +5208,6 @@ local function addPrivateMessage(sender, message, isSystem, msgId)
     lbl.TextSize = 12
     lbl.TextXAlignment = Enum.TextXAlignment.Left
     lbl.TextWrapped = false
-    -- cap width
     local maxW = pcScroll.AbsoluteSize.X - 24
     local textLen = #lbl.Text
     if textLen * 7 > maxW then
@@ -5238,7 +5435,6 @@ _G.__AW_RUN_COMMAND = function(raw)
         end
     end
 
-    -- .un commands (turn off)
     if cmd == "unfly" then turnOff("flyEnabled","Fly")
     elseif cmd == "unnoclip" then turnOff("noclip","Noclip")
     elseif cmd == "uninfjump" then turnOff("infJumpEnabled","Inf Jump")
@@ -5293,7 +5489,6 @@ _G.__AW_RUN_COMMAND = function(raw)
         _G.__AW_NOTIFY("Loop teleports off")
     elseif cmd == "unsheriff" then turnOff("sheriffFlickToggle","Sheriff Flick")
 
-    -- normal commands
     elseif cmd == "help" or cmd == "h" or cmd == "?" then
         if not privateChatFrame.Visible then privateChatFrame.Visible = true end
         setPcTab("cmds")
@@ -5393,19 +5588,17 @@ LP.Chatted:Connect(function(msg)
     end
 end)
 
--- UNLOAD (turns off EVERYTHING including ESP)
+-- UNLOAD
 _G.ApplewareUnload = function()
     _G.ApplewareActive = false
     _G.ApplewareLoaded = false
 
-    -- turn off every feature explicitly
     for k, v in pairs(state) do
         if type(v) == "boolean" then
             state[k] = false
         end
     end
 
-    -- reset character
     pcall(function()
         local ch = LP.Character
         if ch then
@@ -5423,24 +5616,20 @@ _G.ApplewareUnload = function()
                 r.AssemblyLinearVelocity = Vector3.zero
                 r.AssemblyAngularVelocity = Vector3.zero
             end
-            -- remove invisibility
             for _, d in ipairs(ch:GetDescendants()) do
                 if d:IsA("BasePart") or d:IsA("Decal") then
                     pcall(function() d.Transparency = 0 end)
                 end
             end
-            -- remove hitboxes
             local hb = ch:FindFirstChild("AW_Hitbox")
             if hb then pcall(function() hb:Destroy() end) end
         end
     end)
 
-    -- stop fly body movers
     if flyConn then pcall(function() flyConn:Disconnect() end) end
     if flyBV and flyBV.Parent then pcall(function() flyBV:Destroy() end) end
     if flyBG and flyBG.Parent then pcall(function() flyBG:Destroy() end) end
 
-    -- clear ESP
     pcall(function()
         for p, e in pairs(EC) do
             if e then
@@ -5458,7 +5647,6 @@ _G.ApplewareUnload = function()
         GC2 = {}
     end)
 
-    -- clear floating buttons
     pcall(function()
         for _, d in pairs(FBs) do
             if d.btn and d.btn.Parent then pcall(function() d.btn:Destroy() end) end
@@ -5467,8 +5655,7 @@ _G.ApplewareUnload = function()
         FBs = {}
     end)
 
-    -- destroy all GUI
-    local gn = {"AWNotes", "AWRT", "AW_BigShoot", "AW_FloatingActions", "Appleware", "AW_EmoteFloats", "AW_FPS_Ping", "AW_ESP", "AW_ReloadPrompt", "AW_PrivateChat", "AW_WhatsNew"}
+    local gn = {"AWNotes", "AWRT", "AW_BigShoot", "AW_FloatingActions", "Appleware", "AW_EmoteFloats", "AW_FPS_Ping", "AW_ESP", "AW_ReloadPrompt", "AW_PrivateChat", "AW_WhatsNew", "AW_Loading"}
     local function KG(par)
         for _, n in ipairs(gn) do
             local g = par:FindFirstChild(n)
@@ -5478,13 +5665,11 @@ _G.ApplewareUnload = function()
     pcall(KG, CoreGui)
     pcall(KG, PlayerGui)
 
-    -- destroy workspace objects
     for _, n in ipairs({"AW_VoidPlatform", "invischair"}) do
         local o = workspace:FindFirstChild(n)
         if o then pcall(function() o:Destroy() end) end
     end
 
-    -- reset invis state
     dodgeActive = false
     invisApplied = false
 
@@ -5492,4 +5677,5 @@ _G.ApplewareUnload = function()
 end
 
 print("[Appleware] Loaded. Type .help for commands")
+print("[Appleware] https://awh.filho.wtf")
 print("Credits: lzzzx, noir (7yd7)")
