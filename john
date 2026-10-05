@@ -177,13 +177,14 @@ local shouldShowWhatsNew = true
 pcall(function() if isfile and isfile(WN_FLAG) then shouldShowWhatsNew=false end end)
 
 state={
-    farm=false,xpFarm=false,noclip=false,gun=false,afk=false,antiVoid=false,antiFling=false,
+    farm=false,xpFarm=false,noclip=false,gun=false,afk=false,antiVoid=false,antiFling=true,
     autoKillAll=false,autoShootMurderer=false,
     autoResetMurderer=false,autoResetSheriff=false,autoResetInnocent=false,aimbotMurderer=false,aimbotSheriff=false,
     aimbotFOV=250,aimbotSmooth=4,aimbotPredict=false,
     silentAimEnabled=false,silentAimWallCheck=false,
     shootThroughWall=false,silentAimFlickToggle=false,sheriffFlickToggle=false,
     loopFlingAll=false,loopFlingMur=false,loopFlingSheriff=false,loopFlingCustom=false,
+    loopStealGun=false,
     espPlayers=false,espGunDrop=false,espTeamColor=false,espMurderer=false,espSheriff=false,espHero=false,espInnocent=false,
     espHighlight=false,espOutline=false,espFill=false,espShowName=false,espShowRole=false,espShowDistance=false,
     espFillTransparency=0.5,espTextSize=14,espMaxDistance=2000,
@@ -262,7 +263,7 @@ TD={
     aimbotMurderer="Aimbot Murderer",aimbotSheriff="Aimbot Sheriff",silentAimEnabled="Silent Aim",
     silentAimWallCheck="Silent Aim WC",silentAimFlickToggle="Silent Aim Flick",sheriffFlickToggle="Sheriff Flick",
     shootThroughWall="Shoot Walls",loopFlingAll="Loop Fling All",loopFlingMur="Loop Fling Mur",
-    loopFlingSheriff="Loop Fling Sher",loopFlingCustom="Loop Fling Cust",
+    loopFlingSheriff="Loop Fling Sher",loopFlingCustom="Loop Fling Cust",loopStealGun="Loop Steal Gun",
     flyEnabled="Fly",infJumpEnabled="Inf Jump",bunnyHop="Bunny Hop",speedGlitch="Speed Glitch",
     invisibleEnabled="Invisible",killAura="Kill Aura",flingAura="Fling Aura",autoDodge="Auto Dodge",
     freeze="Freeze",fullbright="Fullbright",fovEnabled="FOV",cameraZoomEnabled="Cam Zoom",
@@ -322,6 +323,7 @@ local function loadSettings()
         for k,v in pairs(state) do
             if type(v)=="boolean" then state[k]=false end
         end
+        state.antiFling = true
         for _,k in ipairs(KB) do state.keybinds[k.key]=k.default end
         pcall(function() if writefile then writefile(FIRST_FLAG,"1") end end)
     end
@@ -377,10 +379,12 @@ task.spawn(function()
     local r=0
     while true do
         local dt=RunService.Heartbeat:Wait()
-        r=(r+dt*130)%360
-        for i=#SG,1,-1 do
-            local g=SG[i]
-            if g and g.Parent then g.Rotation=r else table.remove(SG,i) end
+        if state.animationsEnabled ~= false then
+            r=(r+dt*130)%360
+            for i=#SG,1,-1 do
+                local g=SG[i]
+                if g and g.Parent then g.Rotation=r else table.remove(SG,i) end
+            end
         end
     end
 end)
@@ -540,7 +544,7 @@ _G.__AW_NOTIFY=function(text,dur)
     end)
 end
 
--- ANTI-FLING
+-- ANTI-FLING (persists after unload)
 afConnections = {}
 task.spawn(function()
     local function disableCollide(part)
@@ -961,6 +965,24 @@ local function grabNearestGun()
 end
 local function GGN() task.spawn(function() pcall(grabNearestGun) end) end
 
+local function stealGun()
+    task.spawn(function()
+        _G.__AW_NOTIFY("Steal Gun: flinging sheriff")
+        local sher = GLSH()[1]
+        if sher and TIA(sher) and not IW(sher) then
+            pcall(function() RF(sher,true) end)
+            task.wait(0.6)
+        else
+            _G.__AW_NOTIFY("No sheriff found")
+        end
+        for _=1,10 do
+            pcall(grabNearestGun)
+            task.wait(0.15)
+        end
+        _G.__AW_NOTIFY("Steal Gun done")
+    end)
+end
+
 LCF=CFrame.new(14.47,516.73,-25.34)
 local function TTL()
     local r=LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
@@ -1239,7 +1261,31 @@ local function TSM()
 end
 local function FSS() return TSM() end
 
--- KILL VIA KNIFE HANDLE FIRE-TOUCH-INTEREST (no body movement)
+local function FSSUserTriggered()
+    if not state.shootThroughWall and state.silentAimWallCheck then
+        local pt=GTP()
+        if not pt or not HCS(pt) then
+            _G.__AW_NOTIFY("Waiting for visible murderer...")
+            task.spawn(function()
+                for _=1,150 do
+                    task.wait(0.1)
+                    if not state.silentAimWallCheck or state.shootThroughWall then
+                        pcall(FSS)
+                        return
+                    end
+                    local p2=GTP()
+                    if p2 and HCS(p2) then
+                        pcall(FSS)
+                        return
+                    end
+                end
+            end)
+            return
+        end
+    end
+    FSS()
+end
+
 local function ensureKnifeEquipped()
     local ch=LP.Character
     if not ch then return nil end
@@ -1260,40 +1306,42 @@ local function ensureKnifeEquipped()
     return nil
 end
 
-local function killWithKnife(target)
-    if not target or not target.Character or not target.Character.Parent then return false end
-    local targetCh=target.Character
-    local targetHum=targetCh:FindFirstChildOfClass("Humanoid")
-    if not targetHum or targetHum.Health<=0 then return false end
+local function getHandleTouched()
     local knife=ensureKnifeEquipped()
-    if not knife then _G.__AW_NOTIFY("No knife") return false end
-    local handle=knife:FindFirstChild("Handle")
-    if not handle then _G.__AW_NOTIFY("No handle") return false end
-    for _=1,25 do
-        if not targetCh.Parent or targetHum.Health<=0 then break end
-        for _,part in ipairs(targetCh:GetChildren()) do
-            if part:IsA("BasePart") then
-                pcall(function()
-                    firetouchinterest(handle,part,0)
-                    task.wait()
-                    firetouchinterest(handle,part,1)
-                end)
-            end
+    if not knife then return nil end
+    local events=knife:FindFirstChild("Events")
+    if not events then return nil end
+    return events:FindFirstChild("HandleTouched")
+end
+
+local function killMultipleWithHandle(targets)
+    if not targets or #targets==0 then return end
+    local handleTouched=getHandleTouched()
+    if not handleTouched then _G.__AW_NOTIFY("Knife HandleTouched not found") return end
+    local torsos={}
+    for _,p in ipairs(targets) do
+        if p~=LP and p.Character and TIA(p) and not IW(p) then
+            local torso=p.Character:FindFirstChild("UpperTorso") or p.Character:FindFirstChild("Torso")
+            if torso then table.insert(torsos,torso) end
         end
-        task.wait(0.02)
     end
-    return targetHum.Health<=0
+    if #torsos==0 then _G.__AW_NOTIFY("No targets") return end
+    for i=1,6 do
+        for _,torso in ipairs(torsos) do
+            pcall(function() handleTouched:FireServer(torso) end)
+        end
+        if i<6 then task.wait(1) end
+    end
 end
 
 local function KAN()
     task.spawn(function()
-        local k=ensureKnifeEquipped()
-        if not k then _G.__AW_NOTIFY("No knife") return end
+        local all={}
         for _,p in ipairs(Players:GetPlayers()) do
-            if p~=LP and TIA(p) and not IW(p) then
-                killWithKnife(p)
-            end
+            if p~=LP and TIA(p) and not IW(p) then table.insert(all,p) end
         end
+        if #all==0 then _G.__AW_NOTIFY("No targets") return end
+        killMultipleWithHandle(all)
         _G.__AW_NOTIFY("Killed all")
     end)
 end
@@ -1301,25 +1349,23 @@ local function KSN()
     task.spawn(function()
         local lv=GLSH()
         if #lv==0 then _G.__AW_NOTIFY("No sheriff") return end
-        local k=ensureKnifeEquipped()
-        if not k then _G.__AW_NOTIFY("No knife") return end
-        for _,p in ipairs(lv) do
-            if TIA(p) and not IW(p) then
-                killWithKnife(p)
-                break
-            end
-        end
+        killMultipleWithHandle({lv[1]})
         _G.__AW_NOTIFY("Killed sheriff")
     end)
 end
-local function KMN()
+local function KCUN()
     task.spawn(function()
-        local m=GM()
-        if not m then _G.__AW_NOTIFY("No murderer") return end
-        local k=ensureKnifeEquipped()
-        if not k then _G.__AW_NOTIFY("No knife") return end
-        killWithKnife(m)
-        _G.__AW_NOTIFY("Killed murderer")
+        local targets={}
+        for _,n in ipairs(SC.flingList) do
+            for _,p in ipairs(Players:GetPlayers()) do
+                if p~=LP and PMN(p,n) and TIA(p) and not IW(p) then
+                    table.insert(targets,p)
+                end
+            end
+        end
+        if #targets==0 then _G.__AW_NOTIFY("No custom targets") return end
+        killMultipleWithHandle(targets)
+        _G.__AW_NOTIFY("Killed custom")
     end)
 end
 
@@ -1660,6 +1706,16 @@ task.spawn(function()
     end
 end)
 
+-- LOOP STEAL GUN
+task.spawn(function()
+    while true do
+        task.wait(2)
+        if state.loopStealGun and al() then
+            pcall(stealGun)
+        end
+    end
+end)
+
 -- WHAT'S NEW
 if shouldShowWhatsNew then
     pcall(function() if writefile then writefile(WN_FLAG,"1") end end)
@@ -1720,14 +1776,13 @@ if shouldShowWhatsNew then
         wnBodyLayout.SortOrder = Enum.SortOrder.LayoutOrder
         wnBodyLayout.Padding = UDim.new(0, 10)
         local whatsNewItems = {
-            {"Remove Barriers", "One-click remove barriers and kill bricks."},
-            {"Sheriff Flick", "Flicks camera onto sheriff. RightCtrl."},
-            {"New Teleports", "Map, Lobby, Murderer, Sheriff, Custom, Void."},
-            {"Kill Buttons", "Knife kills via handle firetouchinterest - you don't move."},
-            {".to <user>", "Teleport to a player by name. Type .to bob for example."},
-            {"Radio Abuse", "Add / select / play / delete songs. Requires gamepass."},
-            {"Anti-Fling", "Stops other players flinging you."},
-            {"Everything Starts Off", "All features default OFF on first load."}
+            {".ui command", "Opens private chat directly to the UI tab."},
+            {"UI Tab in Private Chat", "Change UI size by ±0.1 and toggle animations from inside the private chat window."},
+            {"UI Tab (Main)", "Animation ON/OFF buttons added."},
+            {"Undo Commands", "Every toggle has a matching .un<feature> command (e.g. .unfly, .unnoclip)."},
+            {".to random", "Teleport to a random alive player."},
+            {"Emotes Expanded", "More emotes + improved float system."},
+            {"Loop Steal Gun", "Repeatedly flings sheriff and grabs gun."}
         }
         for i, item in ipairs(whatsNewItems) do
             local card = Instance.new("Frame", wnBody)
@@ -1884,7 +1939,7 @@ local function RSW()
     SWR=true
     SFT()
     task.spawn(function()
-        pcall(FSS)
+        pcall(FSSUserTriggered)
         SWR=false
     end)
 end
@@ -1939,9 +1994,11 @@ FBD={
     {id="flingSherAction",label="Fling Sheriff",type="action",cb=FSN},
     {id="flingAllAction",label="Fling All",type="action",cb=FAN},
     {id="flingCustAction",label="Fling Custom",type="action",cb=FCUN},
-    {id="killMurAction",label="Kill Murderer",type="action",cb=function() task.spawn(function() pcall(KMN) end) end},
     {id="killSherAction",label="Kill Sheriff",type="action",cb=function() task.spawn(function() pcall(KSN) end) end},
     {id="killAllAction",label="Kill All",type="action",cb=function() task.spawn(function() pcall(KAN) end) end},
+    {id="killCustAction",label="Kill Custom",type="action",cb=function() task.spawn(function() pcall(KCUN) end) end},
+    {id="stealGunAction",label="Steal Gun",type="action",cb=function() task.spawn(function() pcall(stealGun) end) end},
+    {id="loopStealGun",label="Loop Steal Gun",type="toggle",key="loopStealGun"},
     {id="sheriffFlick",label="Sheriff Flick",type="action",cb=SHF},
     {id="tpMap",label="TP Map",type="action",cb=function() TTM(false) end},
     {id="tpLobby",label="TP Lobby",type="action",cb=TTL},
@@ -1950,7 +2007,7 @@ FBD={
     {id="tpCustom",label="TP Custom",type="action",cb=TTCU},
     {id="tpVoid",label="TP Void",type="action",cb=TTVP},
     {id="grabGun",label="Grab Gun",type="action",cb=GGN},
-    {id="shoot",label="Shoot Murderer",type="action",cb=FSS},
+    {id="shoot",label="Shoot Murderer",type="action",cb=FSSUserTriggered},
     {id="shootWall",label="Shoot Wall",type="action",cb=FTW},
     {id="wallShoot",label="Shoot Thru Walls",type="toggle",key="shootThroughWall"},
     {id="silentAim",label="Silent Aim",type="toggle",key="silentAimEnabled"},
@@ -2131,6 +2188,9 @@ local function RFB()
                     local dn=TD[d.key] or d.label
                     _G.__AW_NOTIFY('<font color="'..(state[d.key] and "#5aff8c" or "#ff5a5a")..'">'..dn..'</font> '..(state[d.key] and "on" or "off"))
                     if d.key=="voidPlatform" and not state.voidPlatform then RVP() end
+                    if d.key=="shootThroughWall" and state.shootThroughWall and state.silentAimWallCheck then
+                        state.silentAimWallCheck=false
+                    end
                     saveSettings()
                 else
                     if d.cb then pcall(d.cb) end
@@ -2180,11 +2240,13 @@ task.spawn(function()
     local p=0
     while true do
         local dt=RunService.Heartbeat:Wait()
-        p=(p+dt*0.8)%(math.pi*2)
-        local t=(math.sin(p)+1)*0.5
-        if MSS and MSS.Parent then
-            MSS.Transparency=0.35+t*0.35
-            MSS.Thickness=1.4+t*1.2
+        if state.animationsEnabled ~= false then
+            p=(p+dt*0.8)%(math.pi*2)
+            local t=(math.sin(p)+1)*0.5
+            if MSS and MSS.Parent then
+                MSS.Transparency=0.35+t*0.35
+                MSS.Thickness=1.4+t*1.2
+            end
         end
     end
 end)
@@ -2357,6 +2419,8 @@ local function CTB(n,f)
 end
 for i,n in ipairs(TABS) do CTB(n,i==1) end
 
+_G.__AW_ALLTOGGLES = _G.__AW_ALLTOGGLES or {}
+
 local function TGG(pg,name,order,key)
     local row=Instance.new("Frame",pg)
     row.Size=UDim2.new(1,0,0,40)
@@ -2392,6 +2456,7 @@ local function TGG(pg,name,order,key)
     dt.Position=state[key] and UDim2.new(1,-20,0.5,-8) or UDim2.new(0,4,0.5,-8)
     dt.BackgroundColor3=state[key] and Color3.new(0,0,0) or Color3.fromRGB(200,200,200)
     Instance.new("UICorner",dt).CornerRadius=UDim.new(1,0)
+    _G.__AW_ALLTOGGLES[key]={rs=rs,pl=pl,pi=pi,dt=dt}
     if not _G.__AW_TPTOGGLES then _G.__AW_TPTOGGLES={} end
     local LTPK={"loopTpMap","loopTpLobby","loopTpMurderer","loopTpSheriff","loopTpCustom"}
     for _,lk in ipairs(LTPK) do
@@ -2418,7 +2483,28 @@ local function TGG(pg,name,order,key)
         if key=="floatButtonsEnabled" then SFV(ns) end
         if key=="voidPlatform" and not ns then RVP() end
         if key=="hudEnabled" and HUDF then HUDF.Visible=ns end
+        if key=="animationsEnabled" then
+            -- sync UI buttons text maybe
+        end
         if FBM[key] then RFV(FBM[key]) end
+        if key=="shootThroughWall" and ns and state.silentAimWallCheck then
+            state.silentAimWallCheck=false
+            local refs=_G.__AW_ALLTOGGLES["silentAimWallCheck"]
+            if refs then
+                pcall(function()
+                    TweenService:Create(refs.pl,TweenInfo.new(0.28,EAB,EAO),{BackgroundColor3=Color3.fromRGB(28,28,30)}):Play()
+                    TweenService:Create(refs.pi,TweenInfo.new(0.28,EAB,EAO),{BackgroundColor3=Color3.fromRGB(18,18,20)}):Play()
+                    TweenService:Create(refs.dt,TweenInfo.new(0.4,Enum.EasingStyle.Elastic,EAO),{
+                        Position=UDim2.new(0,4,0.5,-8),
+                        BackgroundColor3=Color3.fromRGB(200,200,200)
+                    }):Play()
+                    local gg=refs.rs:FindFirstChild("SpinGrad")
+                    if gg then setSGC(gg,false) end
+                end)
+            end
+            if FBM["silentAimWC"] then RFV(FBM["silentAimWC"]) end
+            _G.__AW_NOTIFY("Silent Aim Wall Check auto-disabled (magic bullet on)")
+        end
         local LTP={"loopTpMap","loopTpLobby","loopTpMurderer","loopTpSheriff","loopTpCustom"}
         local isLtp=false
         for _,lk in ipairs(LTP) do if lk==key then isLtp=true break end end
@@ -2965,9 +3051,9 @@ TGG(pages["Farm"],"Full Bag Gate",6,"fullBagGate")
 ASEC(pages["Combat"],"Silent Aim (Gun)",1)
 TGG(pages["Combat"],"Silent Aim",2,"silentAimEnabled")
 TGG(pages["Combat"],"Silent Aim Wall Check",3,"silentAimWallCheck")
-TGG(pages["Combat"],"Shoot Through Walls",11,"shootThroughWall")
+TGG(pages["Combat"],"Magic Bullet (Shoot Through Walls)",11,"shootThroughWall")
 TGG(pages["Combat"],"Auto Shoot Murderer",12,"autoShootMurderer")
-ABN(pages["Combat"],"Shoot Murderer Now",13,FSS)
+ABN(pages["Combat"],"Shoot Murderer Now",13,FSSUserTriggered)
 ABN(pages["Combat"],"Shoot Through Wall Now",14,FTW)
 ASEC(pages["Combat"],"Sheriff Flick",19)
 TGG(pages["Combat"],"Sheriff Flick Toggle",20,"sheriffFlickToggle")
@@ -2978,17 +3064,19 @@ TGG(pages["Combat"],"Loop Fling All",32,"loopFlingAll")
 TGG(pages["Combat"],"Loop Fling Murderer",33,"loopFlingMur")
 TGG(pages["Combat"],"Loop Fling Sheriff",34,"loopFlingSheriff")
 TGG(pages["Combat"],"Loop Fling Custom",35,"loopFlingCustom")
-TGG(pages["Combat"],"Auto Reset Murderer",36,"autoResetMurderer")
-TGG(pages["Combat"],"Auto Reset Sheriff",37,"autoResetSheriff")
-TGG(pages["Combat"],"Auto Reset Innocent",38,"autoResetInnocent")
+TGG(pages["Combat"],"Loop Steal Gun",36,"loopStealGun")
+TGG(pages["Combat"],"Auto Reset Murderer",37,"autoResetMurderer")
+TGG(pages["Combat"],"Auto Reset Sheriff",38,"autoResetSheriff")
+TGG(pages["Combat"],"Auto Reset Innocent",39,"autoResetInnocent")
 ASEC(pages["Combat"],"Fling & Kill",50)
 ABN(pages["Combat"],"Fling Murderer",51,FMN)
 ABN(pages["Combat"],"Fling Sheriff",52,FSN)
 ABN(pages["Combat"],"Fling All",53,FAN)
 ABN(pages["Combat"],"Fling Custom",54,FCUN)
-ABN(pages["Combat"],"Kill Murderer (Knife)",55,KMN)
 ABN(pages["Combat"],"Kill Sheriff (Knife)",56,KSN)
 ABN(pages["Combat"],"Kill All (Knife)",57,KAN)
+ABN(pages["Combat"],"Kill Custom (Knife)",58,KCUN)
+ABN(pages["Combat"],"Steal Gun (Fling Sheriff + Grab)",59,function() task.spawn(function() pcall(stealGun) end) end)
 MIN(pages["Combat"],61,"Username...",state.playerSearchText or "",function(t) state.playerSearchText=t end)
 ABN(pages["Combat"],"Add to Custom",62,function()
     local t=state.playerSearchText or ""
@@ -3553,6 +3641,7 @@ _G.__AW_HIDEUI=function()
 end
 
 UIS.InputBegan:Connect(function(inp,gp)
+    if _G.ApplewareActive==false then return end
     if inp.UserInputType~=Enum.UserInputType.Keyboard then return end
     if LF2 then
         state.keybinds[LF2]=inp.KeyCode.Name
@@ -3576,6 +3665,9 @@ UIS.InputBegan:Connect(function(inp,gp)
                 _G.__AW_NOTIFY('<font color="'..(ns and "#5aff8c" or "#ff5a5a")..'">'..dn..'</font> '..(ns and "on" or "off"))
                 if ft=="voidPlatform" and not ns then RVP() end
                 if ft=="hudEnabled" and HUDF then HUDF.Visible=ns end
+                if ft=="shootThroughWall" and ns and state.silentAimWallCheck then
+                    state.silentAimWallCheck=false
+                end
                 if (ft=="speedEnabled" or ft=="speedGlitch" or ft=="jumpEnabled" or ft=="flyEnabled") and not ns and LP.Character then
                     local h=LP.Character:FindFirstChildOfClass("Humanoid")
                     if h then
@@ -3663,6 +3755,53 @@ ASEC(pages["UI"],"Quick Actions",10)
 TGG(pages["UI"],"Notification Sound",26,"notifySound")
 TGG(pages["UI"],"Enable Animations",27,"animationsEnabled")
 TGG(pages["UI"],"Enable HUD",28,"hudEnabled")
+ABN(pages["UI"],"Turn OFF All Animations",29,function()
+    state.animationsEnabled = false
+    for _, g in ipairs(SG) do
+        if g and g.Parent then pcall(function() g.Rotation = 0 end) end
+    end
+    if MSS and MSS.Parent then
+        MSS.Transparency = 0.35
+        MSS.Thickness = 1.5
+    end
+    if pcStroke and pcStroke.Parent then
+        pcStroke.Transparency = 0.3
+        pcStroke.Color = Color3.fromRGB(200,200,205)
+    end
+    local refs = _G.__AW_ALLTOGGLES and _G.__AW_ALLTOGGLES["animationsEnabled"]
+    if refs then
+        pcall(function()
+            TweenService:Create(refs.pl,TweenInfo.new(0.28,EAB,EAO),{BackgroundColor3=Color3.fromRGB(28,28,30)}):Play()
+            TweenService:Create(refs.pi,TweenInfo.new(0.28,EAB,EAO),{BackgroundColor3=Color3.fromRGB(18,18,20)}):Play()
+            TweenService:Create(refs.dt,TweenInfo.new(0.4,Enum.EasingStyle.Elastic,EAO),{
+                Position=UDim2.new(0,4,0.5,-8),
+                BackgroundColor3=Color3.fromRGB(200,200,200)
+            }):Play()
+            local g = refs.rs:FindFirstChild("SpinGrad")
+            if g then setSGC(g,false) end
+        end)
+    end
+    _G.__AW_NOTIFY("Animations OFF")
+    saveSettings()
+end)
+ABN(pages["UI"],"Turn ON All Animations",30,function()
+    state.animationsEnabled = true
+    local refs = _G.__AW_ALLTOGGLES and _G.__AW_ALLTOGGLES["animationsEnabled"]
+    if refs then
+        pcall(function()
+            TweenService:Create(refs.pl,TweenInfo.new(0.28,EAB,EAO),{BackgroundColor3=cc(SC.accentColor)}):Play()
+            TweenService:Create(refs.pi,TweenInfo.new(0.28,EAB,EAO),{BackgroundColor3=cc(SC.accentColor)}):Play()
+            TweenService:Create(refs.dt,TweenInfo.new(0.4,Enum.EasingStyle.Elastic,EAO),{
+                Position=UDim2.new(1,-20,0.5,-8),
+                BackgroundColor3=Color3.new(0,0,0)
+            }):Play()
+            local g = refs.rs:FindFirstChild("SpinGrad")
+            if g then setSGC(g,true) end
+        end)
+    end
+    _G.__AW_NOTIFY("Animations ON")
+    saveSettings()
+end)
 ASEC(pages["UI"],"Danger Zone",30)
 ABN(pages["UI"],"Unload Script",31,function()
     if _G.__AW_NOTIFY then _G.__AW_NOTIFY("Unloading...") end
@@ -3749,15 +3888,21 @@ do
     efG.ResetOnSpawn=false
     efG.DisplayOrder=999993
     efG.IgnoreGuiInset=true
-    pcall(function() efG.Parent=CoreGui end)
-    if not efG.Parent then efG.Parent=PlayerGui end
+    efG.Enabled=true
+    efG.Parent=PlayerGui
     emoteFloatButtons={}
     state.emoteFloatButtons=state.emoteFloatButtons or {}
     state.emoteFloatPositions=state.emoteFloatPositions or {}
     local function pEm(id)
         local h=LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-        if not h then return end
-        pcall(function() h:PlayEmoteAndGetAnimTrackById(tonumber(id)) end)
+        if not h then
+            _G.__AW_NOTIFY("No character")
+            return
+        end
+        local ok = pcall(function() h:PlayEmoteAndGetAnimTrackById(tonumber(id)) end)
+        if not ok then
+            pcall(function() h:PlayEmote(tonumber(id)) end)
+        end
     end
     local function bEF(id,em)
         id=tostring(id)
@@ -3766,26 +3911,30 @@ do
         ou.AnchorPoint=Vector2.new(0,0)
         ou.BackgroundTransparency=1
         ou.Size=UDim2.new(0,60,0,60)
+        ou.Visible=true
         local sp=state.emoteFloatPositions[id]
         if sp then ou.Position=UDim2.new(sp.xScale or 0,sp.xOffset or 20,sp.yScale or 0,sp.yOffset or 200)
         else ou.Position=UDim2.new(0,20,0,200+#emoteFloatButtons*66) end
         local bt=Instance.new("TextButton",ou)
         bt.Size=UDim2.new(1,0,1,0)
-        bt.BackgroundColor3=Color3.new(0,0,0)
-        bt.BackgroundTransparency=0.3
+        bt.BackgroundColor3=Color3.fromRGB(20,20,24)
+        bt.BackgroundTransparency=0
         bt.Text=""
         bt.AutoButtonColor=false
+        bt.Visible=true
+        bt.ZIndex=2
         Instance.new("UICorner",bt).CornerRadius=UDim.new(0,10)
         local st=Instance.new("UIStroke",bt)
         st.Color=cc(SC.accentColor)
-        st.Thickness=1.5
-        st.Transparency=0.4
+        st.Thickness=2
+        st.Transparency=0
         local img=Instance.new("ImageLabel",bt)
         img.Size=UDim2.new(0.85,0,0.85,0)
         img.Position=UDim2.new(0.075,0,0.075,0)
         img.BackgroundTransparency=1
         img.Image="rbxthumb://type=Asset&id="..id.."&w=150&h=150"
         img.ScaleType=Enum.ScaleType.Fit
+        img.ZIndex=3
         bt.MouseButton1Click:Connect(function() pEm(id) end)
         local ds=nil
         bt.InputBegan:Connect(function(inp)
@@ -3810,7 +3959,6 @@ do
             end
         end)
         emoteFloatButtons[id]={btn=bt,outer=ou,emote=em}
-        bt.Visible=state.floatButtonsEnabled
     end
     local function rEF(id)
         id=tostring(id)
@@ -3818,8 +3966,13 @@ do
         if r then r.outer:Destroy() emoteFloatButtons[id]=nil end
     end
     _G.__AW_EMOTE_FLOAT_REFRESH=function()
+        pcall(function()
+            efG.Enabled=true
+            if not efG.Parent then efG.Parent=PlayerGui end
+        end)
         for _,r in pairs(emoteFloatButtons) do
-            if r.btn then r.btn.Visible=state.floatButtonsEnabled end
+            if r.btn then r.btn.Visible=true end
+            if r.outer then r.outer.Visible=true end
         end
     end
     local tb=Instance.new("TextButton",pages["Emotes"])
@@ -3941,10 +4094,12 @@ do
                         state.emoteFloatButtons[tostring(em.id)]=nil
                         rEF(em.id)
                         cb.BackgroundColor3=Color3.fromRGB(30,30,32)
+                        _G.__AW_NOTIFY("Removed emote float")
                     else
                         state.emoteFloatButtons[tostring(em.id)]=true
                         bEF(em.id,em)
                         cb.BackgroundColor3=cc(SC.accentColor)
+                        _G.__AW_NOTIFY("Added emote float: "..em.name)
                     end
                     saveSettings()
                 end)
@@ -3983,6 +4138,24 @@ do
         state.emoteFloatPositions={}
         saveSettings()
         rG()
+        _G.__AW_NOTIFY("Cleared emote floats")
+    end)
+    ABN(pages["Emotes"],"Add Visible Emotes as Floats",5,function()
+        local q=string.lower(state.emoteSearch or "")
+        local added=0
+        for _,em in ipairs(EM) do
+            if q=="" or string.find(string.lower(em.name),q,1,true) or string.find(tostring(em.id),q,1,true) then
+                if not state.emoteFloatButtons[tostring(em.id)] then
+                    state.emoteFloatButtons[tostring(em.id)]=true
+                    bEF(em.id,em)
+                    added=added+1
+                    if added>=8 then break end
+                end
+            end
+        end
+        saveSettings()
+        rG()
+        _G.__AW_NOTIFY("Added "..added.." emote floats (max 8 at a time)")
     end)
     task.defer(function()
         rMV()
@@ -5330,11 +5503,13 @@ task.spawn(function()
     local p = 0
     while true do
         local dt = RunService.Heartbeat:Wait()
-        p = (p + dt * 1.4) % (math.pi * 2)
-        local t = (math.sin(p) + 1) * 0.5
-        if pcStroke and pcStroke.Parent then
-            pcStroke.Transparency = 0.3 - t * 0.3
-            pcStroke.Color = Color3.fromRGB(120 + t * 110, 120 + t * 110, 125 + t * 110)
+        if state.animationsEnabled ~= false then
+            p = (p + dt * 1.4) % (math.pi * 2)
+            local t = (math.sin(p) + 1) * 0.5
+            if pcStroke and pcStroke.Parent then
+                pcStroke.Transparency = 0.3 - t * 0.3
+                pcStroke.Color = Color3.fromRGB(120 + t * 110, 120 + t * 110, 125 + t * 110)
+            end
         end
     end
 end)
@@ -5429,6 +5604,14 @@ pcTabCmds.Font = Enum.Font.GothamBold
 pcTabCmds.TextSize = 12
 pcTabCmds.AutoButtonColor = false
 Instance.new("UICorner", pcTabCmds).CornerRadius = UDim.new(0, 8)
+local pcTabUI = Instance.new("TextButton", pcTabRow)
+pcTabUI.Size = UDim2.new(0, 110, 1, 0)
+pcTabUI.Position = UDim2.new(0, 232, 0, 0)
+pcTabUI.Text = "UI"
+pcTabUI.Font = Enum.Font.GothamBold
+pcTabUI.TextSize = 12
+pcTabUI.AutoButtonColor = false
+Instance.new("UICorner", pcTabUI).CornerRadius = UDim.new(0, 8)
 
 local pcBody = Instance.new("Frame", privateChatFrame)
 pcBody.Size = UDim2.new(1, -20, 1, -152)
@@ -5477,6 +5660,141 @@ pcCmdPad.PaddingTop = UDim.new(0, 10)
 pcCmdPad.PaddingBottom = UDim.new(0, 10)
 pcCmdPad.PaddingLeft = UDim.new(0, 12)
 pcCmdPad.PaddingRight = UDim.new(0, 12)
+
+-- NEW: UI Tab page in private chat
+local pcUiPage = Instance.new("Frame", pcBody)
+pcUiPage.Size = UDim2.new(1, 0, 1, 0)
+pcUiPage.BackgroundTransparency = 1
+pcUiPage.Visible = false
+local pcUiScroll = Instance.new("ScrollingFrame", pcUiPage)
+pcUiScroll.Size = UDim2.new(1, 0, 1, 0)
+pcUiScroll.BackgroundTransparency = 1
+pcUiScroll.BorderSizePixel = 0
+pcUiScroll.ScrollBarThickness = 4
+pcUiScroll.ScrollBarImageColor3 = Color3.fromRGB(160, 160, 165)
+pcUiScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+pcUiScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+local pcUiLayout = Instance.new("UIListLayout", pcUiScroll)
+pcUiLayout.SortOrder = Enum.SortOrder.LayoutOrder
+pcUiLayout.Padding = UDim.new(0, 8)
+local pcUiPad = Instance.new("UIPadding", pcUiScroll)
+pcUiPad.PaddingTop = UDim.new(0, 12)
+pcUiPad.PaddingBottom = UDim.new(0, 12)
+pcUiPad.PaddingLeft = UDim.new(0, 12)
+pcUiPad.PaddingRight = UDim.new(0, 12)
+
+local pcUiScaleLabel = Instance.new("TextLabel", pcUiScroll)
+pcUiScaleLabel.Size = UDim2.new(1, 0, 0, 34)
+pcUiScaleLabel.LayoutOrder = 1
+pcUiScaleLabel.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
+pcUiScaleLabel.Text = "UI Size: " .. string.format("%.1fx", SC.selectedScale or 1)
+pcUiScaleLabel.TextColor3 = Color3.fromRGB(190, 190, 195)
+pcUiScaleLabel.Font = Enum.Font.GothamBold
+pcUiScaleLabel.TextSize = 14
+Instance.new("UICorner", pcUiScaleLabel).CornerRadius = UDim.new(0, 8)
+
+local function pcUiRefreshLabel()
+    pcUiScaleLabel.Text = "UI Size: " .. string.format("%.1fx", SC.selectedScale or 1)
+end
+
+local function pcUiScaleBy(delta)
+    local s = SC.selectedScale or 1
+    s = math.clamp(math.floor((s + delta) * 10 + 0.5) / 10, 0.5, 2.0)
+    SC.selectedScale = s
+    if _G.__AW_MAINSCALE then
+        TweenService:Create(_G.__AW_MAINSCALE, TweenInfo.new(0.22, EAS), {Scale = s}):Play()
+    end
+    pcUiRefreshLabel()
+    saveSettings()
+    _G.__AW_NOTIFY("UI Size: " .. string.format("%.1fx", s))
+end
+
+local pcUiPlus = Instance.new("TextButton", pcUiScroll)
+pcUiPlus.Size = UDim2.new(1, 0, 0, 40)
+pcUiPlus.LayoutOrder = 2
+pcUiPlus.BackgroundColor3 = Color3.fromRGB(35, 140, 65)
+pcUiPlus.Text = "UI Size  +0.1"
+pcUiPlus.TextColor3 = Color3.new(1, 1, 1)
+pcUiPlus.Font = Enum.Font.GothamBold
+pcUiPlus.TextSize = 13
+pcUiPlus.AutoButtonColor = false
+Instance.new("UICorner", pcUiPlus).CornerRadius = UDim.new(0, 8)
+pcUiPlus.MouseButton1Click:Connect(function() pcUiScaleBy(0.1) end)
+
+local pcUiMinus = Instance.new("TextButton", pcUiScroll)
+pcUiMinus.Size = UDim2.new(1, 0, 0, 40)
+pcUiMinus.LayoutOrder = 3
+pcUiMinus.BackgroundColor3 = Color3.fromRGB(160, 40, 40)
+pcUiMinus.Text = "UI Size  -0.1"
+pcUiMinus.TextColor3 = Color3.new(1, 1, 1)
+pcUiMinus.Font = Enum.Font.GothamBold
+pcUiMinus.TextSize = 13
+pcUiMinus.AutoButtonColor = false
+Instance.new("UICorner", pcUiMinus).CornerRadius = UDim.new(0, 8)
+pcUiMinus.MouseButton1Click:Connect(function() pcUiScaleBy(-0.1) end)
+
+local pcUiReset = Instance.new("TextButton", pcUiScroll)
+pcUiReset.Size = UDim2.new(1, 0, 0, 40)
+pcUiReset.LayoutOrder = 4
+pcUiReset.BackgroundColor3 = Color3.fromRGB(60, 60, 65)
+pcUiReset.Text = "Reset UI Size (1.0x)"
+pcUiReset.TextColor3 = Color3.new(1, 1, 1)
+pcUiReset.Font = Enum.Font.GothamBold
+pcUiReset.TextSize = 13
+pcUiReset.AutoButtonColor = false
+Instance.new("UICorner", pcUiReset).CornerRadius = UDim.new(0, 8)
+pcUiReset.MouseButton1Click:Connect(function()
+    SC.selectedScale = 1
+    if _G.__AW_MAINSCALE then
+        TweenService:Create(_G.__AW_MAINSCALE, TweenInfo.new(0.22, EAS), {Scale = 1}):Play()
+    end
+    pcUiRefreshLabel()
+    saveSettings()
+    _G.__AW_NOTIFY("UI Size reset to 1.0x")
+end)
+
+local pcUiAnimOff = Instance.new("TextButton", pcUiScroll)
+pcUiAnimOff.Size = UDim2.new(1, 0, 0, 40)
+pcUiAnimOff.LayoutOrder = 5
+pcUiAnimOff.BackgroundColor3 = Color3.fromRGB(140, 40, 40)
+pcUiAnimOff.Text = "Turn OFF All Animations"
+pcUiAnimOff.TextColor3 = Color3.new(1, 1, 1)
+pcUiAnimOff.Font = Enum.Font.GothamBold
+pcUiAnimOff.TextSize = 13
+pcUiAnimOff.AutoButtonColor = false
+Instance.new("UICorner", pcUiAnimOff).CornerRadius = UDim.new(0, 8)
+pcUiAnimOff.MouseButton1Click:Connect(function()
+    state.animationsEnabled = false
+    for _, g in ipairs(SG) do
+        if g and g.Parent then pcall(function() g.Rotation = 0 end) end
+    end
+    if MSS and MSS.Parent then
+        MSS.Transparency = 0.35
+        MSS.Thickness = 1.5
+    end
+    if pcStroke and pcStroke.Parent then
+        pcStroke.Transparency = 0.3
+        pcStroke.Color = Color3.fromRGB(200,200,205)
+    end
+    _G.__AW_NOTIFY("Animations OFF")
+    saveSettings()
+end)
+
+local pcUiAnimOn = Instance.new("TextButton", pcUiScroll)
+pcUiAnimOn.Size = UDim2.new(1, 0, 0, 40)
+pcUiAnimOn.LayoutOrder = 6
+pcUiAnimOn.BackgroundColor3 = Color3.fromRGB(35, 140, 65)
+pcUiAnimOn.Text = "Turn ON All Animations"
+pcUiAnimOn.TextColor3 = Color3.new(1, 1, 1)
+pcUiAnimOn.Font = Enum.Font.GothamBold
+pcUiAnimOn.TextSize = 13
+pcUiAnimOn.AutoButtonColor = false
+Instance.new("UICorner", pcUiAnimOn).CornerRadius = UDim.new(0, 8)
+pcUiAnimOn.MouseButton1Click:Connect(function()
+    state.animationsEnabled = true
+    _G.__AW_NOTIFY("Animations ON")
+    saveSettings()
+end)
 
 local pcStatusBar = Instance.new("Frame", privateChatFrame)
 pcStatusBar.Size = UDim2.new(1, -20, 0, 18)
@@ -5576,6 +5894,7 @@ local function setPcTab(t)
     pcActiveTab = t
     pcChatPage.Visible = (t == "chat")
     pcCmdsPage.Visible = (t == "cmds")
+    pcUiPage.Visible = (t == "ui")
     pcInputWrap.Visible = (t == "chat")
     local function style(btn, active)
         if active then
@@ -5588,34 +5907,43 @@ local function setPcTab(t)
     end
     style(pcTabChat, t == "chat")
     style(pcTabCmds, t == "cmds")
+    style(pcTabUI, t == "ui")
+    if t == "ui" and pcUiRefreshLabel then pcall(pcUiRefreshLabel) end
 end
 pcTabChat.MouseButton1Click:Connect(function() setPcTab("chat") end)
 pcTabCmds.MouseButton1Click:Connect(function() setPcTab("cmds") end)
+pcTabUI.MouseButton1Click:Connect(function() setPcTab("ui") end)
 
 local helpEntries = {
     {"General", "header"},
     {".help", "Open Commands tab"},
+    {".ui", "Open private UI settings tab"},
     {".showui / .hideui", "Show/hide main UI"},
-    {".private", "Toggle private chat - chat with other players who have the script"},
+    {".private", "Toggle private chat"},
     {".unload", "Unload the entire script"},
-    {"Turn Off Any Feature", "header"},
-    {".unfly / .unnoclip", "Turn off fly / noclip"},
-    {".unaimbot", "Turn off aimbot murderer + sheriff"},
-    {".unsilentaim", "Turn off silent aim"},
-    {".unshootwall", "Turn off shoot through walls"},
-    {".unesp / .ungesp", "Turn off player / gun ESP"},
-    {".unhitbox", "Turn off hitbox expander"},
-    {".unspinbot", "Turn off spin bot"},
-    {".unwallhop", "Turn off wall hop"},
-    {".uninvis", "Turn off invisible"},
-    {".unspeed / .unjump", "Turn off speed / jump power"},
-    {".unfullbright", "Turn off fullbright"},
-    {".unfov", "Turn off FOV changer"},
-    {".undodge", "Turn off auto dodge"},
-    {".unflingaura", "Turn off fling aura"},
-    {".unantifling", "Turn off anti-fling"},
-    {".unhud", "Turn off HUD"},
-    {".unradioabuse", "Turn off radio abuse"},
+    {"Undo All Toggles", "header"},
+    {".unfly / .unnoclip", "Fly / Noclip off"},
+    {".uninfjump / .unbhop", "Inf Jump / Bunny Hop off"},
+    {".unspeed / .unjump / .unspeedglitch", "Speed / Jump / Speed Glitch off"},
+    {".uncamzoom / .unfullbright / .unfov / .unfreeze", "Cam Zoom / Fullbright / FOV / Freeze off"},
+    {".unclicktp / .uninvis", "Click TP / Invisible off"},
+    {".unaimbot / .unsilentaim / .unshootwall", "Aimbot / Silent Aim / Shoot Walls off"},
+    {".unautoshoot / .unsilentaimwc / .unsilentaimflick", "Auto Shoot / Silent Aim extras off"},
+    {".unsheriff / .unflingaura / .undodge", "Sheriff Flick / Fling Aura / Auto Dodge off"},
+    {".untouchfling / .unkillaura", "Touch Fling / Kill Aura off"},
+    {".unesp / .ungesp / .unespmur / .unespsher / .unesphero / .unespinno", "ESP toggles off"},
+    {".unesphl / .unespoutline / .unespfill / .unespname / .unesprole / .unespdist", "ESP extras off"},
+    {".unautokill / .unfarm / .unxp", "Auto Kill / Farm / XP Farm off"},
+    {".unresetmur / .unresetsher / .unresetinno", "Auto Reset toggles off"},
+    {".unloopflingall / .unloopflingmur / .unloopflingsher / .unloopflingcust", "Loop Fling toggles off"},
+    {".unloopstealgun / .unstealgun", "Loop Steal Gun off"},
+    {".unhitbox / .unspinbot / .unwallhop / .unwallhopflick", "Hitbox / Spin Bot / Wall Hop off"},
+    {".unremovebarriers / .unvoid / .unfeanim", "Remove Barriers / Void Platform / FE Anim off"},
+    {".unheadless / .unafk / .unantivoid / .unantifling", "Headless / Anti AFK / Anti Void / Anti Fling off"},
+    {".ungun / .unnotifysound / .unfps / .unfpscolor", "Auto Gun / Notif Sound / FPS / FPS Color off"},
+    {".unnotrade / .untp / .unradioabuse / .unradioauto", "No Trade / Loop TP / Radio off"},
+    {".unbigbutton / .unfloatbuttons / .unhud / .unanimations", "Big Button / Float Buttons / HUD / Animations off"},
+    {".unbaggate / .unsendonfull", "Bag Gate / Webhook send off"},
     {"Combat", "header"},
     {".aimbot [sheriff]", "Toggle aimbot"},
     {".silentaim", "Toggle silent aim"},
@@ -5623,7 +5951,7 @@ local helpEntries = {
     {".shootwall", "Shoot through walls"},
     {".fling <user>", "Fling a player"},
     {".flingall / .flingmur", "Fling all / murderer"},
-    {".killmur / .killsher / .killall", "Kill murderer / sheriff / all (knife)"},
+    {".killsher / .killall / .killcust", "Kill sheriff / all / custom (knife)"},
     {"Movement", "header"},
     {".fly / .noclip", "Toggle fly / noclip"},
     {".speed <n>", "Set walk speed"},
@@ -5632,6 +5960,7 @@ local helpEntries = {
     {".tpmap / .tplobby", "TP to map / lobby"},
     {".tpmur / .tpsher", "TP to murderer / sheriff"},
     {".to <user>", "TP to a player by username or display name"},
+    {".to random", "TP to a random alive player"},
     {"Utility", "header"},
     {".grabgun", "Grab nearest gun"},
     {".removebarriers", "Remove barriers"},
@@ -5639,7 +5968,9 @@ local helpEntries = {
     {".invisible", "Toggle invisible"},
     {".hud", "Toggle HUD"},
     {".antifling", "Toggle anti-fling"},
-    {".radioabuse", "Toggle radio spam"}
+    {".radioabuse", "Toggle radio spam"},
+    {".rj", "Rejoin the current server"},
+    {".shop", "Server hop to a random server"}
 }
 for i, entry in ipairs(helpEntries) do
     local n, d = entry[1], entry[2]
@@ -5749,6 +6080,7 @@ end)
 
 _G.__AW_RUN_COMMAND = function(raw)
     if not raw or raw == "" then return end
+    if _G.ApplewareActive == false then return end
     local args = {}
     for w in string.gmatch(raw, "%S+") do table.insert(args, w) end
     local cmd = string.lower(args[1] or ""):gsub("^%.", "")
@@ -5771,21 +6103,26 @@ _G.__AW_RUN_COMMAND = function(raw)
         else _G.__AW_NOTIFY((label or key)..' already off') end
     end
 
+    -- Undo commands (comprehensive)
     if cmd == "unfly" then turnOff("flyEnabled","Fly")
-    elseif cmd == "unnoclip" then turnOff("noclip","Noclip")
+    elseif cmd == "unnoclip" or cmd == "unclip" then turnOff("noclip","Noclip")
     elseif cmd == "uninfjump" then turnOff("infJumpEnabled","Inf Jump")
-    elseif cmd == "unbhop" then turnOff("bunnyHop","Bunny Hop")
+    elseif cmd == "unbhop" or cmd == "unbunnyhop" then turnOff("bunnyHop","Bunny Hop")
     elseif cmd == "unspeedglitch" then turnOff("speedGlitch","Speed Glitch")
     elseif cmd == "unspeed" then turnOff("speedEnabled","Speed")
-    elseif cmd == "unjump" then turnOff("jumpEnabled","Jump Power")
+    elseif cmd == "unjump" or cmd == "unjumppower" then turnOff("jumpEnabled","Jump Power")
     elseif cmd == "uninvis" or cmd == "uninvisible" then turnOff("invisibleEnabled","Invisible")
     elseif cmd == "unfreeze" then turnOff("freeze","Freeze")
     elseif cmd == "unfullbright" then turnOff("fullbright","Fullbright")
     elseif cmd == "unfov" then turnOff("fovEnabled","FOV")
     elseif cmd == "unclicktp" then turnOff("clickTP","Click TP")
+    elseif cmd == "uncamzoom" then turnOff("cameraZoomEnabled","Cam Zoom")
     elseif cmd == "unhud" then turnOff("hudEnabled","HUD")
+    elseif cmd == "unanimations" or cmd == "unanim" then turnOff("animationsEnabled","Animations")
     elseif cmd == "unantifling" or cmd == "unaf2" then turnOff("antiFling","Anti-Fling")
     elseif cmd == "unradioabuse" or cmd == "unradio" then turnOff("radioAbuse","Radio Abuse")
+    elseif cmd == "unradioauto" then turnOff("radioAutoPlay","Radio Auto Play")
+    elseif cmd == "unloopstealgun" then turnOff("loopStealGun","Loop Steal Gun")
     elseif cmd == "unaimbot" then
         state.aimbotMurderer=false
         state.aimbotSheriff=false
@@ -5794,42 +6131,74 @@ _G.__AW_RUN_COMMAND = function(raw)
         _G.__AW_NOTIFY("Aimbot off")
         saveSettings()
     elseif cmd == "unsilentaim" then turnOff("silentAimEnabled","Silent Aim")
+    elseif cmd == "unsilentaimwc" or cmd == "unsaWC" then turnOff("silentAimWallCheck","Silent Aim Wall Check")
+    elseif cmd == "unsilentaimflick" then turnOff("silentAimFlickToggle","Silent Aim Flick")
     elseif cmd == "unshootwall" or cmd == "unshootthrough" then turnOff("shootThroughWall","Shoot Through Walls")
     elseif cmd == "unautoshoot" then turnOff("autoShootMurderer","Auto Shoot")
     elseif cmd == "unesp" then turnOff("espPlayers","Player ESP")
     elseif cmd == "ungesp" or cmd == "unespgun" then turnOff("espGunDrop","Gun ESP")
+    elseif cmd == "unespmur" then turnOff("espMurderer","ESP Murderer")
+    elseif cmd == "unespsher" then turnOff("espSheriff","ESP Sheriff")
+    elseif cmd == "unesphero" then turnOff("espHero","ESP Hero")
+    elseif cmd == "unespinno" then turnOff("espInnocent","ESP Innocent")
+    elseif cmd == "unesphl" or cmd == "unesphighlight" then turnOff("espHighlight","ESP Highlight")
+    elseif cmd == "unespoutline" then turnOff("espOutline","ESP Outline")
+    elseif cmd == "unespfill" then turnOff("espFill","ESP Fill")
+    elseif cmd == "unespname" then turnOff("espShowName","ESP Name")
+    elseif cmd == "unesprole" then turnOff("espShowRole","ESP Role")
+    elseif cmd == "unespdist" or cmd == "unespdistance" then turnOff("espShowDistance","ESP Distance")
+    elseif cmd == "unteamcolors" then turnOff("espTeamColor","Team Colors")
     elseif cmd == "unhitbox" then turnOff("hitboxExpander","Hitbox Expander")
     elseif cmd == "unspinbot" then turnOff("spinBot","Spin Bot")
     elseif cmd == "unwallhop" then turnOff("wallHop","Wall Hop")
     elseif cmd == "unwallhopflick" then turnOff("wallHopFlick","Wall Hop Flick")
     elseif cmd == "undodge" or cmd == "unautododge" then turnOff("autoDodge","Auto Dodge")
     elseif cmd == "unflingaura" then turnOff("flingAura","Fling Aura")
+    elseif cmd == "unautokill" or cmd == "unautokillall" then turnOff("autoKillAll","Auto Kill All")
+    elseif cmd == "unfarm" then turnOff("farm","Farm")
+    elseif cmd == "unxp" or cmd == "unxpfarm" then turnOff("xpFarm","XP Farm")
+    elseif cmd == "unbaggate" or cmd == "unfullbaggate" then turnOff("fullBagGate","Full Bag Gate")
+    elseif cmd == "unresetmur" then turnOff("autoResetMurderer","Auto Reset Murderer")
+    elseif cmd == "unresetsher" then turnOff("autoResetSheriff","Auto Reset Sheriff")
+    elseif cmd == "unresetinno" then turnOff("autoResetInnocent","Auto Reset Innocent")
     elseif cmd == "unloopflingall" then turnOff("loopFlingAll","Loop Fling All")
     elseif cmd == "unloopflingmur" then turnOff("loopFlingMur","Loop Fling Mur")
     elseif cmd == "unloopflingsher" then turnOff("loopFlingSheriff","Loop Fling Sher")
     elseif cmd == "unloopflingcust" then turnOff("loopFlingCustom","Loop Fling Cust")
+    elseif cmd == "unkillaura" then turnOff("killAura","Kill Aura")
+    elseif cmd == "untouchfling" then turnOff("touchFling","Touch Fling")
     elseif cmd == "unremovebarriers" then turnOff("removeBarriers","Remove Barriers")
-    elseif cmd == "unvoid" then turnOff("voidPlatform","Void Platform")
+    elseif cmd == "unvoid" or cmd == "unvoidplatform" then turnOff("voidPlatform","Void Platform")
     elseif cmd == "unheadless" then
         state.headless1=false; state.headless2=false; state.headless3=false
         saveSettings()
         _G.__AW_NOTIFY("Headless off")
     elseif cmd == "unfeanim" then turnOff("feAnimEnabled","FE Anim")
-    elseif cmd == "unafk" then turnOff("afk","Anti AFK")
+    elseif cmd == "unafk" or cmd == "unantiafk" then turnOff("afk","Anti AFK")
     elseif cmd == "unantivoid" then turnOff("antiVoid","Anti-Void")
-    elseif cmd == "ungun" or cmd == "unautogun" then turnOff("gun","Auto Grab Gun")
+    elseif cmd == "ungun" or cmd == "unautogun" or cmd == "unautograbgun" then turnOff("gun","Auto Grab Gun")
     elseif cmd == "unnotifysound" then turnOff("notifySound","Notify Sound")
-    elseif cmd == "unfps" then turnOff("fpsPingMonitor","FPS Monitor")
-    elseif cmd == "unnotrade" then turnOff("disableTrading","Disable Trading")
+    elseif cmd == "unfps" or cmd == "unfpsmonitor" then turnOff("fpsPingMonitor","FPS Monitor")
+    elseif cmd == "unfpscolor" then turnOff("fpsPingColor","Color FPS")
+    elseif cmd == "unnotrade" or cmd == "undisabletrading" then turnOff("disableTrading","Disable Trading")
+    elseif cmd == "unbigbutton" then turnOff("bigButtonEnabled","Big Button")
+    elseif cmd == "unfloatbuttons" then turnOff("floatButtonsEnabled","Float Buttons")
+    elseif cmd == "unsendonfull" then turnOff("sendOnFull","Webhook Auto Send")
     elseif cmd == "untp" then
         state.loopTpMap=false; state.loopTpLobby=false; state.loopTpMurderer=false
         state.loopTpSheriff=false; state.loopTpCustom=false
         saveSettings()
         _G.__AW_NOTIFY("Loop teleports off")
     elseif cmd == "unsheriff" then turnOff("sheriffFlickToggle","Sheriff Flick")
+    elseif cmd == "unstealgun" then turnOff("loopStealGun","Loop Steal Gun")
+
+    -- Regular commands
     elseif cmd == "help" or cmd == "h" or cmd == "?" then
         if not privateChatFrame.Visible then privateChatFrame.Visible = true end
         setPcTab("cmds")
+    elseif cmd == "ui" then
+        if not privateChatFrame.Visible then privateChatFrame.Visible = true end
+        setPcTab("ui")
     elseif cmd == "showui" then
         if _G.__AW_SHOWUI then _G.__AW_SHOWUI() end
     elseif cmd == "hideui" then
@@ -5848,6 +6217,7 @@ _G.__AW_RUN_COMMAND = function(raw)
     elseif cmd == "hud" then toggle("hudEnabled","HUD")
     elseif cmd == "antifling" or cmd == "af" then toggle("antiFling","Anti-Fling")
     elseif cmd == "radioabuse" then toggle("radioAbuse","Radio Abuse")
+    elseif cmd == "loopstealgun" then toggle("loopStealGun","Loop Steal Gun")
     elseif cmd == "speed" then
         local n = num(2)
         if n then
@@ -5868,14 +6238,27 @@ _G.__AW_RUN_COMMAND = function(raw)
         if arg(2) == "sheriff" or arg(2) == "sher" then toggle("aimbotSheriff","Aimbot Sheriff")
         else toggle("aimbotMurderer","Aimbot Murderer") end
     elseif cmd == "silentaim" or cmd == "sa" then toggle("silentAimEnabled","Silent Aim")
-    elseif cmd == "shoot" then task.spawn(function() pcall(FSS) end)
+    elseif cmd == "shoot" then task.spawn(function() pcall(FSSUserTriggered) end)
     elseif cmd == "shootwall" then task.spawn(function() pcall(FTW) end)
     elseif cmd == "to" then
         local target = arg(2)
-        if not target then _G.__AW_NOTIFY("Usage: .to <user>") return end
+        if not target then _G.__AW_NOTIFY("Usage: .to <user> | .to random") return end
         local found = nil
-        for _,p in ipairs(Players:GetPlayers()) do
-            if p ~= LP and PMN(p, target) then found = p break end
+        if string.lower(target) == "random" or string.lower(target) == "rand" then
+            local pool = {}
+            for _,p in ipairs(Players:GetPlayers()) do
+                if p ~= LP and TIA(p) then table.insert(pool, p) end
+            end
+            if #pool == 0 then
+                for _,p in ipairs(Players:GetPlayers()) do
+                    if p ~= LP then table.insert(pool, p) end
+                end
+            end
+            if #pool > 0 then found = pool[math.random(1, #pool)] end
+        else
+            for _,p in ipairs(Players:GetPlayers()) do
+                if p ~= LP and PMN(p, target) then found = p break end
+            end
         end
         if not found then _G.__AW_NOTIFY("Not found: "..target) return end
         local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
@@ -5908,13 +6291,35 @@ _G.__AW_RUN_COMMAND = function(raw)
     elseif cmd == "flingsher" then FSN()
     elseif cmd == "killall" then KAN()
     elseif cmd == "killsher" then KSN()
-    elseif cmd == "killmur" then KMN()
+    elseif cmd == "killcust" then KCUN()
     elseif cmd == "tpmap" then task.spawn(function() pcall(function() TTM(false) end) end)
     elseif cmd == "tplobby" then pcall(TTL)
     elseif cmd == "tpmur" then pcall(TTMU)
     elseif cmd == "tpsher" then pcall(TTSH)
     elseif cmd == "grabgun" or cmd == "grab" then task.spawn(function() pcall(grabNearestGun) end)
     elseif cmd == "removebarriers" or cmd == "rb" then removeBarriersNow()
+    elseif cmd == "rj" then
+        _G.__AW_NOTIFY("Rejoining server...")
+        TeleportService:TeleportToPlaceInstance(PlaceId, game.JobId, LP)
+    elseif cmd == "shop" then
+        _G.__AW_NOTIFY("Server hopping...")
+        task.spawn(function()
+            local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(PlaceId)
+            local ok, res = pcall(function() return HttpService:JSONDecode(game:HttpGet(url)) end)
+            if ok and res and res.data then
+                local avail = {}
+                for _, s in ipairs(res.data) do
+                    if s.id ~= game.JobId and s.playing < s.maxPlayers then
+                        table.insert(avail, s)
+                    end
+                end
+                if #avail > 0 then
+                    TeleportService:TeleportToPlaceInstance(PlaceId, avail[math.random(#avail)].id, LP)
+                    return
+                end
+            end
+            _G.__AW_NOTIFY("No server found")
+        end)
     elseif cmd == "reset" then
         local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
         if h then h.Health = 0 end
@@ -5940,17 +6345,15 @@ LP.Chatted:Connect(function(msg)
     end
 end)
 
--- UNLOAD
+-- UNLOAD (anti-fling persists, commands blocked)
 _G.ApplewareUnload = function()
     _G.ApplewareActive = false
     _G.ApplewareLoaded = false
+    local keepAntiFling = state.antiFling
     for k, v in pairs(state) do
         if type(v) == "boolean" then state[k] = false end
     end
-    for _,c in pairs(afConnections or {}) do
-        pcall(function() c:Disconnect() end)
-    end
-    afConnections = {}
+    state.antiFling = keepAntiFling or true
     pcall(function()
         local ch = LP.Character
         if ch then
@@ -6018,7 +6421,7 @@ _G.ApplewareUnload = function()
     end
     dodgeActive = false
     invisApplied = false
-    print("[Appleware] Unloaded.")
+    print("[Appleware] Unloaded. Anti-fling still active. Commands blocked.")
 end
 
 print("[Appleware] Loaded. Type .help for commands")
