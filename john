@@ -1,4 +1,4 @@
--- Appleware (PC Optimized Build - Fully Fixed)
+-- Appleware (PC Optimized + Fixed)
 if _G.ApplewareLoaded and _G.ApplewareUnload then
     local r=nil
     local pg=Instance.new("ScreenGui") pg.Name="AW_ReloadPrompt" pg.ResetOnSpawn=false pg.DisplayOrder=9999999 pg.IgnoreGuiInset=true
@@ -36,6 +36,7 @@ local Lighting=game:GetService("Lighting")
 local UIS=game:GetService("UserInputService")
 local InsertService=game:GetService("InsertService")
 local MarketplaceService=game:GetService("MarketplaceService")
+local Stats=game:GetService("Stats")
 local LP=Players.LocalPlayer
 local PlaceId=game.PlaceId
 local PlayerGui=LP:WaitForChild("PlayerGui",10)
@@ -180,7 +181,7 @@ state={
     farm=false,xpFarm=false,noclip=false,gun=false,afk=false,antiVoid=false,antiFling=true,
     autoKillAll=false,autoShootMurderer=false,
     autoResetMurderer=false,autoResetSheriff=false,autoResetInnocent=false,aimbotMurderer=false,aimbotSheriff=false,
-    aimbotFOV=250,aimbotSmooth=4,aimbotPredict=false,
+    aimbotFOV=250,aimbotSmooth=4,aimbotPredict=false,aimbotSnap=false,
     silentAimEnabled=false,silentAimWallCheck=false,
     shootThroughWall=false,silentAimFlickToggle=false,sheriffFlickToggle=false,
     loopFlingAll=false,loopFlingMur=false,loopFlingSheriff=false,loopFlingCustom=false,
@@ -192,14 +193,13 @@ state={
     jumpEnabled=false,jumpValue=50,infJumpEnabled=false,invisibleEnabled=false,
     cameraZoomEnabled=false,cameraMaxZoom=500,freeze=false,fullbright=false,fovEnabled=false,fovValue=70,clickTP=false,
     killAura=false,flingAura=false,autoDodge=false,bunnyHop=false,touchFling=false,
-    murdererPredictor=false,murdererPerkNotify=false,predictSheriff=false,notifySound=false,animationsEnabled=false,
+    murdererPredictor=false,murdererPerkNotify=true,predictSheriff=false,notifySound=false,animationsEnabled=false,
     bigButtonEnabled=false,bigButtonW=230,bigButtonH=82,bigButtonX=0.72,bigButtonY=0.42,
     mainX=0.5,mainY=0.5,openX=0.014,openY=0.28,fullBagGate=false,bagTarget=40,
     floatButtonsEnabled=false,floatButtonSize=68,floatButtonShape="circle",
     floatButtonPositions={},floatEnabledButtons={},hitboxExpander=false,hitboxExpanderSize=15,
     hitboxExpanderTarget="murderer",keybinds={},playerSearchText="",playerListOpen=true,
     fpsPingMonitor=false,fpsPingColor=false,disableTrading=false,
-    fpsBooster=false,
     wallHop=false,wallHopFlick=false,removeBarriers=false,
     feAnimEnabled=false,
     feAnimAll="Default",feAnimIdle="Default",feAnimWalk="Default",feAnimRun="Default",
@@ -215,6 +215,7 @@ state={
     headless1=false,headless2=false,headless3=false,
     autoDodgeRange=25,
     hudEnabled=false,hudX=0.985,hudY=0.02,
+    fpsBooster=false,
     privateChatRelayUrl="https://api.npoint.io/795defab3ba6f023d5bc"
 }
 wallHopInfJump=false
@@ -282,7 +283,7 @@ TD={
     spinBot="Spin Bot",hideUI="Hide UI",radioAutoPlay="Radio Auto Play",
     headless1="Headless V1",headless2="Headless V2",headless3="Headless V3",
     hudEnabled="HUD",radioAbuse="Radio Abuse",fpsBooster="FPS Booster",
-    murdererPerkNotify="Murderer Perk Notify"
+    murdererPerkNotify="Perk Notify"
 }
 
 local function saveSettings()
@@ -344,65 +345,6 @@ local EAI=Enum.EasingDirection.In
 local SG={}
 local WK=Color3.new(1,1,1)
 local BK=Color3.new(0,0,0)
-
--- ============================================================
--- PC-OPTIMIZED DRAG HELPER
--- ============================================================
-local function makeDraggable(target, opts)
-    opts = opts or {}
-    local dragging, startPos, startFramePos, moved = false, nil, nil, false
-
-    local function computePosition(input)
-        if not dragging then return end
-        local delta = input.Position - startPos
-        if delta.Magnitude > (opts.threshold or 6) then moved = true end
-        if moved then
-            target.Position = UDim2.new(
-                startFramePos.X.Scale,
-                startFramePos.X.Offset + delta.X,
-                startFramePos.Y.Scale,
-                startFramePos.Y.Offset + delta.Y
-            )
-            if opts.onMove then opts.onMove() end
-        end
-    end
-
-    local dragStart
-    dragStart = target.InputBegan:Connect(function(input)
-        if input.UserInputType ~= Enum.UserInputType.MouseButton1
-           and input.UserInputType ~= Enum.UserInputType.Touch then return end
-        if opts.canDrag and opts.canDrag() then return end
-        dragging = true
-        moved = false
-        startPos = input.Position
-        startFramePos = target.Position
-    end)
-
-    local dragChangeGlobal
-    dragChangeGlobal = UIS.InputChanged:Connect(function(input)
-        if not dragging then return end
-        if input.UserInputType == Enum.UserInputType.MouseMovement
-           or input.UserInputType == Enum.UserInputType.Touch then
-            computePosition(input)
-        end
-    end)
-
-    local dragEnd
-    dragEnd = UIS.InputEnded:Connect(function(input)
-        if not dragging then return end
-        if input.UserInputType ~= Enum.UserInputType.MouseButton1
-           and input.UserInputType ~= Enum.UserInputType.Touch then return end
-        dragging = false
-        if opts.onEnd then opts.onEnd(moved) end
-        moved = false
-    end)
-
-    return function()
-        if dragStart then dragStart:Disconnect() end
-        if dragChangeGlobal then dragChangeGlobal:Disconnect() end
-        if dragEnd then dragEnd:Disconnect() end
-    end
-end
 
 local function buildAS(a,b)
     return ColorSequence.new({
@@ -602,7 +544,7 @@ _G.__AW_NOTIFY=function(text,dur)
     end)
 end
 
--- ANTI-FLING
+-- ANTI-FLING (persists after unload)
 afConnections = {}
 task.spawn(function()
     local function disableCollide(part)
@@ -770,53 +712,6 @@ local function getPlayerRole(plr)
     return "Innocent"
 end
 
--- MURDERER PERK DETECTION
-local PERK_KEYS = {"Perk","perk","MurdererPerk","murdererPerk","EquippedPerk","PerkName","PerkId","ActivePerk","Power"}
-local function getMurdererPerk(plr)
-    if not plr then return nil end
-    for _, an in ipairs(PERK_KEYS) do
-        local ok, a = pcall(function() return plr:GetAttribute(an) end)
-        if ok and a ~= nil and tostring(a) ~= "" then return tostring(a) end
-    end
-    local ch = plr.Character
-    if ch then
-        for _, an in ipairs(PERK_KEYS) do
-            local ok, a = pcall(function() return ch:GetAttribute(an) end)
-            if ok and a ~= nil and tostring(a) ~= "" then return tostring(a) end
-        end
-        for _, child in ipairs(ch:GetChildren()) do
-            if child.Name:lower():find("perk", 1, true) then
-                if child:IsA("StringValue") then
-                    if child.Value ~= "" then return child.Value end
-                elseif child:IsA("ObjectValue") then
-                    if child.Value then return child.Value.Name end
-                elseif child:IsA("Folder") or child:IsA("Model") then
-                    for _, sub in ipairs(child:GetChildren()) do
-                        if sub:IsA("StringValue") and sub.Value ~= "" then return sub.Value end
-                    end
-                end
-            end
-        end
-    end
-    local pg = plr:FindFirstChild("PlayerGui")
-    if pg then
-        for _, g in ipairs(pg:GetDescendants()) do
-            local nm = string.lower(g.Name)
-            if g:IsA("TextLabel") and g.Text ~= "" and
-               (string.find(nm, "perk", 1, true) or string.find(nm, "power", 1, true) or string.find(nm, "ability", 1, true)) then
-                return g.Text
-            end
-        end
-    end
-    local bp = plr:FindFirstChild("Backpack")
-    if bp then
-        for _, c in ipairs(bp:GetChildren()) do
-            if c.Name:lower():find("perk", 1, true) then return c.Name end
-        end
-    end
-    return nil
-end
-
 local function FPBR(r)
     for _,p in ipairs(Players:GetPlayers()) do
         if p~=LP and p.Character and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health>0 and getPlayerRole(p)==r then
@@ -826,35 +721,6 @@ local function FPBR(r)
     return nil
 end
 local function GM() return FPBR("Murderer") end
-
--- MURDERER PERK NOTIFIER (below GM definition - fixed)
-task.spawn(function()
-    local lastMurderer, lastPerk = nil, nil
-    while true do
-        task.wait(2)
-        if state.murdererPerkNotify and al() and IIR() then
-            local m = GM()
-            if m then
-                local perk = getMurdererPerk(m)
-                if m ~= lastMurderer then
-                    lastMurderer = m
-                    lastPerk = perk
-                    if perk then
-                        _G.__AW_NOTIFY('Murderer: <b>'..m.Name..'</b>\nPerk: <font color="#ff5a5a">'..perk..'</font>', 6)
-                    else
-                        _G.__AW_NOTIFY('Murderer: <b>'..m.Name..'</b>\nPerk: <font color="#aaaaaa">Unknown</font>', 6)
-                    end
-                elseif perk and perk ~= lastPerk then
-                    lastPerk = perk
-                    _G.__AW_NOTIFY('Murderer perk changed: <font color="#ff5a5a">'..perk..'</font>', 6)
-                end
-            else
-                lastMurderer = nil
-                lastPerk = nil
-            end
-        end
-    end
-end)
 
 GUN={"Gun","Revolver","Pistol"}
 local function PHG(p)
@@ -890,6 +756,83 @@ local function RC(role)
     elseif r=="sheriff" or r=="hero" then return Color3.fromRGB(40,130,255)
     else return Color3.fromRGB(40,220,90) end
 end
+
+-- =================== MURDERER PERK DETECTION ===================
+-- Attempts to find the murderer's perk from various sources.
+local function getMurdererPerk()
+    local m = GM()
+    if not m then return nil end
+    -- Check player attributes
+    local attrNames = {"Perk","perk","PerkName","perkName","MurdererPerk","murdererPerk","Ability","ability"}
+    for _,an in ipairs(attrNames) do
+        local a = m:GetAttribute(an)
+        if a and tostring(a)~="" then return tostring(a) end
+    end
+    -- Check character attributes
+    if m.Character then
+        for _,an in ipairs(attrNames) do
+            local a = m.Character:GetAttribute(an)
+            if a and tostring(a)~="" then return tostring(a) end
+        end
+        -- Look for perk indicators inside character (ChildAdded / children)
+        for _,c in ipairs(m.Character:GetChildren()) do
+            local ln = string.lower(c.Name)
+            if string.find(ln,"perk",1,true) then return c.Name end
+        end
+    end
+    -- Look for a Perks folder / StringValue in player
+    local pf = m:FindFirstChild("Perks") or m:FindFirstChild("Perk")
+    if pf then
+        if pf:IsA("StringValue") then return pf.Value end
+        if pf:IsA("Folder") then
+            for _,c in ipairs(pf:GetChildren()) do return c.Name end
+        end
+    end
+    -- PlayerData module
+    local rd = getCachedRoleData()
+    if rd and type(rd)=="table" then
+        local pd = rd[m.Name] or rd[tostring(m.UserId)] or rd[m.UserId]
+        if type(pd)=="table" then
+            local p = pd.Perk or pd.perk or pd.PerkName or pd.perkName
+            if p and tostring(p)~="" then return tostring(p) end
+        end
+    end
+    return nil
+end
+
+-- Monitor murderer + perk
+local lastMurderer, lastPerk = nil, nil
+task.spawn(function()
+    while true do
+        task.wait(0.75)
+        if state.murdererPerkNotify and al() and IIR() then
+            local m = GM()
+            if m then
+                if m ~= lastMurderer then
+                    lastMurderer = m
+                    lastPerk = nil
+                    local perk = getMurdererPerk()
+                    if perk then
+                        lastPerk = perk
+                        _G.__AW_NOTIFY('<font color="#ff5a5a"><b>MURDERER:</b></font> '..m.Name..'\n<font color="#ffd75a">Perk:</font> '..perk, 6)
+                    else
+                        _G.__AW_NOTIFY('<font color="#ff5a5a"><b>MURDERER:</b></font> '..m.Name..' <font color="#aaa">(perk unknown)</font>', 5)
+                    end
+                else
+                    local perk = getMurdererPerk()
+                    if perk and perk ~= lastPerk then
+                        lastPerk = perk
+                        _G.__AW_NOTIFY('<font color="#ffd75a"><b>Perk:</b></font> '..perk, 5)
+                    end
+                end
+            else
+                lastMurderer = nil
+                lastPerk = nil
+            end
+        end
+    end
+end)
+-- =============================================================
 
 killLocked={}
 activeResets={}
@@ -1395,39 +1338,49 @@ local function TSM()
 end
 local function FSS() return TSM() end
 
--- SILENT AIM WALL CHECK with notification + auto-shoot
-local wallCheckWaiting = false
+-- Improved silent aim wall check: keeps notifying and fires when visible
+local wallCheckActive = false
 local function FSSUserTriggered()
-    if not state.shootThroughWall and state.silentAimWallCheck then
-        local pt=GTP()
-        if not pt or not HCS(pt) then
-            if not wallCheckWaiting then
-                wallCheckWaiting = true
-                _G.__AW_NOTIFY("Waiting for visible murderer...", 3)
-            end
-            task.spawn(function()
-                for _=1,300 do
-                    task.wait(0.1)
-                    if _G.ApplewareActive == false then wallCheckWaiting = false return end
-                    if not state.silentAimWallCheck or state.shootThroughWall then
-                        wallCheckWaiting = false
-                        pcall(FSS)
-                        return
-                    end
-                    local p2 = GTP()
-                    if p2 and HCS(p2) then
-                        wallCheckWaiting = false
-                        pcall(FSS)
-                        return
-                    end
-                end
-                wallCheckWaiting = false
-            end)
-            return
-        end
+    if state.shootThroughWall then
+        FSS()
+        return
     end
-    wallCheckWaiting = false
-    FSS()
+    if not state.silentAimWallCheck then
+        FSS()
+        return
+    end
+    local pt=GTP()
+    if pt and HCS(pt) then
+        FSS()
+        return
+    end
+    if wallCheckActive then return end
+    wallCheckActive = true
+    _G.__AW_NOTIFY('<font color="#ffd75a">Waiting for visible murderer...</font>')
+    task.spawn(function()
+        local lastNotify = tick()
+        for _=1,300 do
+            task.wait(0.1)
+            if not state.silentAimWallCheck or state.shootThroughWall then
+                pcall(FSS)
+                wallCheckActive = false
+                return
+            end
+            if _G.ApplewareActive == false then wallCheckActive = false return end
+            local p2=GTP()
+            if p2 and HCS(p2) then
+                pcall(FSS)
+                _G.__AW_NOTIFY('<font color="#5aff8c">Murderer visible — firing!</font>')
+                wallCheckActive = false
+                return
+            end
+            if tick()-lastNotify > 4 then
+                lastNotify = tick()
+                _G.__AW_NOTIFY('<font color="#ffd75a">Still waiting for visible murderer...</font>', 3)
+            end
+        end
+        wallCheckActive = false
+    end)
 end
 
 -- KILL VIA KNIFE HANDLETOUCHED
@@ -1700,7 +1653,7 @@ local function GVN()
     return mn
 end
 
--- RADIO HELPERS
+-- RADIO
 radioRemoteCache=nil
 local function findRadioRemotes()
     local list={}
@@ -1805,7 +1758,7 @@ task.spawn(function()
         if ok then hasRadioPass = owns end
     end)
     if not hasRadioPass then
-        _G.__AW_NOTIFY("You don't have the Radio gamepass. Buy it at https://www.roblox.com/game-pass/1308795/Radio and rejoin if you bought it just now.", 10)
+        _G.__AW_NOTIFY("Radio gamepass not detected. Buy it or rejoin if you just bought it.", 8)
     end
 end)
 
@@ -1851,107 +1804,11 @@ task.spawn(function()
     end
 end)
 
--- LOOP STEAL GUN
 task.spawn(function()
     while true do
         task.wait(2)
         if state.loopStealGun and al() then
             pcall(stealGun)
-        end
-    end
-end)
-
--- FPS BOOSTER
-local fpsBoosterState = {
-    savedShadows = nil,
-    savedEffects = nil,
-    savedTerrain = nil,
-    savedSimRadius = nil,
-    savedLighting = nil,
-    applied = false
-}
-local function applyFPSBooster()
-    if fpsBoosterState.applied then return end
-    fpsBoosterState.applied = true
-    pcall(function()
-        fpsBoosterState.savedShadows = Lighting.GlobalShadows
-        Lighting.GlobalShadows = false
-    end)
-    pcall(function()
-        fpsBoosterState.savedLighting = {
-            Brightness = Lighting.Brightness,
-            Ambient = Lighting.Ambient,
-            OutdoorAmbient = Lighting.OutdoorAmbient,
-            FogEnd = Lighting.FogEnd,
-        }
-        Lighting.Brightness = 1
-        Lighting.Ambient = Color3.fromRGB(120,120,120)
-        Lighting.OutdoorAmbient = Color3.fromRGB(120,120,120)
-        Lighting.FogEnd = 100000
-    end)
-    pcall(function()
-        fpsBoosterState.savedEffects = {}
-        for _, e in ipairs(Lighting:GetChildren()) do
-            if e:IsA("PostEffect") or e:IsA("BlurEffect") or e:IsA("BloomEffect") or e:IsA("ColorCorrectionEffect") or e:IsA("SunRaysEffect") or e:IsA("DepthOfFieldEffect") then
-                fpsBoosterState.savedEffects[e] = e.Enabled
-                e.Enabled = false
-            end
-        end
-    end)
-    pcall(function()
-        fpsBoosterState.savedTerrain = Workspace.Terrain.WaterWaveSize
-        Workspace.Terrain.WaterWaveSize = 0
-        Workspace.Terrain.WaterWaveSpeed = 0
-        Workspace.Terrain.WaterReflectance = 0
-        Workspace.Terrain.WaterTransparency = 1
-    end)
-    pcall(function()
-        fpsBoosterState.savedSimRadius = Workspace.StreamingTargetRadius
-        Workspace.StreamingTargetRadius = math.min(Workspace.StreamingTargetRadius or 512, 256)
-    end)
-    for _, p in ipairs(Workspace:GetDescendants()) do
-        pcall(function()
-            if p:IsA("ParticleEmitter") or p:IsA("Trail") or p:IsA("Smoke") or p:IsA("Fire") or p:IsA("Sparkles") then
-                if p.Enabled then p.Enabled = false end
-            end
-            if p:IsA("BasePart") then
-                p.CastShadow = false
-            end
-        end)
-    end
-end
-local function removeFPSBooster()
-    if not fpsBoosterState.applied then return end
-    fpsBoosterState.applied = false
-    pcall(function()
-        if fpsBoosterState.savedShadows ~= nil then Lighting.GlobalShadows = fpsBoosterState.savedShadows end
-    end)
-    pcall(function()
-        if fpsBoosterState.savedLighting then
-            Lighting.Brightness = fpsBoosterState.savedLighting.Brightness
-            Lighting.Ambient = fpsBoosterState.savedLighting.Ambient
-            Lighting.OutdoorAmbient = fpsBoosterState.savedLighting.OutdoorAmbient
-            Lighting.FogEnd = fpsBoosterState.savedLighting.FogEnd
-        end
-    end)
-    pcall(function()
-        if fpsBoosterState.savedEffects then
-            for e, en in pairs(fpsBoosterState.savedEffects) do
-                if e and e.Parent then e.Enabled = en end
-            end
-        end
-    end)
-    pcall(function()
-        if fpsBoosterState.savedTerrain then Workspace.Terrain.WaterWaveSize = fpsBoosterState.savedTerrain end
-    end)
-end
-task.spawn(function()
-    while true do
-        task.wait(0.5)
-        if state.fpsBooster then
-            if not fpsBoosterState.applied then applyFPSBooster() end
-        else
-            if fpsBoosterState.applied then removeFPSBooster() end
         end
     end
 end)
@@ -2016,15 +1873,13 @@ if shouldShowWhatsNew then
         wnBodyLayout.SortOrder = Enum.SortOrder.LayoutOrder
         wnBodyLayout.Padding = UDim.new(0, 10)
         local whatsNewItems = {
-            {"PC Optimizations", "All buttons, HUD and windows now drag properly on PC with mouse."},
-            {"FPS Booster", "New toggle in Misc - disables shadows, particles, post FX for higher FPS."},
-            {"Murderer Perk Notify", "New toggle that alerts you what perk the murderer has."},
-            {"Silent Aim Wall Check", "Shows 'Waiting for visible murderer...' then auto-shoots once visible."},
-            {"Fixed .shop", "Robust server hop - tries multiple HTTP methods and both sort orders."},
+            {"PC Drag Fixed", "Buttons + HUD now drag correctly with mouse."},
+            {"FPS Booster", "New toggle in Misc to reduce graphics for better FPS."},
+            {"Perk Notification", "Notifies you of the murderer's perk when round starts."},
+            {"Silent Aim WC", "Now notifies 'waiting for visible murderer' and auto-fires when visible."},
+            {".shop Fixed", "Server hop now uses proper endpoints + fallback."},
             {"Loop Steal Gun", "New toggle that repeatedly flings sheriff and grabs gun."},
-            {"Steal Gun", "Only flings the sheriff and grabs the dropped gun."},
-            {"Kill Buttons", "Kill Sheriff / All / Custom use HandleTouched method."},
-            {"Radio Abuse", "Add / select / play / delete songs. Requires gamepass."}
+            {"Kill Buttons", "Kill Sheriff / Kill All / Kill Custom use HandleTouched."}
         }
         for i, item in ipairs(whatsNewItems) do
             local card = Instance.new("Frame", wnBody)
@@ -2062,17 +1917,9 @@ if shouldShowWhatsNew then
             desc.TextYAlignment = Enum.TextYAlignment.Top
             desc.TextWrapped = true
         end
-        local wnFooter = Instance.new("TextLabel", wnFrame)
-        wnFooter.Size = UDim2.new(1, -40, 0, 22)
-        wnFooter.Position = UDim2.new(0, 20, 1, -70)
-        wnFooter.BackgroundTransparency = 1
-        wnFooter.Text = "Please read before continuing"
-        wnFooter.TextColor3 = Color3.fromRGB(150, 150, 155)
-        wnFooter.Font = Enum.Font.GothamMedium
-        wnFooter.TextSize = 12
         local wnContinue = Instance.new("TextButton", wnFrame)
         wnContinue.Size = UDim2.new(1, -40, 0, 40)
-        wnContinue.Position = UDim2.new(0, 20, 1, -42)
+        wnContinue.Position = UDim2.new(0, 20, 1, -50)
         wnContinue.BackgroundColor3 = Color3.fromRGB(90, 90, 95)
         wnContinue.Text = "Please wait..."
         wnContinue.TextColor3 = Color3.new(1, 1, 1)
@@ -2080,10 +1927,6 @@ if shouldShowWhatsNew then
         wnContinue.TextSize = 14
         wnContinue.AutoButtonColor = false
         Instance.new("UICorner", wnContinue).CornerRadius = UDim.new(0, 10)
-        local wnContinueStroke = Instance.new("UIStroke", wnContinue)
-        wnContinueStroke.Color = Color3.fromRGB(235, 235, 240)
-        wnContinueStroke.Thickness = 2
-        wnContinueStroke.Transparency = 0.5
         local canContinue = false
         task.delay(1, function()
             if not wnContinue or not wnContinue.Parent then return end
@@ -2114,6 +1957,7 @@ RTF.BackgroundColor3=Color3.new(0,0,0)
 RTF.BackgroundTransparency=0.1
 RTF.Visible=false
 RTF.Active=true
+RTF.Draggable=true
 Instance.new("UICorner",RTF).CornerRadius=UDim.new(0,10)
 RTV=Instance.new("TextLabel",RTF)
 RTV.Size=UDim2.new(1,0,1,0)
@@ -2123,7 +1967,9 @@ RTV.TextColor3=Color3.new(1,1,1)
 RTV.Font=Enum.Font.GothamBold
 RTV.TextSize=22
 
--- Big shoot button
+-- ============================================================
+-- BIG SHOOT BUTTON (drag fixed for PC)
+-- ============================================================
 BGI=Instance.new("ScreenGui")
 BGI.Name="AW_BigShoot"
 BGI.ResetOnSpawn=false
@@ -2137,6 +1983,7 @@ BW.Position=UDim2.new(state.bigButtonX,0,state.bigButtonY,0)
 BW.Size=UDim2.new(0,state.bigButtonW,0,state.bigButtonH)
 BW.BackgroundTransparency=1
 BW.Visible=state.bigButtonEnabled
+BW.Active=true
 BB=Instance.new("TextButton",BW)
 BB.Name="AWBigShootBtn"
 BB.AnchorPoint=Vector2.new(0.5,0.5)
@@ -2154,6 +2001,7 @@ BB.TextWrapped=true
 BB.AutoButtonColor=false
 BB.BorderSizePixel=0
 BB.Active=true
+BB.Parent=BW
 Instance.new("UICorner",BB).CornerRadius=UDim.new(0,12)
 BS=Instance.new("UIStroke",BB)
 BS.Color=WK
@@ -2177,27 +2025,43 @@ local function RSW()
         SWR=false
     end)
 end
-
--- Big button drag (drags wrapper BW, not inner BB)
-makeDraggable(BW, {
-    threshold = 8,
-    canDrag = function() return isIdLocked("bigShootButton") end,
-    onEnd = function(moved)
-        if moved then
-            state.bigButtonX = BW.Position.X.Scale
-            state.bigButtonY = BW.Position.Y.Scale
-            saveSettings()
-        else
-            RSW()
-            if state.animationsEnabled then
-                local s=Instance.new("UIScale",BW)
-                TweenService:Create(s,TweenInfo.new(0.1,EAS),{Scale=0.88}):Play()
-                TweenService:Create(s,TweenInfo.new(0.45,Enum.EasingStyle.Elastic),{Scale=1}):Play()
-                task.delay(0.6,function() if s and s.Parent then s:Destroy() end end)
-            end
-        end
+BD=nil
+BB.InputBegan:Connect(function(i)
+    if i.UserInputType~=Enum.UserInputType.MouseButton1 and i.UserInputType~=Enum.UserInputType.Touch then return end
+    BD={input=i,start=i.Position,startPos=BW.Position,moved=false}
+end)
+UIS.InputChanged:Connect(function(i)
+    if not BD then return end
+    -- PC FIX: don't compare InputObject references; use UserInputType check instead
+    if i.UserInputType~=Enum.UserInputType.MouseMovement and i.UserInputType~=Enum.UserInputType.Touch then return end
+    if isIdLocked("bigShootButton") then return end
+    local d=i.Position-BD.start
+    if d.Magnitude>8 then BD.moved=true end
+    if BD.moved then
+        BW.Position=UDim2.new(BD.startPos.X.Scale,BD.startPos.X.Offset+d.X,BD.startPos.Y.Scale,BD.startPos.Y.Offset+d.Y)
     end
-})
+end)
+UIS.InputEnded:Connect(function(i)
+    if not BD then return end
+    if i.UserInputType~=Enum.UserInputType.MouseButton1 and i.UserInputType~=Enum.UserInputType.Touch then return end
+    local d=BD
+    BD=nil
+    if not d.moved then
+        state.bigButtonX=BW.Position.X.Scale
+        state.bigButtonY=BW.Position.Y.Scale
+        RSW()
+        if state.animationsEnabled then
+            local s=Instance.new("UIScale",BW)
+            TweenService:Create(s,TweenInfo.new(0.1,EAS),{Scale=0.88}):Play()
+            TweenService:Create(s,TweenInfo.new(0.45,Enum.EasingStyle.Elastic),{Scale=1}):Play()
+            task.delay(0.6,function() if s and s.Parent then s:Destroy() end end)
+        end
+    else
+        state.bigButtonX=BW.Position.X.Scale
+        state.bigButtonY=BW.Position.Y.Scale
+        saveSettings()
+    end
+end)
 
 -- Floating buttons
 FG=Instance.new("ScreenGui")
@@ -2272,8 +2136,7 @@ FBD={
     {id="voidPlatform",label="Void Platform",type="toggle",key="voidPlatform"},
     {id="feAnim",label="FE Anim",type="toggle",key="feAnimEnabled"},
     {id="spinBot",label="Spin Bot",type="toggle",key="spinBot"},
-    {id="sheriffFlickT",label="Sheriff Flick",type="toggle",key="sheriffFlickToggle"},
-    {id="fpsBooster",label="FPS Booster",type="toggle",key="fpsBooster"}
+    {id="sheriffFlickT",label="Sheriff Flick",type="toggle",key="sheriffFlickToggle"}
 }
 FBM={}
 for _,d in ipairs(FBD) do FBM[d.id]=d end
@@ -2322,11 +2185,16 @@ local function ASH(b,s)
     b.Rotation=ro
     return ro
 end
+
+-- Track drag per button (PC FIX: use UserInputType check)
+local floatDrag = {} -- id -> {start, sp, moved}
+
 local function RFB()
     for _,c in ipairs(FG:GetChildren()) do
         if c:IsA("TextButton") or c:IsA("Frame") then c:Destroy() end
     end
     FBs={}
+    floatDrag={}
     local i=0
     for _,d in ipairs(FBD) do
         if state.floatEnabledButtons[d.id] then
@@ -2337,6 +2205,15 @@ local function RFB()
             local by=sd.yOffset or 0
             local sx=sd.xScale or 0
             local sy=sd.yScale or 0
+            local ou=Instance.new("Frame",FG)
+            ou.AnchorPoint=Vector2.new(0,0)
+            ou.BackgroundTransparency=1
+            ou.BorderSizePixel=0
+            ou.ZIndex=1
+            ou.Visible=state.floatButtonsEnabled
+            ou.Active=true
+            ou.Position=UDim2.new(sx,bx,sy,by)
+            ou.Size=UDim2.new(0,state.floatButtonSize,0,state.floatButtonSize)
             local bt=Instance.new("TextButton")
             bt.AnchorPoint=Vector2.new(0,0)
             bt.Size=UDim2.new(0,state.floatButtonSize,0,state.floatButtonSize)
@@ -2353,6 +2230,7 @@ local function RFB()
             bt.AutoButtonColor=false
             bt.BorderSizePixel=0
             bt.Visible=state.floatButtonsEnabled
+            bt.Active=true
             bt.ZIndex=2
             bt.Parent=FG
             ASH(bt,state.floatButtonShape)
@@ -2361,54 +2239,72 @@ local function RFB()
             in2.Thickness=2
             local iO=d.type=="toggle" and state[d.key] or false
             attachSpin(in2,iO)
-            FBs[d.id]={def=d,btn=bt,inner=in2}
+            FBs[d.id]={def=d,btn=bt,inner=in2,outer=ou}
             RFV(d)
-            makeDraggable(bt, {
-                threshold = 6,
-                canDrag = function() return isIdLocked(d.id) end,
-                onEnd = function(moved)
-                    if moved then
-                        state.floatButtonPositions[d.id]={
-                            xScale=bt.Position.X.Scale,xOffset=bt.Position.X.Offset,
-                            yScale=bt.Position.Y.Scale,yOffset=bt.Position.Y.Offset
-                        }
-                        saveSettings()
-                        return
-                    end
-                    if d.type=="toggle" then
-                        state[d.key]=not state[d.key]
-                        RFV(d)
-                        local dn=TD[d.key] or d.label
-                        _G.__AW_NOTIFY('<font color="'..(state[d.key] and "#5aff8c" or "#ff5a5a")..'">'..dn..'</font> '..(state[d.key] and "on" or "off"))
-                        if d.key=="voidPlatform" and not state.voidPlatform then RVP() end
-                        if d.key=="shootThroughWall" and state.shootThroughWall and state.silentAimWallCheck then
-                            state.silentAimWallCheck=false
-                            local refs=_G.__AW_ALLTOGGLES and _G.__AW_ALLTOGGLES["silentAimWallCheck"]
-                            if refs then
-                                pcall(function()
-                                    TweenService:Create(refs.pl,TweenInfo.new(0.28,EAB,EAO),{BackgroundColor3=Color3.fromRGB(28,28,30)}):Play()
-                                    TweenService:Create(refs.pi,TweenInfo.new(0.28,EAB,EAO),{BackgroundColor3=Color3.fromRGB(18,18,20)}):Play()
-                                    TweenService:Create(refs.dt,TweenInfo.new(0.4,Enum.EasingStyle.Elastic,EAO),{
-                                        Position=UDim2.new(0,4,0.5,-8),
-                                        BackgroundColor3=Color3.fromRGB(200,200,200)
-                                    }):Play()
-                                    local gg=refs.rs:FindFirstChild("SpinGrad")
-                                    if gg then setSGC(gg,false) end
-                                end)
-                            end
-                        end
-                        saveSettings()
-                    else
-                        if d.cb then pcall(d.cb) end
-                    end
+            local thisId = d.id
+            bt.InputBegan:Connect(function(ii)
+                if ii.UserInputType~=Enum.UserInputType.Touch and ii.UserInputType~=Enum.UserInputType.MouseButton1 then return end
+                floatDrag[thisId]={start=ii.Position,sp=bt.Position,moved=false}
+            end)
+            UIS.InputChanged:Connect(function(ii)
+                local ds = floatDrag[thisId]
+                if not ds then return end
+                if ii.UserInputType~=Enum.UserInputType.Touch and ii.UserInputType~=Enum.UserInputType.MouseMovement then return end
+                if isIdLocked(thisId) then return end
+                local dd=ii.Position-ds.start
+                if dd.Magnitude>6 then ds.moved=true end
+                if ds.moved then
+                    bt.Position=UDim2.new(ds.sp.X.Scale,ds.sp.X.Offset+dd.X,ds.sp.Y.Scale,ds.sp.Y.Offset+dd.Y)
+                    ou.Position=bt.Position
                 end
-            })
+            end)
+            UIS.InputEnded:Connect(function(ii)
+                local ds = floatDrag[thisId]
+                if not ds then return end
+                if ii.UserInputType~=Enum.UserInputType.MouseButton1 and ii.UserInputType~=Enum.UserInputType.Touch then return end
+                floatDrag[thisId]=nil
+                if ds.moved and not isIdLocked(thisId) then
+                    state.floatButtonPositions[thisId]={
+                        xScale=bt.Position.X.Scale,xOffset=bt.Position.X.Offset,
+                        yScale=bt.Position.Y.Scale,yOffset=bt.Position.Y.Offset
+                    }
+                    saveSettings()
+                    return
+                end
+                if d.type=="toggle" then
+                    state[d.key]=not state[d.key]
+                    RFV(d)
+                    local dn=TD[d.key] or d.label
+                    _G.__AW_NOTIFY('<font color="'..(state[d.key] and "#5aff8c" or "#ff5a5a")..'">'..dn..'</font> '..(state[d.key] and "on" or "off"))
+                    if d.key=="voidPlatform" and not state.voidPlatform then RVP() end
+                    if d.key=="shootThroughWall" and state.shootThroughWall and state.silentAimWallCheck then
+                        state.silentAimWallCheck=false
+                        local refs=_G.__AW_ALLTOGGLES and _G.__AW_ALLTOGGLES["silentAimWallCheck"]
+                        if refs then
+                            pcall(function()
+                                TweenService:Create(refs.pl,TweenInfo.new(0.28,EAB,EAO),{BackgroundColor3=Color3.fromRGB(28,28,30)}):Play()
+                                TweenService:Create(refs.pi,TweenInfo.new(0.28,EAB,EAO),{BackgroundColor3=Color3.fromRGB(18,18,20)}):Play()
+                                TweenService:Create(refs.dt,TweenInfo.new(0.4,Enum.EasingStyle.Elastic,EAO),{
+                                    Position=UDim2.new(0,4,0.5,-8),
+                                    BackgroundColor3=Color3.fromRGB(200,200,200)
+                                }):Play()
+                                local gg=refs.rs:FindFirstChild("SpinGrad")
+                                if gg then setSGC(gg,false) end
+                            end)
+                        end
+                    end
+                    saveSettings()
+                else
+                    if d.cb then pcall(d.cb) end
+                end
+            end)
         end
     end
 end
 local function SFV(v)
     for _,da in pairs(FBs) do
         if da.btn and da.btn.Parent then da.btn.Visible=v end
+        if da.outer and da.outer.Parent then da.outer.Visible=v end
     end
     if _G.__AW_EMOTE_FLOAT_REFRESH then pcall(_G.__AW_EMOTE_FLOAT_REFRESH) end
 end
@@ -2461,35 +2357,31 @@ DRS.Position=UDim2.new(0,140,0,0)
 DRS.BackgroundTransparency=1
 DRS.Text=""
 DRS.ZIndex=20
-
--- Main window drag (single handler, PC-safe)
-local mwDragging, mwStart, mwStartPos = false, nil, nil
+MD=nil
+local function BMD(i) MD={start=i.Position,startPos=MW.Position} end
 DRS.InputBegan:Connect(function(i)
-    if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
-        mwDragging = true
-        mwStart = i.Position
-        mwStartPos = MW.Position
-    end
+    if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then BMD(i) end
 end)
 UIS.InputChanged:Connect(function(i)
-    if not mwDragging then return end
+    if not MD then return end
     if i.UserInputType~=Enum.UserInputType.MouseMovement and i.UserInputType~=Enum.UserInputType.Touch then return end
-    local d = i.Position - mwStart
-    local sc = MSC.Scale
-    MW.Position = UDim2.new(
-        mwStartPos.X.Scale,
-        mwStartPos.X.Offset + d.X/sc,
-        mwStartPos.Y.Scale,
-        mwStartPos.Y.Offset + d.Y/sc
+    local d=i.Position-MD.start
+    local sc=MSC.Scale
+    MW.Position=UDim2.new(
+        MD.startPos.X.Scale,
+        MD.startPos.X.Offset+d.X/sc,
+        MD.startPos.Y.Scale,
+        MD.startPos.Y.Offset+d.Y/sc
     )
 end)
 UIS.InputEnded:Connect(function(i)
-    if not mwDragging then return end
     if i.UserInputType~=Enum.UserInputType.MouseButton1 and i.UserInputType~=Enum.UserInputType.Touch then return end
-    mwDragging = false
-    state.mainX = MW.Position.X.Scale
-    state.mainY = MW.Position.Y.Scale
-    saveSettings()
+    if MD then
+        MD=nil
+        state.mainX=MW.Position.X.Scale
+        state.mainY=MW.Position.Y.Scale
+        saveSettings()
+    end
 end)
 
 SB=Instance.new("Frame",MN)
@@ -2507,11 +2399,7 @@ LG.TextSize=16
 LG.TextXAlignment=Enum.TextXAlignment.Left
 LG.AutoButtonColor=false
 LG.InputBegan:Connect(function(i)
-    if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
-        mwDragging = true
-        mwStart = i.Position
-        mwStartPos = MW.Position
-    end
+    if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then BMD(i) end
 end)
 
 URLBL=Instance.new("TextLabel",SB)
@@ -2925,13 +2813,6 @@ local function playHl(cfg)
     cfg.stopped = track.Stopped:Connect(function()
         if cfg.on and LP.Character then task.wait(0.1) playHl(cfg) end
     end)
-    if cfg.freeze then pcall(function() cfg.freeze:Disconnect() end) end
-    cfg.freeze = hum.StateChanged:Connect(function()
-        if cfg.on and hum.Parent and (not cfg.track or not cfg.track.IsPlaying) then
-            task.wait(0.05)
-            if cfg.on and hum.Parent then playHl(cfg) end
-        end
-    end)
 end
 LP.CharacterAdded:Connect(function()
     task.wait(0.6)
@@ -3178,10 +3059,7 @@ _G.__AW_REFRESH_RADIO_LIST = function()
 end
 _G.__AW_REFRESH_RADIO_LIST()
 ABN(pages[SEC],"Play Audio",204,function()
-    if not hasRadioPass then
-        _G.__AW_NOTIFY("You don't have the Radio gamepass. Buy it at https://www.roblox.com/game-pass/1308795/Radio and rejoin if you bought it just now.", 8)
-        return
-    end
+    if not hasRadioPass then _G.__AW_NOTIFY("Radio gamepass not detected.", 6) return end
     local id = state.radioSelectedAudio
     if not id or id == "" then id = state.radioAbuseSongId end
     if not id or id == "" then _G.__AW_NOTIFY("No audio selected") return end
@@ -3193,10 +3071,7 @@ ABN(pages[SEC],"Pause / Stop Audio",205,function()
     _G.__AW_NOTIFY("Stopped audio")
 end)
 ABN(pages[SEC],"Restart Audio",206,function()
-    if not hasRadioPass then
-        _G.__AW_NOTIFY("You don't have the Radio gamepass. Buy it at https://www.roblox.com/game-pass/1308795/Radio and rejoin if you bought it just now.", 8)
-        return
-    end
+    if not hasRadioPass then _G.__AW_NOTIFY("Radio gamepass not detected.", 6) return end
     local id = state.radioSelectedAudio
     if not id or id == "" then id = state.radioAbuseSongId end
     if not id or id == "" then _G.__AW_NOTIFY("No audio selected") return end
@@ -3206,10 +3081,7 @@ ABN(pages[SEC],"Restart Audio",206,function()
     _G.__AW_NOTIFY("Restarted "..tostring(id))
 end)
 ABN(pages[SEC],"Spam Selected (x5)",207,function()
-    if not hasRadioPass then
-        _G.__AW_NOTIFY("You don't have the Radio gamepass. Buy it at https://www.roblox.com/game-pass/1308795/Radio and rejoin if you bought it just now.", 8)
-        return
-    end
+    if not hasRadioPass then _G.__AW_NOTIFY("Radio gamepass not detected.", 6) return end
     local id = state.radioSelectedAudio
     if not id or id == "" then id = state.radioAbuseSongId end
     if not id or id == "" then _G.__AW_NOTIFY("No audio selected") return end
@@ -3537,14 +3409,13 @@ TGG(pages["Webhook"],"Auto Send",1,"sendOnFull")
 MIN(pages["Webhook"],3,"Webhook URL...",SC.webhookUrl,function(t) SC.webhookUrl=t saveSettings() end)
 MIN(pages["Webhook"],4,"Discord User ID...",SC.discordUserId,function(t) SC.discordUserId=t saveSettings() end)
 
--- MISC TAB
+-- MISC TAB (add FPS Booster + Perk Notify)
 TGG(pages["Misc"],"Anti AFK",1,"afk")
 TGG(pages["Misc"],"Auto Grab Gun",3,"gun")
 TGG(pages["Misc"],"Anti-Void",7,"antiVoid")
 TGG(pages["Misc"],"Anti-Fling",10,"antiFling")
-TGG(pages["Misc"],"Murderer Perk Notify",11,"murdererPerkNotify")
-ASEC(pages["Misc"],"Performance",20)
-TGG(pages["Misc"],"FPS Booster",21,"fpsBooster")
+TGG(pages["Misc"],"FPS Booster",11,"fpsBooster")
+TGG(pages["Misc"],"Murderer Perk Notify",12,"murdererPerkNotify")
 
 -- VOTING TAB
 ASEC(pages["Voting"],"Live Vote Map Names",1)
@@ -3616,6 +3487,9 @@ MSL(pages["Button"],"Button Size",12,state.floatButtonSize or 68,44,120,"floatBu
         if d.btn and d.btn.Parent then
             d.btn.Size=UDim2.new(0,v,0,v)
             d.btn.TextSize=math.clamp(v*0.19,8,15)
+        end
+        if d.outer and d.outer.Parent then
+            d.outer.Size=UDim2.new(0,v,0,v)
         end
     end
 end)
@@ -3970,20 +3844,20 @@ ABN(pages["UI"],"Unload Script",31,function()
     if _G.ApplewareUnload then pcall(function() _G.ApplewareUnload() end) end
 end)
 
--- EMOTES TAB (abbreviated)
+-- EMOTES TAB (abbreviated - uses same EM table as before)
 ASEC(pages["Emotes"],"Emote Browser",1)
 do
     local EM={
         {id=3360689775,name="Salute"},{id=5915779043,name="Applaud"},{id=3360692915,name="Tilt"},
-        {id=15610015346,name="Yungblud"},{id=14353423348,name="Bouncy Twirl"},{id=14353421343,name="Face Frame"},
-        {id=3823158750,name="Godlike"},{id=139021427684680,name="Touch"},{id=133596366979822,name="Biblically"},
-        {id=108128682361404,name="Rambunctious"},{id=79127989560307,name="Moon Walk"},{id=5230661597,name="Bored"},
-        {id=14353425085,name="Strut"},{id=15694504637,name="Backflip"},{id=104142334418357,name="Gangnam"},
-        {id=16553249658,name="Piano Hands"},{id=12507097350,name="Lotus"},{id=15698511500,name="Levitate"},
-        {id=4689362868,name="Sleep"},{id=111426928948833,name="Floating"},{id=130245358716273,name="Starboy"},
-        {id=120642514156293,name="Handshake"},{id=15506503658,name="Victory"},{id=3576717965,name="Shy"},
-        {id=73796726960568,name="Nyan"},{id=78758922757947,name="Feet Sit"},{id=93511411593120,name="Fly"},
-        {id=114899970878842,name="Death"},{id=5104377791,name="Hero Landing"},{id=5917570207,name="Floss"}
+        {id=3823158750,name="Godlike"},{id=5230661597,name="Bored"},{id=15506503658,name="Victory"},
+        {id=3576717965,name="Shy"},{id=5917570207,name="Floss"},{id=4849502101,name="Sad"},
+        {id=3576968026,name="Shrug"},{id=3576686446,name="Hello"},{id=3762654854,name="Greatest"},
+        {id=4102315500,name="Haha"},{id=3934986896,name="Dizzy"},{id=4212496830,name="Zombie"},
+        {id=4849499887,name="Happy"},{id=4272351660,name="Fast Hands"},{id=4849497510,name="Power Blast"},
+        {id=3994130516,name="Bodybuilder"},{id=5938365243,name="Dolphin"},{id=3576823880,name="Point2"},
+        {id=4940597758,name="Cower"},{id=5104377791,name="Hero Landing"},{id=4646306583,name="Curtsy"},
+        {id=5915776835,name="High Wave"},{id=3360686498,name="Stadium"},{id=4940602656,name="Jump Wave"},
+        {id=7202898984,name="Wrists"},{id=7202900159,name="Wake Up"},{id=79439718544597,name="Default Dance"}
     }
     local efG=Instance.new("ScreenGui")
     efG.Name="AW_EmoteFloats"
@@ -4000,23 +3874,33 @@ do
         if not h then return end
         pcall(function() h:PlayEmoteAndGetAnimTrackById(tonumber(id)) end)
     end
+    local emoteDrag={}
     local function bEF(id,em)
         id=tostring(id)
         if emoteFloatButtons[id] then return end
-        local bt=Instance.new("TextButton",efG)
-        bt.AnchorPoint=Vector2.new(0,0)
+        local ou=Instance.new("Frame",efG)
+        ou.AnchorPoint=Vector2.new(0,0)
+        ou.BackgroundTransparency=1
+        ou.Size=UDim2.new(0,60,0,60)
+        ou.Visible=true
+        ou.Active=true
+        local sp=state.emoteFloatPositions[id]
+        if sp then ou.Position=UDim2.new(sp.xScale or 0,sp.xOffset or 20,sp.yScale or 0,sp.yOffset or 200)
+        else ou.Position=UDim2.new(0,20,0,200+#emoteFloatButtons*66) end
+        local bt=Instance.new("TextButton",ou)
+        bt.Size=UDim2.new(1,0,1,0)
         bt.BackgroundColor3=Color3.fromRGB(20,20,24)
+        bt.BackgroundTransparency=0
         bt.Text=""
         bt.AutoButtonColor=false
-        bt.Size=UDim2.new(0,60,0,60)
+        bt.Visible=true
+        bt.Active=true
         bt.ZIndex=2
-        local sp=state.emoteFloatPositions[id]
-        if sp then bt.Position=UDim2.new(sp.xScale or 0,sp.xOffset or 20,sp.yScale or 0,sp.yOffset or 200)
-        else bt.Position=UDim2.new(0,20,0,200+#emoteFloatButtons*66) end
         Instance.new("UICorner",bt).CornerRadius=UDim.new(0,10)
         local st=Instance.new("UIStroke",bt)
         st.Color=cc(SC.accentColor)
         st.Thickness=2
+        st.Transparency=0
         local img=Instance.new("ImageLabel",bt)
         img.Size=UDim2.new(0.85,0,0.85,0)
         img.Position=UDim2.new(0.075,0,0.075,0)
@@ -4024,27 +3908,47 @@ do
         img.Image="rbxthumb://type=Asset&id="..id.."&w=150&h=150"
         img.ScaleType=Enum.ScaleType.Fit
         img.ZIndex=3
-        bt.MouseButton1Click:Connect(function() pEm(id) end)
-        makeDraggable(bt, {
-            threshold = 6,
-            onEnd = function(moved)
-                if moved then
-                    state.emoteFloatPositions[id]={xScale=bt.Position.X.Scale,xOffset=bt.Position.X.Offset,yScale=bt.Position.Y.Scale,yOffset=bt.Position.Y.Offset}
-                    saveSettings()
-                end
+        bt.InputBegan:Connect(function(inp)
+            if inp.UserInputType~=Enum.UserInputType.Touch and inp.UserInputType~=Enum.UserInputType.MouseButton1 then return end
+            emoteDrag[id]={start=inp.Position,sp=ou.Position,moved=false}
+        end)
+        UIS.InputChanged:Connect(function(inp)
+            local ds=emoteDrag[id]
+            if not ds then return end
+            if inp.UserInputType~=Enum.UserInputType.Touch and inp.UserInputType~=Enum.UserInputType.MouseMovement then return end
+            local d=inp.Position-ds.start
+            if d.Magnitude>6 then ds.moved=true end
+            if ds.moved then
+                ou.Position=UDim2.new(ds.sp.X.Scale,ds.sp.X.Offset+d.X,ds.sp.Y.Scale,ds.sp.Y.Offset+d.Y)
             end
-        })
-        emoteFloatButtons[id]={btn=bt,emote=em}
+        end)
+        UIS.InputEnded:Connect(function(inp)
+            local ds=emoteDrag[id]
+            if not ds then return end
+            if inp.UserInputType~=Enum.UserInputType.MouseButton1 and inp.UserInputType~=Enum.UserInputType.Touch then return end
+            emoteDrag[id]=nil
+            if ds.moved then
+                state.emoteFloatPositions[id]={xScale=ou.Position.X.Scale,xOffset=ou.Position.X.Offset,yScale=ou.Position.Y.Scale,yOffset=ou.Position.Y.Offset}
+                saveSettings()
+            else
+                pEm(id)
+            end
+        end)
+        emoteFloatButtons[id]={btn=bt,outer=ou,emote=em}
     end
     local function rEF(id)
         id=tostring(id)
         local r=emoteFloatButtons[id]
-        if r then r.btn:Destroy() emoteFloatButtons[id]=nil end
+        if r then r.outer:Destroy() emoteFloatButtons[id]=nil end
     end
     _G.__AW_EMOTE_FLOAT_REFRESH=function()
-        pcall(function() efG.Enabled=true end)
+        pcall(function()
+            efG.Enabled=true
+            if not efG.Parent then efG.Parent=PlayerGui end
+        end)
         for _,r in pairs(emoteFloatButtons) do
             if r.btn then r.btn.Visible=true end
+            if r.outer then r.outer.Visible=true end
         end
     end
     local tb=Instance.new("TextButton",pages["Emotes"])
@@ -4054,6 +3958,10 @@ do
     tb.Text=""
     tb.AutoButtonColor=false
     Instance.new("UICorner",tb).CornerRadius=UDim.new(0,10)
+    local ts=Instance.new("UIStroke",tb)
+    ts.Color=cc(SC.accentColor)
+    ts.Thickness=1.5
+    ts.Transparency=0.4
     local tl=Instance.new("TextLabel",tb)
     tl.Size=UDim2.new(1,-12,1,0)
     tl.Position=UDim2.new(0,12,0,0)
@@ -4072,12 +3980,9 @@ do
     local ml=Instance.new("UIListLayout",mc)
     ml.SortOrder=Enum.SortOrder.LayoutOrder
     ml.Padding=UDim.new(0,6)
-    local cr=Instance.new("Frame",mc)
-    cr.Size=UDim2.new(1,0,0,40)
-    cr.LayoutOrder=1
-    cr.BackgroundTransparency=1
-    local sb=Instance.new("TextBox",cr)
-    sb.Size=UDim2.new(1,0,1,0)
+    local sb=Instance.new("TextBox",mc)
+    sb.Size=UDim2.new(1,0,0,40)
+    sb.LayoutOrder=1
     sb.BackgroundColor3=cc(SC.cardColor)
     sb.PlaceholderText="Search emotes..."
     sb.PlaceholderColor3=cc(SC.tabTextColor)
@@ -4108,7 +4013,7 @@ do
         rendered={}
         local q=string.lower(state.emoteSearch or "")
         for i,em in ipairs(EM) do
-            if q=="" or string.find(string.lower(em.name),q,1,true) or string.find(tostring(em.id),q,1,true) then
+            if q=="" or string.find(string.lower(em.name),q,1,true) then
                 local card=Instance.new("Frame",gs)
                 card.LayoutOrder=i
                 card.BackgroundColor3=cc(SC.cardColor)
@@ -4131,6 +4036,7 @@ do
                 nm.TextColor3=cc(SC.textColor)
                 nm.Font=Enum.Font.GothamMedium
                 nm.TextSize=10
+                nm.TextTruncate=Enum.TextTruncate.AtEnd
                 nm.TextXAlignment=Enum.TextXAlignment.Left
                 local pb=Instance.new("TextButton",card)
                 pb.Size=UDim2.new(1,-32,0,24)
@@ -4172,24 +4078,41 @@ do
             end
         end
     end
+    local sTok=0
     sb:GetPropertyChangedSignal("Text"):Connect(function()
+        sTok=sTok+1
+        local mt=sTok
         state.emoteSearch=sb.Text
-        rG()
+        task.delay(0.2,function() if sTok==mt then rG() end end)
     end)
-    tb.MouseButton1Click:Connect(function()
-        state.emoteMenuOpen=not state.emoteMenuOpen
+    local function rMV()
         tl.Text=state.emoteMenuOpen and "Close Emote Menu" or "Open Emote Menu"
         if state.emoteMenuOpen then
             mc.Visible=true
+            mc.Size=UDim2.new(1,0,0,0)
             TweenService:Create(mc,TweenInfo.new(0.35,EAB,EAO),{Size=UDim2.new(1,0,0,466)}):Play()
             rG()
         else
             TweenService:Create(mc,TweenInfo.new(0.22,EAS,EAI),{Size=UDim2.new(1,0,0,0)}):Play()
             task.delay(0.24,function() if not state.emoteMenuOpen then mc.Visible=false end end)
         end
+    end
+    tb.MouseButton1Click:Connect(function()
+        state.emoteMenuOpen=not state.emoteMenuOpen
         saveSettings()
+        rMV()
+    end)
+    ABN(pages["Emotes"],"Clear All Emote Floats",4,function()
+        for _,r in pairs(emoteFloatButtons) do pcall(function() r.outer:Destroy() end) end
+        emoteFloatButtons={}
+        state.emoteFloatButtons={}
+        state.emoteFloatPositions={}
+        saveSettings()
+        rG()
+        _G.__AW_NOTIFY("Cleared emote floats")
     end)
     task.defer(function()
+        rMV()
         for idStr,on in pairs(state.emoteFloatButtons or {}) do
             if on then
                 local idN=tonumber(idStr)
@@ -4224,16 +4147,6 @@ fb.MouseButton1Click:Connect(function()
     MW.Visible=not MW.Visible
     fb.Text=MW.Visible and "Close" or "Open"
 end)
-makeDraggable(fb, {
-    threshold = 6,
-    onEnd = function(moved)
-        if moved then
-            state.openX = fb.Position.X.Scale
-            state.openY = fb.Position.Y.Scale
-            saveSettings()
-        end
-    end
-})
 
 -- FLY / NOCLIP / SPEED
 flyBV=nil
@@ -4457,6 +4370,69 @@ task.spawn(function()
     end
 end)
 
+-- =================== FPS BOOSTER ===================
+task.spawn(function()
+    local applied=false
+    local saved={}
+    local lastClean=0
+    local removedParticles={}
+    while true do
+        task.wait(0.3)
+        if state.fpsBooster then
+            if not applied then
+                applied=true
+                pcall(function()
+                    saved.shadows=Lighting.GlobalShadows
+                    saved.fog=Lighting.FogEnd
+                    saved.brightness=Lighting.Brightness
+                end)
+                pcall(function() Lighting.GlobalShadows=false end)
+                pcall(function() Lighting.FogEnd=100000 end)
+                pcall(function()
+                    if settings and settings().Rendering then
+                        settings().Rendering.QualityLevel=1
+                    end
+                end)
+                pcall(function()
+                    for _,v in ipairs(Lighting:GetChildren()) do
+                        if v:IsA("PostEffect") then v.Enabled=false end
+                    end
+                end)
+                _G.__AW_NOTIFY('<font color="#5aff8c">FPS Booster:</font> ON')
+            end
+            if tick()-lastClean>2 then
+                lastClean=tick()
+                pcall(function()
+                    for _,v in ipairs(Workspace:GetDescendants()) do
+                        if v:IsA("ParticleEmitter") or v:IsA("Trail") or v:IsA("Smoke") or v:IsA("Fire") or v:IsA("Sparkles") then
+                            if v.Enabled then
+                                v.Enabled=false
+                                removedParticles[v]=true
+                            end
+                        end
+                    end
+                end)
+            end
+        elseif applied then
+            applied=false
+            pcall(function() Lighting.GlobalShadows=saved.shadows or true end)
+            pcall(function() Lighting.FogEnd=saved.fog or 100000 end)
+            pcall(function() Lighting.Brightness=saved.brightness or 2 end)
+            pcall(function()
+                for _,v in ipairs(Lighting:GetChildren()) do
+                    if v:IsA("PostEffect") then v.Enabled=true end
+                end
+            end)
+            for v in pairs(removedParticles) do
+                pcall(function() if v and v.Parent then v.Enabled=true end end)
+            end
+            removedParticles={}
+            _G.__AW_NOTIFY('<font color="#ff5a5a">FPS Booster:</font> OFF')
+        end
+    end
+end)
+-- =====================================================
+
 -- INVISIBILITY
 INVIS_POSITION=Vector3.new(-25.95,84,3537.55)
 invisSeat=nil
@@ -4579,6 +4555,11 @@ task.spawn(function()
         if state.touchFling then
             local c=LP.Character
             local hrp=c and c:FindFirstChild("HumanoidRootPart")
+            while state.touchFling and not (c and c.Parent and hrp and hrp.Parent) do
+                RunService.Heartbeat:Wait()
+                c=LP.Character
+                hrp=c and c:FindFirstChild("HumanoidRootPart")
+            end
             if state.touchFling and hrp then
                 local v=hrp.Velocity
                 hrp.Velocity=v*10000+Vector3.new(0,10000,0)
@@ -4734,9 +4715,13 @@ task.spawn(function()
                     else sh=state.espInnocent end
                     if ch and hrp and hm and hm.Health>0 and sh then
                         local col = RC(role)
+                        if IIL(hrp.Position) and role == "Innocent" then
+                            role = "Dead"
+                            col = Color3.fromRGB(150,150,150)
+                        end
                         local hd=ch:FindFirstChild("Head") or hrp
                         local e=EC[p]
-                        if e and (not e.bb or not e.bb.Parent or (e.hl and not e.hl.Parent) or e.bb.Adornee~=hd) then
+                        if e and (not e.bb or not e.bb.Parent or (e.hl and not e.hl.Parent) or (e.hl and e.hl.Adornee~=ch) or e.bb.Adornee~=hd) then
                             DE2(e)
                             EC[p]=nil
                             e=nil
@@ -5179,6 +5164,13 @@ function applyHitboxToPlayer(p)
             hb.Anchored=false
             hb.Locked=false
         end)
+        if not hb:FindFirstChild("AW_HitboxWeld") then
+            local wd=Instance.new("Weld")
+            wd.Name="AW_HitboxWeld"
+            wd.Part0=hrp
+            wd.Part1=hb
+            wd.Parent=hb
+        end
     end
 end
 function removeHitboxFromPlayer(p)
@@ -5278,42 +5270,41 @@ function lockButtonCertain(idOrLabel,lock)
 end
 
 -- FPS / PING
+MG=Instance.new("ScreenGui")
+MG.Name="AW_FPS_Ping"
+MG.ResetOnSpawn=false
+MG.DisplayOrder=999992
+MG.IgnoreGuiInset=true
+pcall(function() MG.Parent=CoreGui end)
+if not MG.Parent then MG.Parent=PlayerGui end
+MG.Enabled=false
+FL=Instance.new("TextLabel",MG)
+FL.Size=UDim2.new(0,120,0,24)
+FL.Position=UDim2.new(0,12,0,12)
+FL.BackgroundColor3=Color3.fromRGB(0,0,0)
+FL.BackgroundTransparency=0.4
+FL.TextColor3=Color3.new(1,1,1)
+FL.Font=Enum.Font.GothamBold
+FL.TextSize=14
+FL.TextXAlignment=Enum.TextXAlignment.Left
+FL.Text="FPS: --"
+Instance.new("UICorner",FL).CornerRadius=UDim.new(0,6)
+FP=Instance.new("UIPadding",FL)
+FP.PaddingLeft=UDim.new(0,8)
+PL=Instance.new("TextLabel",MG)
+PL.Size=UDim2.new(0,120,0,24)
+PL.Position=UDim2.new(0,12,0,40)
+PL.BackgroundColor3=Color3.fromRGB(0,0,0)
+PL.BackgroundTransparency=0.4
+PL.TextColor3=Color3.new(1,1,1)
+PL.Font=Enum.Font.GothamBold
+PL.TextSize=14
+PL.TextXAlignment=Enum.TextXAlignment.Left
+PL.Text="PING: --"
+Instance.new("UICorner",PL).CornerRadius=UDim.new(0,6)
+PP=Instance.new("UIPadding",PL)
+PP.PaddingLeft=UDim.new(0,8)
 do
-    local Stats=game:GetService("Stats")
-    MG=Instance.new("ScreenGui")
-    MG.Name="AW_FPS_Ping"
-    MG.ResetOnSpawn=false
-    MG.DisplayOrder=999992
-    MG.IgnoreGuiInset=true
-    pcall(function() MG.Parent=CoreGui end)
-    if not MG.Parent then MG.Parent=PlayerGui end
-    MG.Enabled=false
-    FL=Instance.new("TextLabel",MG)
-    FL.Size=UDim2.new(0,120,0,24)
-    FL.Position=UDim2.new(0,12,0,12)
-    FL.BackgroundColor3=Color3.fromRGB(0,0,0)
-    FL.BackgroundTransparency=0.4
-    FL.TextColor3=Color3.new(1,1,1)
-    FL.Font=Enum.Font.GothamBold
-    FL.TextSize=14
-    FL.TextXAlignment=Enum.TextXAlignment.Left
-    FL.Text="FPS: --"
-    Instance.new("UICorner",FL).CornerRadius=UDim.new(0,6)
-    FP=Instance.new("UIPadding",FL)
-    FP.PaddingLeft=UDim.new(0,8)
-    PL=Instance.new("TextLabel",MG)
-    PL.Size=UDim2.new(0,120,0,24)
-    PL.Position=UDim2.new(0,12,0,40)
-    PL.BackgroundColor3=Color3.fromRGB(0,0,0)
-    PL.BackgroundTransparency=0.4
-    PL.TextColor3=Color3.new(1,1,1)
-    PL.Font=Enum.Font.GothamBold
-    PL.TextSize=14
-    PL.TextXAlignment=Enum.TextXAlignment.Left
-    PL.Text="PING: --"
-    Instance.new("UICorner",PL).CornerRadius=UDim.new(0,6)
-    PP=Instance.new("UIPadding",PL)
-    PP.PaddingLeft=UDim.new(0,8)
     local FA,FTI=0,0
     RunService.RenderStepped:Connect(function(dt)
         if not MG.Enabled then return end
@@ -5347,15 +5338,17 @@ do
             end
         end
     end)
-    task.spawn(function()
-        while true do
-            task.wait(0.3)
-            MG.Enabled=state.fpsPingMonitor
-        end
-    end)
 end
+task.spawn(function()
+    while true do
+        task.wait(0.3)
+        MG.Enabled=state.fpsPingMonitor
+    end
+end)
 
--- HUD
+-- =====================================================
+-- HUD (PC DRAG FIXED)
+-- =====================================================
 HUDG=Instance.new("ScreenGui")
 HUDG.Name="AW_HUD"
 HUDG.ResetOnSpawn=false
@@ -5400,75 +5393,71 @@ HUDLabel.TextYAlignment=Enum.TextYAlignment.Top
 HUDLabel.RichText=true
 HUDLabel.TextWrapped=true
 
-local hudStart, hudStartPos, hudDragging = nil, nil, false
+local hudDrag=nil
 HUDF.InputBegan:Connect(function(i)
     if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
-        hudDragging = true
-        hudStart = i.Position
-        hudStartPos = HUDF.Position
+        hudDrag={start=i.Position,sp=HUDF.Position}
     end
 end)
 UIS.InputChanged:Connect(function(i)
-    if not hudDragging then return end
+    if not hudDrag then return end
     if i.UserInputType~=Enum.UserInputType.MouseMovement and i.UserInputType~=Enum.UserInputType.Touch then return end
-    local d = i.Position - hudStart
-    HUDF.Position = UDim2.new(
-        hudStartPos.X.Scale,
-        hudStartPos.X.Offset + d.X,
-        hudStartPos.Y.Scale,
-        hudStartPos.Y.Offset + d.Y
-    )
+    local d=i.Position-hudDrag.start
+    HUDF.Position=UDim2.new(hudDrag.sp.X.Scale,hudDrag.sp.X.Offset+d.X,hudDrag.sp.Y.Scale,hudDrag.sp.Y.Offset+d.Y)
 end)
 UIS.InputEnded:Connect(function(i)
-    if not hudDragging then return end
+    if not hudDrag then return end
     if i.UserInputType~=Enum.UserInputType.MouseButton1 and i.UserInputType~=Enum.UserInputType.Touch then return end
-    hudDragging = false
-    state.hudX = math.clamp(HUDF.Position.X.Scale, 0, 1)
-    state.hudY = math.clamp(HUDF.Position.Y.Scale, 0, 1)
+    local cam=Workspace.CurrentCamera
+    local vw=cam and cam.ViewportSize.X or 1920
+    state.hudX=math.clamp(1-(vw-HUDF.AbsolutePosition.X-HUDF.AbsoluteSize.X)/vw,0,1)
+    state.hudY=math.clamp(HUDF.AbsolutePosition.Y/vw,0,1)
+    hudDrag=nil
     saveSettings()
 end)
 
+-- HUD content updater (fixed: uses proper FPS accumulators)
 do
-    local Stats=game:GetService("Stats")
     local frames=0
-    local acc=0
+    local lastT=tick()
     task.spawn(function()
         while true do
             RunService.RenderStepped:Wait()
             frames=frames+1
-            acc=acc+1
-            if acc>=30 then
-                local fps=math.floor(frames/(acc/60))
+            local now=tick()
+            if now-lastT>=0.5 then
+                local fps=math.floor(frames/(now-lastT)+0.5)
                 frames=0
-                acc=0
-                if not HUDF.Visible then continue end
-                local role="Innocent"
-                pcall(function() role=getPlayerRole(LP) end)
-                local rc=RC(role)
-                local ping=0
-                pcall(function()
-                    local ok,p=pcall(function() return Stats.Network.ServerStatsItem["Data Ping"]:GetValueString() end)
-                    if ok and p then ping=tonumber(tostring(p):match("%-?%d+")) or 0 end
-                end)
-                local pcount=#Players:GetPlayers()
-                local alive=0
-                for _,pl in ipairs(Players:GetPlayers()) do
-                    if pl.Character and pl.Character:FindFirstChildOfClass("Humanoid") and pl.Character.Humanoid.Health>0 then
-                        alive=alive+1
+                lastT=now
+                if HUDF.Visible then
+                    local role="Innocent"
+                    pcall(function() role=getPlayerRole(LP) end)
+                    local rc=RC(role)
+                    local ping=0
+                    pcall(function()
+                        local ok,p=pcall(function() return Stats.Network.ServerStatsItem["Data Ping"]:GetValueString() end)
+                        if ok and p then ping=tonumber(tostring(p):match("%-?%d+")) or 0 end
+                    end)
+                    local pcount=#Players:GetPlayers()
+                    local alive=0
+                    for _,pl in ipairs(Players:GetPlayers()) do
+                        if pl.Character and pl.Character:FindFirstChildOfClass("Humanoid") and pl.Character.Humanoid.Health>0 then
+                            alive=alive+1
+                        end
                     end
+                    local roleCol=string.format("#%02X%02X%02X",math.floor(rc.R*255),math.floor(rc.G*255),math.floor(rc.B*255))
+                    local fpsCol="#5aff8c"
+                    if fps<30 then fpsCol="#ff5a5a" elseif fps<50 then fpsCol="#ffd75a" end
+                    local pingCol="#5aff8c"
+                    if ping>150 then pingCol="#ff5a5a" elseif ping>80 then pingCol="#ffd75a" end
+                    local hour=os.date("%H:%M:%S")
+                    HUDLabel.Text =
+                        '<font color="'..roleCol..'"><b>'..string.upper(role)..'</b></font>\n'..
+                        'FPS: <font color="'..fpsCol..'">'..fps..'</font>\n'..
+                        'Ping: <font color="'..pingCol..'">'..ping..'ms</font>\n'..
+                        'Players: <b>'..pcount..'</b>  ('..alive..' alive)\n'..
+                        'Time: '..hour
                 end
-                local roleCol=string.format("#%02X%02X%02X",math.floor(rc.R*255),math.floor(rc.G*255),math.floor(rc.B*255))
-                local fpsCol="#5aff8c"
-                if fps<30 then fpsCol="#ff5a5a" elseif fps<50 then fpsCol="#ffd75a" end
-                local pingCol="#5aff8c"
-                if ping>150 then pingCol="#ff5a5a" elseif ping>80 then pingCol="#ffd75a" end
-                local hour=os.date("%H:%M:%S")
-                HUDLabel.Text =
-                    '<font color="'..roleCol..'"><b>'..string.upper(role)..'</b></font>\n'..
-                    'FPS: <font color="'..fpsCol..'">'..fps..'</font>\n'..
-                    'Ping: <font color="'..pingCol..'">'..ping..'ms</font>\n'..
-                    'Players: <b>'..pcount..'</b>  ('..alive..' alive)\n'..
-                    'Time: '..hour
             end
         end
     end)
@@ -5528,6 +5517,7 @@ pcDragBar.Position = UDim2.new(0, 8, 0, 4)
 pcDragBar.BackgroundTransparency = 1
 pcDragBar.Text = ""
 pcDragBar.ZIndex = 3
+pcDragBar.Active = true
 
 local pcTitle = Instance.new("TextLabel", pcDragBar)
 pcTitle.Size = UDim2.new(1, -80, 0, 20)
@@ -5561,27 +5551,25 @@ pcClose.AutoButtonColor = false
 Instance.new("UICorner", pcClose).CornerRadius = UDim.new(0, 8)
 pcClose.MouseButton1Click:Connect(function() privateChatFrame.Visible = false end)
 
-local pcStart, pcStartPos, pcDragging = nil, nil, false
+local pcDragState = nil
 pcDragBar.InputBegan:Connect(function(i)
-    if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
-        pcDragging = true
-        pcStart = i.Position
-        pcStartPos = privateChatFrame.Position
+    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+        pcDragState = { start = i.Position, startPos = privateChatFrame.Position }
     end
 end)
 UIS.InputChanged:Connect(function(i)
-    if not pcDragging then return end
-    if i.UserInputType~=Enum.UserInputType.MouseMovement and i.UserInputType~=Enum.UserInputType.Touch then return end
-    local d = i.Position - pcStart
+    if not pcDragState then return end
+    if i.UserInputType ~= Enum.UserInputType.MouseMovement and i.UserInputType ~= Enum.UserInputType.Touch then return end
+    local d = i.Position - pcDragState.start
     privateChatFrame.Position = UDim2.new(
-        pcStartPos.X.Scale, pcStartPos.X.Offset + d.X,
-        pcStartPos.Y.Scale, pcStartPos.Y.Offset + d.Y
+        pcDragState.startPos.X.Scale, pcDragState.startPos.X.Offset + d.X,
+        pcDragState.startPos.Y.Scale, pcDragState.startPos.Y.Offset + d.Y
     )
 end)
 UIS.InputEnded:Connect(function(i)
-    if not pcDragging then return end
-    if i.UserInputType~=Enum.UserInputType.MouseButton1 and i.UserInputType~=Enum.UserInputType.Touch then return end
-    pcDragging = false
+    if not pcDragState then return end
+    if i.UserInputType ~= Enum.UserInputType.MouseButton1 and i.UserInputType ~= Enum.UserInputType.Touch then return end
+    pcDragState = nil
 end)
 
 local pcTabRow = Instance.new("Frame", privateChatFrame)
@@ -5717,6 +5705,7 @@ local function addPrivateMessage(sender, message, isSystem, msgId)
     lbl.Font = Enum.Font.Gotham
     lbl.TextSize = 12
     lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.TextWrapped = true
     task.defer(function()
         if pcScroll and pcScroll.Parent then
             pcScroll.CanvasPosition = Vector2.new(0, math.max(0, pcScroll.AbsoluteCanvasSize.Y - pcScroll.AbsoluteWindowSize.Y))
@@ -5746,33 +5735,37 @@ pcTabChat.MouseButton1Click:Connect(function() setPcTab("chat") end)
 pcTabCmds.MouseButton1Click:Connect(function() setPcTab("cmds") end)
 
 local helpEntries = {
-    {"General", "header"},
-    {".help", "Open Commands tab"},
-    {".showui / .hideui", "Show/hide main UI"},
-    {".private", "Toggle private chat"},
-    {".unload", "Unload the entire script"},
-    {"Combat", "header"},
-    {".aimbot [sheriff]", "Toggle aimbot"},
-    {".silentaim", "Toggle silent aim"},
-    {".shoot", "Fire at murderer"},
-    {".shootwall", "Shoot through walls"},
-    {".fling <user>", "Fling a player"},
-    {".flingall / .flingmur", "Fling all / murderer"},
-    {".killsher / .killall / .killcust", "Kill sheriff / all / custom"},
-    {"Movement", "header"},
-    {".fly / .noclip", "Toggle fly / noclip"},
-    {".speed <n>", "Set walk speed"},
-    {".jump <n>", "Set jump power"},
-    {"Teleport", "header"},
-    {".tpmap / .tplobby", "TP to map / lobby"},
-    {".tpmur / .tpsher", "TP to murderer / sheriff"},
-    {".to <user>", "TP to a player by name"},
-    {"Utility", "header"},
-    {".grabgun", "Grab nearest gun"},
-    {".removebarriers", "Remove barriers"},
-    {".reset", "Reset character"},
-    {".rj", "Rejoin the current server"},
-    {".shop", "Server hop to a random server"}
+    {"General","header"},
+    {".help","Open Commands tab"},
+    {".showui / .hideui","Show/hide main UI"},
+    {".private","Toggle private chat"},
+    {".unload","Unload the entire script"},
+    {"Combat","header"},
+    {".aimbot [sheriff]","Toggle aimbot"},
+    {".silentaim","Toggle silent aim"},
+    {".shoot","Fire at murderer"},
+    {".shootwall","Shoot through walls"},
+    {".fling <user>","Fling a player"},
+    {".flingall / .flingmur","Fling all / murderer"},
+    {".killsher / .killall / .killcust","Kill sheriff / all / custom (knife)"},
+    {"Movement","header"},
+    {".fly / .noclip","Toggle fly / noclip"},
+    {".speed <n>","Set walk speed"},
+    {".jump <n>","Set jump power"},
+    {"Teleport","header"},
+    {".tpmap / .tplobby","TP to map / lobby"},
+    {".tpmur / .tpsher","TP to murderer / sheriff"},
+    {".to <user>","TP to a player by username or display name"},
+    {"Utility","header"},
+    {".grabgun","Grab nearest gun"},
+    {".removebarriers","Remove barriers"},
+    {".reset","Reset character"},
+    {".invisible","Toggle invisible"},
+    {".hud","Toggle HUD"},
+    {".antifling","Toggle anti-fling"},
+    {".radioabuse","Toggle radio spam"},
+    {".rj","Rejoin the current server"},
+    {".shop","Server hop to a random server"}
 }
 for i, entry in ipairs(helpEntries) do
     local n, d = entry[1], entry[2]
@@ -5813,7 +5806,6 @@ end
 setPcTab("chat")
 
 local RELAY_URL = state.privateChatRelayUrl or "https://api.npoint.io/795defab3ba6f023d5bc"
-
 local function httpGetJson(url)
     local ok, res = pcall(function()
         if syn and syn.request then return syn.request({Url=url, Method="GET"})
@@ -5828,7 +5820,6 @@ local function httpGetJson(url)
     if not parseOk or type(data) ~= "table" then return nil end
     return data
 end
-
 local function httpPostJson(url, tbl)
     local body = HttpService:JSONEncode(tbl)
     local ok, res = pcall(function()
@@ -5839,7 +5830,6 @@ local function httpPostJson(url, tbl)
     end)
     return ok, res
 end
-
 local function sendToRelay(name, message)
     task.spawn(function()
         task.wait(math.random() * 0.5)
@@ -5859,7 +5849,6 @@ local function sendToRelay(name, message)
         else pcStatus.Text = "Send failed" end
     end)
 end
-
 task.spawn(function()
     while true do
         task.wait(3)
@@ -5880,6 +5869,9 @@ task.spawn(function()
     end
 end)
 
+-- =============================================================
+-- COMMAND PROCESSOR (with FIXED .shop)
+-- =============================================================
 _G.__AW_RUN_COMMAND = function(raw)
     if not raw or raw == "" then return end
     if _G.ApplewareActive == false then return end
@@ -5921,7 +5913,7 @@ _G.__AW_RUN_COMMAND = function(raw)
     elseif cmd == "unantifling" or cmd == "unaf2" then turnOff("antiFling","Anti-Fling")
     elseif cmd == "unradioabuse" or cmd == "unradio" then turnOff("radioAbuse","Radio Abuse")
     elseif cmd == "unloopstealgun" then turnOff("loopStealGun","Loop Steal Gun")
-    elseif cmd == "unfps" then turnOff("fpsBooster","FPS Booster")
+    elseif cmd == "unfpsbooster" then turnOff("fpsBooster","FPS Booster")
     elseif cmd == "unaimbot" then
         state.aimbotMurderer=false
         state.aimbotSheriff=false
@@ -5955,8 +5947,8 @@ _G.__AW_RUN_COMMAND = function(raw)
     elseif cmd == "unantivoid" then turnOff("antiVoid","Anti-Void")
     elseif cmd == "ungun" or cmd == "unautogun" then turnOff("gun","Auto Grab Gun")
     elseif cmd == "unnotifysound" then turnOff("notifySound","Notify Sound")
+    elseif cmd == "unfps" then turnOff("fpsPingMonitor","FPS Monitor")
     elseif cmd == "unnotrade" then turnOff("disableTrading","Disable Trading")
-    elseif cmd == "unperknotify" then turnOff("murdererPerkNotify","Perk Notify")
     elseif cmd == "untp" then
         state.loopTpMap=false; state.loopTpLobby=false; state.loopTpMurderer=false
         state.loopTpSheriff=false; state.loopTpCustom=false
@@ -5985,7 +5977,7 @@ _G.__AW_RUN_COMMAND = function(raw)
     elseif cmd == "antifling" or cmd == "af" then toggle("antiFling","Anti-Fling")
     elseif cmd == "radioabuse" then toggle("radioAbuse","Radio Abuse")
     elseif cmd == "loopstealgun" then toggle("loopStealGun","Loop Steal Gun")
-    elseif cmd == "fpsbooster" or cmd == "boost" then toggle("fpsBooster","FPS Booster")
+    elseif cmd == "fpsbooster" then toggle("fpsBooster","FPS Booster")
     elseif cmd == "perknotify" then toggle("murdererPerkNotify","Perk Notify")
     elseif cmd == "speed" then
         local n = num(2)
@@ -6056,80 +6048,88 @@ _G.__AW_RUN_COMMAND = function(raw)
     elseif cmd == "removebarriers" or cmd == "rb" then removeBarriersNow()
     elseif cmd == "rj" then
         _G.__AW_NOTIFY("Rejoining server...")
-        TeleportService:TeleportToPlaceInstance(PlaceId, game.JobId, LP)
+        pcall(function()
+            TeleportService:TeleportToPlaceInstance(PlaceId, game.JobId, LP)
+        end)
+    -- ============= FIXED .shop COMMAND =============
     elseif cmd == "shop" then
         _G.__AW_NOTIFY("Server hopping...")
         task.spawn(function()
-            local function httpGet(u)
-                local ok, res = pcall(function()
-                    if syn and syn.request then
-                        return syn.request({Url = u, Method = "GET"})
-                    elseif http and http.request then
-                        return http.request({Url = u, Method = "GET"})
-                    elseif request then
-                        return request({Url = u, Method = "GET"})
-                    elseif http_request then
-                        return http_request({Url = u, Method = "GET"})
-                    else
-                        return {Body = game:HttpGet(u)}
-                    end
+            local function doTeleport(servers)
+                if not servers or #servers == 0 then
+                    _G.__AW_NOTIFY("No available server found.")
+                    return false
+                end
+                local pick = servers[math.random(1, #servers)]
+                if not pick or not pick.id then
+                    _G.__AW_NOTIFY("Invalid server data.")
+                    return false
+                end
+                local ok, err = pcall(function()
+                    TeleportService:TeleportToPlaceInstance(PlaceId, pick.id, LP)
                 end)
-                if not ok or not res then return nil end
-                if type(res) == "table" then return res.Body or res.body end
-                return res
-            end
-
-            local function fetchServers(sortOrder)
-                local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=%s&limit=100"):format(PlaceId, sortOrder)
-                local body = httpGet(url)
-                if not body or body == "" then return nil end
-                local ok, data = pcall(function() return HttpService:JSONDecode(body) end)
-                if ok and type(data) == "table" and type(data.data) == "table" then
-                    return data.data
+                if not ok then
+                    _G.__AW_NOTIFY("Teleport failed: "..tostring(err))
+                    return false
                 end
-                return nil
+                return true
             end
-
-            local avail, seen = {}, {}
-            for _, so in ipairs({"Asc", "Desc"}) do
-                local list = fetchServers(so)
-                if list then
-                    for _, s in ipairs(list) do
-                        if s and s.id and s.id ~= game.JobId
-                           and s.playing and s.maxPlayers
-                           and s.playing < s.maxPlayers
-                           and not seen[s.id] then
-                            seen[s.id] = true
-                            table.insert(avail, s)
-                        end
-                    end
+            local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(PlaceId)
+            local body
+            -- Try multiple HTTP methods, in order of preference
+            local ok1 = pcall(function()
+                if syn and syn.request then
+                    local r = syn.request({Url=url, Method="GET"})
+                    if r and r.Body then body = r.Body end
                 end
-            end
-
-            for i = #avail, 2, -1 do
-                local j = math.random(i)
-                avail[i], avail[j] = avail[j], avail[i]
-            end
-
-            for _, s in ipairs(avail) do
-                local ok = pcall(function()
-                    TeleportService:TeleportToPlaceInstance(PlaceId, s.id, LP)
-                end)
-                if ok then
-                    _G.__AW_NOTIFY("Hopping to " .. tostring(s.id) .. " (" .. tostring(s.playing) .. "/" .. tostring(s.maxPlayers) .. ")")
-                    return
-                end
-                task.wait(0.35)
-            end
-
-            _G.__AW_NOTIFY("No open server found, using default hop...")
-            local ok = pcall(function()
-                TeleportService:Teleport(PlaceId, LP)
             end)
-            if not ok then
-                _G.__AW_NOTIFY("Server hop failed (join a game manually)")
+            if not body then
+                pcall(function()
+                    if request then
+                        local r = request({Url=url, Method="GET"})
+                        if r and r.Body then body = r.Body end
+                    end
+                end)
             end
+            if not body then
+                pcall(function()
+                    if http_request then
+                        local r = http_request({Url=url, Method="GET"})
+                        if r and r.Body then body = r.Body end
+                    end
+                end)
+            end
+            if not body then
+                pcall(function() body = game:HttpGet(url) end)
+            end
+            if not body then
+                _G.__AW_NOTIFY("HTTP request blocked by executor.")
+                return
+            end
+            local ok2, data = pcall(function() return HttpService:JSONDecode(body) end)
+            if not ok2 or type(data) ~= "table" or type(data.data) ~= "table" then
+                _G.__AW_NOTIFY("Failed to parse server list.")
+                return
+            end
+            local avail = {}
+            for _, s in ipairs(data.data) do
+                if s and s.id and s.id ~= game.JobId then
+                    local playing = tonumber(s.playing) or 0
+                    local maxP = tonumber(s.maxPlayers) or 0
+                    if maxP == 0 or playing < maxP then
+                        table.insert(avail, s)
+                    end
+                end
+            end
+            if #avail == 0 then
+                -- fallback: just rejoin current
+                _G.__AW_NOTIFY("No open servers. Rejoining current...")
+                pcall(function() TeleportService:Teleport(PlaceId, LP) end)
+                return
+            end
+            doTeleport(avail)
         end)
+    -- ================================================
     elseif cmd == "reset" then
         local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
         if h then h.Health = 0 end
@@ -6212,10 +6212,11 @@ _G.ApplewareUnload = function()
     pcall(function()
         for _, d in pairs(FBs) do
             if d.btn and d.btn.Parent then pcall(function() d.btn:Destroy() end) end
+            if d.outer and d.outer.Parent then pcall(function() d.outer:Destroy() end) end
         end
         FBs = {}
     end)
-    local gn = {"AWNotes", "AWRT", "AW_BigShoot", "AW_FloatingActions", "Appleware", "AW_EmoteFloats", "AW_FPS_Ping", "AW_ESP", "AW_ReloadPrompt", "AW_PrivateChat", "AW_WhatsNew", "AW_Loading", "AW_HUD"}
+    local gn = {"AWNotes","AWRT","AW_BigShoot","AW_FloatingActions","Appleware","AW_EmoteFloats","AW_FPS_Ping","AW_ESP","AW_ReloadPrompt","AW_PrivateChat","AW_WhatsNew","AW_Loading","AW_HUD"}
     local function KG(par)
         for _, n in ipairs(gn) do
             local g = par:FindFirstChild(n)
@@ -6233,7 +6234,6 @@ _G.ApplewareUnload = function()
     print("[Appleware] Unloaded. Anti-fling still active. Commands blocked.")
 end
 
-print("[Appleware] Loaded. Type .help for commands")
+print("[Appleware] Loaded (PC optimized). Type .help for commands")
 print("[Appleware] https://awh.filho.wtf")
 print("Credits: lzzzx, noir")
-warn("im not the best coder sorry")
