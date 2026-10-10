@@ -23,6 +23,7 @@ end
 _G.ApplewareLoaded=true
 _G.ApplewareActive=true
 
+-- SERVICES
 local Players=game:GetService("Players")
 local RunService=game:GetService("RunService")
 local TweenService=game:GetService("TweenService")
@@ -36,11 +37,12 @@ local Lighting=game:GetService("Lighting")
 local UIS=game:GetService("UserInputService")
 local InsertService=game:GetService("InsertService")
 local MarketplaceService=game:GetService("MarketplaceService")
-local Stats=game:GetService("Stats")
+local StatsService=game:GetService("Stats")
 local LP=Players.LocalPlayer
 local PlaceId=game.PlaceId
 local PlayerGui=LP:WaitForChild("PlayerGui",10)
 
+-- Config path
 local CFG_DIR="ApplewareConfigs"
 local CFG_FILE="Appleware.json"
 pcall(function() if makefolder and isfolder and not isfolder(CFG_DIR) then makefolder(CFG_DIR) end end)
@@ -138,33 +140,37 @@ task.spawn(function()
             bfGrad.Rotation=r
         end
     end)
-    TweenService:Create(title,TweenInfo.new(0.6,Enum.EasingStyle.Quint,Enum.EasingDirection.Out),{TextTransparency=0}):Play()
+    pcall(function()
+        TweenService:Create(title,TweenInfo.new(0.6,Enum.EasingStyle.Quint,Enum.EasingDirection.Out),{TextTransparency=0}):Play()
+    end)
     task.wait(0.15)
-    TweenService:Create(url,TweenInfo.new(0.5),{TextTransparency=0}):Play()
+    pcall(function() TweenService:Create(url,TweenInfo.new(0.5),{TextTransparency=0}):Play() end)
     task.wait(0.08)
-    TweenService:Create(credits,TweenInfo.new(0.45),{TextTransparency=0}):Play()
+    pcall(function() TweenService:Create(credits,TweenInfo.new(0.45),{TextTransparency=0}):Play() end)
     task.wait(0.08)
-    TweenService:Create(hint,TweenInfo.new(0.4),{TextTransparency=0}):Play()
+    pcall(function() TweenService:Create(hint,TweenInfo.new(0.4),{TextTransparency=0}):Play() end)
     task.wait(0.08)
-    TweenService:Create(status,TweenInfo.new(0.4),{TextTransparency=0}):Play()
+    pcall(function() TweenService:Create(status,TweenInfo.new(0.4),{TextTransparency=0}):Play() end)
     task.wait(0.1)
-    TweenService:Create(barBg,TweenInfo.new(0.4),{BackgroundTransparency=0}):Play()
+    pcall(function() TweenService:Create(barBg,TweenInfo.new(0.4),{BackgroundTransparency=0}):Play() end)
     task.wait(0.4)
     local stages={"loading...","fetching modules...","initializing...","ready."}
     for i,s in ipairs(stages) do
         status.Text=s
-        TweenService:Create(barFill,TweenInfo.new(0.45,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{Size=UDim2.new(i/#stages,0,1,0)}):Play()
+        pcall(function()
+            TweenService:Create(barFill,TweenInfo.new(0.45,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{Size=UDim2.new(i/#stages,0,1,0)}):Play()
+        end)
         task.wait(0.5)
     end
     task.wait(0.3)
-    TweenService:Create(loadFrame,TweenInfo.new(0.6),{BackgroundTransparency=1}):Play()
-    TweenService:Create(title,TweenInfo.new(0.5),{TextTransparency=1}):Play()
-    TweenService:Create(url,TweenInfo.new(0.5),{TextTransparency=1}):Play()
-    TweenService:Create(credits,TweenInfo.new(0.5),{TextTransparency=1}):Play()
-    TweenService:Create(hint,TweenInfo.new(0.5),{TextTransparency=1}):Play()
-    TweenService:Create(status,TweenInfo.new(0.5),{TextTransparency=1}):Play()
-    TweenService:Create(barBg,TweenInfo.new(0.5),{BackgroundTransparency=1}):Play()
-    TweenService:Create(barFill,TweenInfo.new(0.5),{BackgroundTransparency=1}):Play()
+    pcall(function() TweenService:Create(loadFrame,TweenInfo.new(0.6),{BackgroundTransparency=1}):Play() end)
+    pcall(function() TweenService:Create(title,TweenInfo.new(0.5),{TextTransparency=1}):Play() end)
+    pcall(function() TweenService:Create(url,TweenInfo.new(0.5),{TextTransparency=1}):Play() end)
+    pcall(function() TweenService:Create(credits,TweenInfo.new(0.5),{TextTransparency=1}):Play() end)
+    pcall(function() TweenService:Create(hint,TweenInfo.new(0.5),{TextTransparency=1}):Play() end)
+    pcall(function() TweenService:Create(status,TweenInfo.new(0.5),{TextTransparency=1}):Play() end)
+    pcall(function() TweenService:Create(barBg,TweenInfo.new(0.5),{BackgroundTransparency=1}):Play() end)
+    pcall(function() TweenService:Create(barFill,TweenInfo.new(0.5),{BackgroundTransparency=1}):Play() end)
     task.wait(0.7)
     pcall(function() loadGui:Destroy() end)
     _G.__AW_LOADING_DONE=true
@@ -177,6 +183,7 @@ pcall(function() if isfile and isfile(FIRST_FLAG) then isFirstLoad=false end end
 local shouldShowWhatsNew = true
 pcall(function() if isfile and isfile(WN_FLAG) then shouldShowWhatsNew=false end end)
 
+-- STATE
 state={
     farm=false,xpFarm=false,noclip=false,gun=false,afk=false,antiVoid=false,antiFling=true,
     autoKillAll=false,autoShootMurderer=false,
@@ -202,8 +209,6 @@ state={
     fpsPingMonitor=false,fpsPingColor=false,disableTrading=false,
     wallHop=false,wallHopFlick=false,removeBarriers=false,
     feAnimEnabled=false,
-    feAnimAll="Default",feAnimIdle="Default",feAnimWalk="Default",feAnimRun="Default",
-    feAnimJump="Default",feAnimClimb="Default",feAnimFall="Default",feAnimSwim="Default",
     emoteButtonSize=120,emoteSearch="",emoteMenuOpen=false,emoteFloatButtons={},emoteFloatPositions={},
     lockedButtons={},allButtonsLocked=false,voidPlatform=false,
     loopTpMap=false,loopTpLobby=false,loopTpMurderer=false,loopTpSheriff=false,loopTpCustom=false,
@@ -216,6 +221,7 @@ state={
     autoDodgeRange=25,
     hudEnabled=false,hudX=0.985,hudY=0.02,
     fpsBooster=false,
+    sendOnFull=false,
     privateChatRelayUrl="https://api.npoint.io/795defab3ba6f023d5bc"
 }
 wallHopInfJump=false
@@ -283,7 +289,7 @@ TD={
     spinBot="Spin Bot",hideUI="Hide UI",radioAutoPlay="Radio Auto Play",
     headless1="Headless V1",headless2="Headless V2",headless3="Headless V3",
     hudEnabled="HUD",radioAbuse="Radio Abuse",fpsBooster="FPS Booster",
-    murdererPerkNotify="Perk Notify"
+    murdererPerkNotify="Perk Notify",sendOnFull="Auto Send"
 }
 
 local function saveSettings()
@@ -325,7 +331,8 @@ local function loadSettings()
         for k,v in pairs(state) do
             if type(v)=="boolean" then state[k]=false end
         end
-        state.antiFling = true
+        state.antiFling=true
+        state.murdererPerkNotify=true
         for _,k in ipairs(KB) do state.keybinds[k.key]=k.default end
         pcall(function() if writefile then writefile(FIRST_FLAG,"1") end end)
     end
@@ -342,10 +349,11 @@ local EASF=Enum.EasingStyle.Sine
 local EAO=Enum.EasingDirection.Out
 local EAI=Enum.EasingDirection.In
 
-local SG={}
 local WK=Color3.new(1,1,1)
 local BK=Color3.new(0,0,0)
 
+-- SPIN GRADIENT SYSTEM
+local SG={}
 local function buildAS(a,b)
     return ColorSequence.new({
         ColorSequenceKeypoint.new(0,a),
@@ -353,20 +361,20 @@ local function buildAS(a,b)
         ColorSequenceKeypoint.new(1,a)
     })
 end
-
 local function setSGC(g,on)
     if not g then return end
-    g.Color=on and buildAS(WK,BK) or buildAS(BK,WK)
+    pcall(function()
+        g.Color=on and buildAS(WK,BK) or buildAS(BK,WK)
+    end)
 end
-
 local function attachSpin(s,on,opts)
-    if not s then return nil end
+    if not s or typeof(s)~="Instance" then return nil end
     opts=opts or {}
-    s.Color=WK
+    pcall(function() s.Color=WK end)
     pcall(function() s.ApplyStrokeMode=Enum.ApplyStrokeMode.Border end)
     local e=s:FindFirstChild("SpinGrad")
     local g
-    if e then g=e
+    if e and e:IsA("UIGradient") then g=e
     else
         g=Instance.new("UIGradient",s)
         g.Name="SpinGrad"
@@ -376,7 +384,6 @@ local function attachSpin(s,on,opts)
     setSGC(g,on)
     return g
 end
-
 task.spawn(function()
     local r=0
     while true do
@@ -384,19 +391,28 @@ task.spawn(function()
         r=(r+dt*130)%360
         for i=#SG,1,-1 do
             local g=SG[i]
-            if g and g.Parent then g.Rotation=r else table.remove(SG,i) end
+            if g and g.Parent then
+                pcall(function() g.Rotation=r end)
+            else
+                table.remove(SG,i)
+            end
         end
     end
 end)
+
+local function cc(t)
+    if not t then return Color3.new() end
+    return Color3.fromRGB(t.r or 0,t.g or 0,t.b or 0)
+end
 
 local function aB(b)
     if state.animationsEnabled==false then return end
     local s=Instance.new("UIScale",b)
     b.MouseButton1Down:Connect(function()
-        TweenService:Create(s,TweenInfo.new(0.09,EAS,EAO),{Scale=0.94}):Play()
+        pcall(function() TweenService:Create(s,TweenInfo.new(0.09,EAS,EAO),{Scale=0.94}):Play() end)
     end)
     local function rr()
-        TweenService:Create(s,TweenInfo.new(0.5,Enum.EasingStyle.Elastic,EAO),{Scale=1}):Play()
+        pcall(function() TweenService:Create(s,TweenInfo.new(0.5,Enum.EasingStyle.Elastic,EAO),{Scale=1}):Play() end)
     end
     b.MouseButton1Up:Connect(rr)
     b.MouseLeave:Connect(rr)
@@ -423,13 +439,16 @@ local function aR(b,c)
         f.Active=false
         Instance.new("UICorner",f).CornerRadius=UDim.new(1,0)
         local mr=math.max(sz.X-rx,rx,sz.Y-ry,ry)*2.2
-        TweenService:Create(f,TweenInfo.new(0.75,EAS,EAO),{Size=UDim2.new(0,mr*2,0,mr*2),BackgroundTransparency=1}):Play()
+        pcall(function()
+            TweenService:Create(f,TweenInfo.new(0.75,EAS,EAO),{Size=UDim2.new(0,mr*2,0,mr*2),BackgroundTransparency=1}):Play()
+        end)
         task.delay(0.85,function() if f and f.Parent then f:Destroy() end end)
     end)
 end
 
 local function sF(p)
     if state.animationsEnabled==false then return end
+    if not p then return end
     local ch={}
     for _,c in ipairs(p:GetChildren()) do
         if c:IsA("GuiObject") and c.Visible~=false and not c:IsA("UIListLayout") and not c:IsA("UIPadding") then
@@ -449,16 +468,16 @@ local function sF(p)
         task.delay(i*0.02,function()
             if not c.Parent then return end
             if c:IsA("Frame") or c:IsA("TextButton") then
-                TweenService:Create(c,TweenInfo.new(0.5,EAB,EAO),{BackgroundTransparency=sb,Position=op}):Play()
+                pcall(function() TweenService:Create(c,TweenInfo.new(0.5,EAB,EAO),{BackgroundTransparency=sb,Position=op}):Play() end)
             end
             if stt then
-                TweenService:Create(c,TweenInfo.new(0.4,EASF),{TextTransparency=stt}):Play()
+                pcall(function() TweenService:Create(c,TweenInfo.new(0.4,EASF),{TextTransparency=stt}):Play() end)
             end
         end)
     end
 end
 
--- Notifications
+-- NOTIFICATIONS
 local NG=Instance.new("ScreenGui")
 NG.Name="AWNotes"
 NG.ResetOnSpawn=false
@@ -474,8 +493,6 @@ NC.BackgroundTransparency=1
 local NL=Instance.new("UIListLayout",NC)
 NL.Padding=UDim.new(0,10)
 NL.VerticalAlignment=Enum.VerticalAlignment.Bottom
-
-local function cc(t) return Color3.fromRGB(t.r or 0,t.g or 0,t.b or 0) end
 
 local nCt=0
 _G.__AW_NOTIFY=function(text,dur)
@@ -528,24 +545,26 @@ _G.__AW_NOTIFY=function(text,dur)
     bd.TextWrapped=true
     bd.ZIndex=2
     if state.notifySound then
-        local snd=Instance.new("Sound",w)
-        snd.SoundId="rbxassetid://7001904928"
-        snd.Volume=0.25
-        snd:Play()
-        task.delay(2,function() if snd and snd.Parent then snd:Destroy() end end)
+        pcall(function()
+            local snd=Instance.new("Sound",w)
+            snd.SoundId="rbxassetid://7001904928"
+            snd.Volume=0.25
+            snd:Play()
+            task.delay(2,function() if snd and snd.Parent then snd:Destroy() end end)
+        end)
     end
-    TweenService:Create(f,TweenInfo.new(0.6,EAS,EAO),{Position=UDim2.new(0,0,0,0)}):Play()
+    pcall(function() TweenService:Create(f,TweenInfo.new(0.6,EAS,EAO),{Position=UDim2.new(0,0,0,0)}):Play() end)
     task.delay(dr,function()
         if not w.Parent then return end
-        TweenService:Create(f,TweenInfo.new(0.45,EAS,EAI),{Position=UDim2.new(1.1,0,0,0)}):Play()
+        pcall(function() TweenService:Create(f,TweenInfo.new(0.45,EAS,EAI),{Position=UDim2.new(1.1,0,0,0)}):Play() end)
         task.wait(0.55)
         if w and w.Parent then w:Destroy() end
         nCt=math.max(0,nCt-1)
     end)
 end
 
--- ANTI-FLING (persists after unload)
-afConnections = {}
+-- ANTI-FLING
+local afConnections={}
 task.spawn(function()
     local function disableCollide(part)
         if state.antiFling and part:IsA("BasePart") then
@@ -587,7 +606,7 @@ task.spawn(function()
     Players.PlayerRemoving:Connect(untrack)
 end)
 
--- Helpers
+-- HELPERS
 local function IIR()
     for _,m in ipairs(Workspace:GetChildren()) do
         if m:FindFirstChild("CoinContainer") or m.Name=="CoinContainer" then return true end
@@ -627,9 +646,8 @@ local function PMN(p,s)
     return false
 end
 local function IBF() return al() and IIR() end
-local function TMR() return TTM(false) end
 
--- Role detection
+-- ROLE DETECTION
 local cachedRoleModule, cachedRoleModuleAt = nil, 0
 local function getCachedRoleData()
     local now = tick()
@@ -722,6 +740,75 @@ local function FPBR(r)
 end
 local function GM() return FPBR("Murderer") end
 
+-- MURDERER PERK DETECTION
+local function getMurdererPerk()
+    local m = GM()
+    if not m then return nil end
+    local attrNames = {"Perk","perk","PerkName","perkName","MurdererPerk","murdererPerk","Ability","ability"}
+    for _,an in ipairs(attrNames) do
+        local a = m:GetAttribute(an)
+        if a and tostring(a)~="" then return tostring(a) end
+    end
+    if m.Character then
+        for _,an in ipairs(attrNames) do
+            local a = m.Character:GetAttribute(an)
+            if a and tostring(a)~="" then return tostring(a) end
+        end
+        for _,c in ipairs(m.Character:GetChildren()) do
+            local ln = string.lower(c.Name)
+            if string.find(ln,"perk",1,true) then return c.Name end
+        end
+    end
+    local pf = m:FindFirstChild("Perks") or m:FindFirstChild("Perk")
+    if pf then
+        if pf:IsA("StringValue") then return pf.Value end
+        if pf:IsA("Folder") then
+            for _,c in ipairs(pf:GetChildren()) do return c.Name end
+        end
+    end
+    local rd = getCachedRoleData()
+    if rd and type(rd)=="table" then
+        local pd = rd[m.Name] or rd[tostring(m.UserId)] or rd[m.UserId]
+        if type(pd)=="table" then
+            local p = pd.Perk or pd.perk or pd.PerkName or pd.perkName
+            if p and tostring(p)~="" then return tostring(p) end
+        end
+    end
+    return nil
+end
+
+task.spawn(function()
+    local lastMurderer, lastPerk = nil, nil
+    while true do
+        task.wait(0.75)
+        if state.murdererPerkNotify and _G.ApplewareActive ~= false and al() and IIR() then
+            local m = GM()
+            if m then
+                if m ~= lastMurderer then
+                    lastMurderer = m
+                    lastPerk = nil
+                    local perk = getMurdererPerk()
+                    if perk then
+                        lastPerk = perk
+                        _G.__AW_NOTIFY('<font color="#ff5a5a"><b>MURDERER:</b></font> '..m.Name..'\n<font color="#ffd75a">Perk:</font> '..perk, 6)
+                    else
+                        _G.__AW_NOTIFY('<font color="#ff5a5a"><b>MURDERER:</b></font> '..m.Name..' <font color="#aaa">(perk unknown)</font>', 5)
+                    end
+                else
+                    local perk = getMurdererPerk()
+                    if perk and perk ~= lastPerk then
+                        lastPerk = perk
+                        _G.__AW_NOTIFY('<font color="#ffd75a"><b>Perk:</b></font> '..perk, 5)
+                    end
+                end
+            else
+                lastMurderer = nil
+                lastPerk = nil
+            end
+        end
+    end
+end)
+
 GUN={"Gun","Revolver","Pistol"}
 local function PHG(p)
     if not p then return false end
@@ -756,83 +843,6 @@ local function RC(role)
     elseif r=="sheriff" or r=="hero" then return Color3.fromRGB(40,130,255)
     else return Color3.fromRGB(40,220,90) end
 end
-
--- =================== MURDERER PERK DETECTION ===================
--- Attempts to find the murderer's perk from various sources.
-local function getMurdererPerk()
-    local m = GM()
-    if not m then return nil end
-    -- Check player attributes
-    local attrNames = {"Perk","perk","PerkName","perkName","MurdererPerk","murdererPerk","Ability","ability"}
-    for _,an in ipairs(attrNames) do
-        local a = m:GetAttribute(an)
-        if a and tostring(a)~="" then return tostring(a) end
-    end
-    -- Check character attributes
-    if m.Character then
-        for _,an in ipairs(attrNames) do
-            local a = m.Character:GetAttribute(an)
-            if a and tostring(a)~="" then return tostring(a) end
-        end
-        -- Look for perk indicators inside character (ChildAdded / children)
-        for _,c in ipairs(m.Character:GetChildren()) do
-            local ln = string.lower(c.Name)
-            if string.find(ln,"perk",1,true) then return c.Name end
-        end
-    end
-    -- Look for a Perks folder / StringValue in player
-    local pf = m:FindFirstChild("Perks") or m:FindFirstChild("Perk")
-    if pf then
-        if pf:IsA("StringValue") then return pf.Value end
-        if pf:IsA("Folder") then
-            for _,c in ipairs(pf:GetChildren()) do return c.Name end
-        end
-    end
-    -- PlayerData module
-    local rd = getCachedRoleData()
-    if rd and type(rd)=="table" then
-        local pd = rd[m.Name] or rd[tostring(m.UserId)] or rd[m.UserId]
-        if type(pd)=="table" then
-            local p = pd.Perk or pd.perk or pd.PerkName or pd.perkName
-            if p and tostring(p)~="" then return tostring(p) end
-        end
-    end
-    return nil
-end
-
--- Monitor murderer + perk
-local lastMurderer, lastPerk = nil, nil
-task.spawn(function()
-    while true do
-        task.wait(0.75)
-        if state.murdererPerkNotify and al() and IIR() then
-            local m = GM()
-            if m then
-                if m ~= lastMurderer then
-                    lastMurderer = m
-                    lastPerk = nil
-                    local perk = getMurdererPerk()
-                    if perk then
-                        lastPerk = perk
-                        _G.__AW_NOTIFY('<font color="#ff5a5a"><b>MURDERER:</b></font> '..m.Name..'\n<font color="#ffd75a">Perk:</font> '..perk, 6)
-                    else
-                        _G.__AW_NOTIFY('<font color="#ff5a5a"><b>MURDERER:</b></font> '..m.Name..' <font color="#aaa">(perk unknown)</font>', 5)
-                    end
-                else
-                    local perk = getMurdererPerk()
-                    if perk and perk ~= lastPerk then
-                        lastPerk = perk
-                        _G.__AW_NOTIFY('<font color="#ffd75a"><b>Perk:</b></font> '..perk, 5)
-                    end
-                end
-            else
-                lastMurderer = nil
-                lastPerk = nil
-            end
-        end
-    end
-end)
--- =============================================================
 
 killLocked={}
 activeResets={}
@@ -1153,6 +1163,8 @@ local function TTM(si)
     if not si then _G.__AW_NOTIFY("TP: "..mf.Name) end
     return true
 end
+local function TMR() return TTM(false) end
+
 local function TTP(p)
     if not p then return end
     local r=LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
@@ -1262,7 +1274,6 @@ local function GTP()
     if not m or not m.Character then return nil end
     return m.Character:FindFirstChild("Head") or m.Character:FindFirstChild("HumanoidRootPart")
 end
-
 local function HCS(tp)
     if not state.silentAimWallCheck then return true end
     if not tp then return true end
@@ -1285,7 +1296,6 @@ local function HCS(tp)
     rp.FilterDescendantsInstances=ig
     return Workspace:Raycast(origin.Position,d,rp)==nil
 end
-
 local function FSAM()
     if not CFF() then return false end
     local pt=GTP()
@@ -1338,9 +1348,10 @@ local function TSM()
 end
 local function FSS() return TSM() end
 
--- Improved silent aim wall check: keeps notifying and fires when visible
-local wallCheckActive = false
+-- Improved silent aim wall check
+local wallCheckActive=false
 local function FSSUserTriggered()
+    if _G.ApplewareActive==false then return end
     if state.shootThroughWall then
         FSS()
         return
@@ -1355,35 +1366,35 @@ local function FSSUserTriggered()
         return
     end
     if wallCheckActive then return end
-    wallCheckActive = true
+    wallCheckActive=true
     _G.__AW_NOTIFY('<font color="#ffd75a">Waiting for visible murderer...</font>')
     task.spawn(function()
-        local lastNotify = tick()
+        local lastNotify=tick()
         for _=1,300 do
             task.wait(0.1)
+            if _G.ApplewareActive==false then wallCheckActive=false return end
             if not state.silentAimWallCheck or state.shootThroughWall then
                 pcall(FSS)
-                wallCheckActive = false
+                wallCheckActive=false
                 return
             end
-            if _G.ApplewareActive == false then wallCheckActive = false return end
             local p2=GTP()
             if p2 and HCS(p2) then
                 pcall(FSS)
                 _G.__AW_NOTIFY('<font color="#5aff8c">Murderer visible — firing!</font>')
-                wallCheckActive = false
+                wallCheckActive=false
                 return
             end
-            if tick()-lastNotify > 4 then
-                lastNotify = tick()
-                _G.__AW_NOTIFY('<font color="#ffd75a">Still waiting for visible murderer...</font>', 3)
+            if tick()-lastNotify>4 then
+                lastNotify=tick()
+                _G.__AW_NOTIFY('<font color="#ffd75a">Still waiting for visible murderer...</font>',3)
             end
         end
-        wallCheckActive = false
+        wallCheckActive=false
     end)
 end
 
--- KILL VIA KNIFE HANDLETOUCHED
+-- KNIFE HANDLETOUCHED
 local function ensureKnifeEquipped()
     local ch=LP.Character
     if not ch then return nil end
@@ -1403,7 +1414,6 @@ local function ensureKnifeEquipped()
     end
     return nil
 end
-
 local function getHandleTouched()
     local knife=ensureKnifeEquipped()
     if not knife then return nil end
@@ -1411,7 +1421,6 @@ local function getHandleTouched()
     if not events then return nil end
     return events:FindFirstChild("HandleTouched")
 end
-
 local function killMultipleWithHandle(targets)
     if not targets or #targets==0 then return end
     local handleTouched=getHandleTouched()
@@ -1431,7 +1440,6 @@ local function killMultipleWithHandle(targets)
         if i<6 then task.wait(1) end
     end
 end
-
 local function KAN()
     task.spawn(function()
         local all={}
@@ -1466,7 +1474,6 @@ local function KCUN()
         _G.__AW_NOTIFY("Killed custom")
     end)
 end
-
 local function SHF()
     if not al() then return end
     if not IGE() then _G.__AW_NOTIFY("Equip gun first") return end
@@ -1482,7 +1489,6 @@ local function SHF()
     task.wait(0.06)
     cm.CFrame=scf
 end
-
 task.spawn(function()
     while true do
         task.wait(0.3)
@@ -1547,7 +1553,7 @@ LP.CharacterAdded:Connect(function(c)
     WC(c)
 end)
 
--- Voting
+-- VOTING
 VS={[1]=Vector3.new(25,508,50),[2]=Vector3.new(13,508,52),[3]=Vector3.new(1,508,49)}
 voting=false
 local function TTVS(i)
@@ -1677,53 +1683,32 @@ local function findRadioRemotes()
     return list
 end
 local function playRadioAudio(songId)
-    if not songId or tostring(songId) == "" then return end
-    songId = tostring(songId)
-    if not radioRemoteCache or #radioRemoteCache == 0 then radioRemoteCache = findRadioRemotes() end
-    local fired = false
-    if radioRemoteCache and #radioRemoteCache > 0 then
-        for _, rm in ipairs(radioRemoteCache) do
+    if not songId or tostring(songId)=="" then return end
+    songId=tostring(songId)
+    if not radioRemoteCache or #radioRemoteCache==0 then radioRemoteCache=findRadioRemotes() end
+    local fired=false
+    if radioRemoteCache and #radioRemoteCache>0 then
+        for _,rm in ipairs(radioRemoteCache) do
             if rm and rm.Parent then
                 pcall(function()
                     if rm:IsA("RemoteEvent") then
                         rm:FireServer(songId)
                         rm:FireServer(tonumber(songId) or songId)
-                        fired = true
+                        fired=true
                     elseif rm:IsA("RemoteFunction") then
                         pcall(function() rm:InvokeServer(songId) end)
-                        fired = true
+                        fired=true
                     end
                 end)
-            end
-        end
-    end
-    if not fired then
-        local paths = {
-            {ReplicatedStorage,"Remotes","RadioPlay"},
-            {ReplicatedStorage,"Remotes","PlayRadio"},
-            {ReplicatedStorage,"Remotes","Gameplay","RadioPlay"},
-            {ReplicatedStorage,"RadioPlay"},
-            {ReplicatedStorage,"PlaySong"},
-        }
-        for _, pa in ipairs(paths) do
-            local cur = pa[1]
-            local ok = true
-            for i=2,#pa do
-                cur = cur and cur:FindFirstChild(pa[i])
-                if not cur then ok = false break end
-            end
-            if ok and cur and cur:IsA("RemoteEvent") then
-                pcall(function() cur:FireServer(songId) end)
-                fired = true
             end
         end
     end
     if not fired then _G.__AW_NOTIFY("Radio remote not found") end
 end
 local function stopRadioAudio()
-    if not radioRemoteCache or #radioRemoteCache == 0 then radioRemoteCache = findRadioRemotes() end
-    if radioRemoteCache and #radioRemoteCache > 0 then
-        for _, rm in ipairs(radioRemoteCache) do
+    if not radioRemoteCache or #radioRemoteCache==0 then radioRemoteCache=findRadioRemotes() end
+    if radioRemoteCache and #radioRemoteCache>0 then
+        for _,rm in ipairs(radioRemoteCache) do
             if rm and rm.Parent then
                 pcall(function()
                     if rm:IsA("RemoteEvent") then
@@ -1737,31 +1722,19 @@ local function stopRadioAudio()
             end
         end
     end
-    pcall(function()
-        if LP.Character then
-            for _, s in ipairs(LP.Character:GetDescendants()) do
-                if s:IsA("Sound") then s:Stop() s:Destroy() end
-            end
-        end
-        for _, s in ipairs(Workspace:GetDescendants()) do
-            if s:IsA("Sound") and s.Playing then s:Stop() end
-        end
-    end)
 end
-
-local RADIO_GAMEPASS_ID = 1308795
-local hasRadioPass = false
+local RADIO_GAMEPASS_ID=1308795
+local hasRadioPass=false
 task.spawn(function()
     task.wait(1)
     pcall(function()
-        local ok, owns = pcall(function() return MarketplaceService:UserOwnsGamePassAsync(LP.UserId, RADIO_GAMEPASS_ID) end)
-        if ok then hasRadioPass = owns end
+        local ok,owns=pcall(function() return MarketplaceService:UserOwnsGamePassAsync(LP.UserId,RADIO_GAMEPASS_ID) end)
+        if ok then hasRadioPass=owns end
     end)
     if not hasRadioPass then
-        _G.__AW_NOTIFY("Radio gamepass not detected. Buy it or rejoin if you just bought it.", 8)
+        _G.__AW_NOTIFY("Radio gamepass not detected. Buy it or rejoin if you just bought it.",8)
     end
 end)
-
 task.spawn(function()
     while true do
         task.wait(0.1)
@@ -1790,20 +1763,6 @@ task.spawn(function()
         end
     end
 end)
-
-local lastAutoPlayed = nil
-task.spawn(function()
-    while true do
-        task.wait(0.25)
-        if state.radioAutoPlay and state.radioSelectedAudio and state.radioSelectedAudio ~= "" then
-            if lastAutoPlayed ~= state.radioSelectedAudio then
-                lastAutoPlayed = state.radioSelectedAudio
-                playRadioAudio(state.radioSelectedAudio)
-            end
-        end
-    end
-end)
-
 task.spawn(function()
     while true do
         task.wait(2)
@@ -1820,127 +1779,123 @@ if shouldShowWhatsNew then
         local t=0
         while not _G.__AW_LOADING_DONE and t<6 do task.wait(0.1) t=t+0.1 end
         task.wait(0.15)
-        local whatsNewGui = Instance.new("ScreenGui")
-        whatsNewGui.Name = "AW_WhatsNew"
-        whatsNewGui.ResetOnSpawn = false
-        whatsNewGui.DisplayOrder = 10000001
-        whatsNewGui.IgnoreGuiInset = true
-        pcall(function() whatsNewGui.Parent = CoreGui end)
-        if not whatsNewGui.Parent then whatsNewGui.Parent = PlayerGui end
-        local wnFrame = Instance.new("Frame", whatsNewGui)
-        wnFrame.Size = UDim2.new(0, 520, 0, 480)
-        wnFrame.Position = UDim2.new(0.5, -260, 0.5, -240)
-        wnFrame.BackgroundColor3 = Color3.fromRGB(8, 8, 10)
-        wnFrame.BorderSizePixel = 0
-        wnFrame.Active = true
-        Instance.new("UICorner", wnFrame).CornerRadius = UDim.new(0, 16)
-        local wnGrad = Instance.new("UIGradient", wnFrame)
-        wnGrad.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(10, 10, 14)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(4, 4, 6))
-        })
-        wnGrad.Rotation = 90
-        local wnStroke = Instance.new("UIStroke", wnFrame)
-        wnStroke.Color = Color3.fromRGB(190, 190, 195)
-        wnStroke.Thickness = 2
-        local wnTitle = Instance.new("TextLabel", wnFrame)
-        wnTitle.Size = UDim2.new(1, -40, 0, 34)
-        wnTitle.Position = UDim2.new(0, 20, 0, 16)
-        wnTitle.BackgroundTransparency = 1
-        wnTitle.Text = "APPLEWARE - WHAT'S NEW"
-        wnTitle.TextColor3 = Color3.fromRGB(235, 235, 240)
-        wnTitle.Font = Enum.Font.GothamBold
-        wnTitle.TextSize = 20
-        wnTitle.TextXAlignment = Enum.TextXAlignment.Left
-        local wnSubtitle = Instance.new("TextLabel", wnFrame)
-        wnSubtitle.Size = UDim2.new(1, -40, 0, 16)
-        wnSubtitle.Position = UDim2.new(0, 20, 0, 48)
-        wnSubtitle.BackgroundTransparency = 1
-        wnSubtitle.Text = "https://awh.filho.wtf"
-        wnSubtitle.TextColor3 = Color3.fromRGB(150, 150, 155)
-        wnSubtitle.Font = Enum.Font.Gotham
-        wnSubtitle.TextSize = 11
-        wnSubtitle.TextXAlignment = Enum.TextXAlignment.Left
-        local wnBody = Instance.new("ScrollingFrame", wnFrame)
-        wnBody.Size = UDim2.new(1, -40, 1, -140)
-        wnBody.Position = UDim2.new(0, 20, 0, 78)
-        wnBody.BackgroundTransparency = 1
-        wnBody.BorderSizePixel = 0
-        wnBody.ScrollBarThickness = 4
-        wnBody.CanvasSize = UDim2.new(0, 0, 0, 0)
-        wnBody.AutomaticCanvasSize = Enum.AutomaticSize.Y
-        local wnBodyLayout = Instance.new("UIListLayout", wnBody)
-        wnBodyLayout.SortOrder = Enum.SortOrder.LayoutOrder
-        wnBodyLayout.Padding = UDim.new(0, 10)
-        local whatsNewItems = {
-            {"PC Drag Fixed", "Buttons + HUD now drag correctly with mouse."},
-            {"FPS Booster", "New toggle in Misc to reduce graphics for better FPS."},
-            {"Perk Notification", "Notifies you of the murderer's perk when round starts."},
-            {"Silent Aim WC", "Now notifies 'waiting for visible murderer' and auto-fires when visible."},
-            {".shop Fixed", "Server hop now uses proper endpoints + fallback."},
-            {"Loop Steal Gun", "New toggle that repeatedly flings sheriff and grabs gun."},
-            {"Kill Buttons", "Kill Sheriff / Kill All / Kill Custom use HandleTouched."}
+        local wnGui=Instance.new("ScreenGui")
+        wnGui.Name="AW_WhatsNew"
+        wnGui.ResetOnSpawn=false
+        wnGui.DisplayOrder=10000001
+        wnGui.IgnoreGuiInset=true
+        pcall(function() wnGui.Parent=CoreGui end)
+        if not wnGui.Parent then wnGui.Parent=PlayerGui end
+        local wnFrame=Instance.new("Frame",wnGui)
+        wnFrame.Size=UDim2.new(0,520,0,480)
+        wnFrame.Position=UDim2.new(0.5,-260,0.5,-240)
+        wnFrame.BackgroundColor3=Color3.fromRGB(8,8,10)
+        wnFrame.BorderSizePixel=0
+        wnFrame.Active=true
+        Instance.new("UICorner",wnFrame).CornerRadius=UDim.new(0,16)
+        local wnStroke=Instance.new("UIStroke",wnFrame)
+        wnStroke.Color=Color3.fromRGB(190,190,195)
+        wnStroke.Thickness=2
+        local wnTitle=Instance.new("TextLabel",wnFrame)
+        wnTitle.Size=UDim2.new(1,-40,0,34)
+        wnTitle.Position=UDim2.new(0,20,0,16)
+        wnTitle.BackgroundTransparency=1
+        wnTitle.Text="APPLEWARE - WHAT'S NEW"
+        wnTitle.TextColor3=Color3.fromRGB(235,235,240)
+        wnTitle.Font=Enum.Font.GothamBold
+        wnTitle.TextSize=20
+        wnTitle.TextXAlignment=Enum.TextXAlignment.Left
+        local wnSub=Instance.new("TextLabel",wnFrame)
+        wnSub.Size=UDim2.new(1,-40,0,16)
+        wnSub.Position=UDim2.new(0,20,0,48)
+        wnSub.BackgroundTransparency=1
+        wnSub.Text="https://awh.filho.wtf"
+        wnSub.TextColor3=Color3.fromRGB(150,150,155)
+        wnSub.Font=Enum.Font.Gotham
+        wnSub.TextSize=11
+        wnSub.TextXAlignment=Enum.TextXAlignment.Left
+        local wnBody=Instance.new("ScrollingFrame",wnFrame)
+        wnBody.Size=UDim2.new(1,-40,1,-140)
+        wnBody.Position=UDim2.new(0,20,0,78)
+        wnBody.BackgroundTransparency=1
+        wnBody.BorderSizePixel=0
+        wnBody.ScrollBarThickness=4
+        wnBody.CanvasSize=UDim2.new(0,0,0,0)
+        wnBody.AutomaticCanvasSize=Enum.AutomaticSize.Y
+        local wnL=Instance.new("UIListLayout",wnBody)
+        wnL.SortOrder=Enum.SortOrder.LayoutOrder
+        wnL.Padding=UDim.new(0,10)
+        local items={
+            {"PC Drag Fixed","Buttons + HUD now drag correctly with mouse."},
+            {"FPS Booster","New toggle in Misc to reduce graphics for better FPS."},
+            {"Perk Notification","Notifies you of the murderer's perk when round starts."},
+            {"Silent Aim WC","Now notifies 'waiting for visible murderer' and auto-fires when visible."},
+            {".shop Fixed","Server hop now uses proper endpoints + fallback."},
+            {"Loop Steal Gun","Repeatedly flings sheriff and grabs gun."},
+            {"Kill Buttons","Kill Sheriff / Kill All / Kill Custom use HandleTouched."}
         }
-        for i, item in ipairs(whatsNewItems) do
-            local card = Instance.new("Frame", wnBody)
-            card.Size = UDim2.new(1, -8, 0, 52)
-            card.LayoutOrder = i
-            card.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
-            Instance.new("UICorner", card).CornerRadius = UDim.new(0, 10)
-            local cst = Instance.new("UIStroke", card)
-            cst.Color = Color3.fromRGB(60, 60, 65)
-            cst.Thickness = 1
-            cst.Transparency = 0.4
-            local bar = Instance.new("Frame", card)
-            bar.Size = UDim2.new(0, 3, 1, -16)
-            bar.Position = UDim2.new(0, 10, 0, 8)
-            bar.BackgroundColor3 = Color3.fromRGB(190, 190, 195)
-            Instance.new("UICorner", bar).CornerRadius = UDim.new(1, 0)
-            local heading = Instance.new("TextLabel", card)
-            heading.Size = UDim2.new(1, -26, 0, 18)
-            heading.Position = UDim2.new(0, 22, 0, 6)
-            heading.BackgroundTransparency = 1
-            heading.Text = item[1]
-            heading.TextColor3 = Color3.fromRGB(235, 235, 240)
-            heading.Font = Enum.Font.GothamBold
-            heading.TextSize = 13
-            heading.TextXAlignment = Enum.TextXAlignment.Left
-            local desc = Instance.new("TextLabel", card)
-            desc.Size = UDim2.new(1, -26, 0, 26)
-            desc.Position = UDim2.new(0, 22, 0, 24)
-            desc.BackgroundTransparency = 1
-            desc.Text = item[2]
-            desc.TextColor3 = Color3.fromRGB(160, 160, 165)
-            desc.Font = Enum.Font.Gotham
-            desc.TextSize = 11
-            desc.TextXAlignment = Enum.TextXAlignment.Left
-            desc.TextYAlignment = Enum.TextYAlignment.Top
-            desc.TextWrapped = true
+        for i,item in ipairs(items) do
+            local card=Instance.new("Frame",wnBody)
+            card.Size=UDim2.new(1,-8,0,52)
+            card.LayoutOrder=i
+            card.BackgroundColor3=Color3.fromRGB(16,16,20)
+            Instance.new("UICorner",card).CornerRadius=UDim.new(0,10)
+            local cst=Instance.new("UIStroke",card)
+            cst.Color=Color3.fromRGB(60,60,65)
+            cst.Thickness=1
+            cst.Transparency=0.4
+            local bar=Instance.new("Frame",card)
+            bar.Size=UDim2.new(0,3,1,-16)
+            bar.Position=UDim2.new(0,10,0,8)
+            bar.BackgroundColor3=Color3.fromRGB(190,190,195)
+            Instance.new("UICorner",bar).CornerRadius=UDim.new(1,0)
+            local h=Instance.new("TextLabel",card)
+            h.Size=UDim2.new(1,-26,0,18)
+            h.Position=UDim2.new(0,22,0,6)
+            h.BackgroundTransparency=1
+            h.Text=item[1]
+            h.TextColor3=Color3.fromRGB(235,235,240)
+            h.Font=Enum.Font.GothamBold
+            h.TextSize=13
+            h.TextXAlignment=Enum.TextXAlignment.Left
+            local d=Instance.new("TextLabel",card)
+            d.Size=UDim2.new(1,-26,0,26)
+            d.Position=UDim2.new(0,22,0,24)
+            d.BackgroundTransparency=1
+            d.Text=item[2]
+            d.TextColor3=Color3.fromRGB(160,160,165)
+            d.Font=Enum.Font.Gotham
+            d.TextSize=11
+            d.TextXAlignment=Enum.TextXAlignment.Left
+            d.TextYAlignment=Enum.TextYAlignment.Top
+            d.TextWrapped=true
         end
-        local wnContinue = Instance.new("TextButton", wnFrame)
-        wnContinue.Size = UDim2.new(1, -40, 0, 40)
-        wnContinue.Position = UDim2.new(0, 20, 1, -50)
-        wnContinue.BackgroundColor3 = Color3.fromRGB(90, 90, 95)
-        wnContinue.Text = "Please wait..."
-        wnContinue.TextColor3 = Color3.new(1, 1, 1)
-        wnContinue.Font = Enum.Font.GothamBold
-        wnContinue.TextSize = 14
-        wnContinue.AutoButtonColor = false
-        Instance.new("UICorner", wnContinue).CornerRadius = UDim.new(0, 10)
-        local canContinue = false
-        task.delay(1, function()
-            if not wnContinue or not wnContinue.Parent then return end
-            canContinue = true
-            wnContinue.Text = "Continue"
-            TweenService:Create(wnContinue, TweenInfo.new(0.3, EAS, EAO), {BackgroundColor3 = Color3.fromRGB(90, 220, 130)}):Play()
+        local wnBtn=Instance.new("TextButton",wnFrame)
+        wnBtn.Size=UDim2.new(1,-40,0,40)
+        wnBtn.Position=UDim2.new(0,20,1,-50)
+        wnBtn.BackgroundColor3=Color3.fromRGB(90,90,95)
+        wnBtn.Text="Please wait..."
+        wnBtn.TextColor3=Color3.new(1,1,1)
+        wnBtn.Font=Enum.Font.GothamBold
+        wnBtn.TextSize=14
+        wnBtn.AutoButtonColor=false
+        Instance.new("UICorner",wnBtn).CornerRadius=UDim.new(0,10)
+        local canContinue=false
+        task.delay(1,function()
+            if not wnBtn or not wnBtn.Parent then return end
+            canContinue=true
+            wnBtn.Text="Continue"
+            pcall(function() TweenService:Create(wnBtn,TweenInfo.new(0.3,EAS,EAO),{BackgroundColor3=Color3.fromRGB(90,220,130)}):Play() end)
         end)
-        wnContinue.MouseButton1Click:Connect(function()
+        wnBtn.MouseButton1Click:Connect(function()
             if not canContinue then return end
-            TweenService:Create(wnFrame, TweenInfo.new(0.4, EAS, EAI), {Size = UDim2.new(0, 0, 0, 0), Position = UDim2.new(0.5, 0, 0.5, 0)}):Play()
-            task.delay(0.45, function() whatsNewGui:Destroy() end)
+            pcall(function() TweenService:Create(wnFrame,TweenInfo.new(0.4,EAS,EAI),{Size=UDim2.new(0,0,0,0),Position=UDim2.new(0.5,0,0.5,0)}):Play() end)
+            task.delay(0.45,function() if wnGui then wnGui:Destroy() end end)
         end)
     end)
 end
+
+-- BILLBOARD GUI for private chat relay, etc. follows below
 
 -- Round timer
 RG=Instance.new("ScreenGui")
@@ -1949,27 +1904,8 @@ RG.ResetOnSpawn=false
 RG.DisplayOrder=999997
 RG.IgnoreGuiInset=true
 RG.Parent=PlayerGui
-RTF=Instance.new("Frame",RG)
-RTF.AnchorPoint=Vector2.new(0.5,0)
-RTF.Position=UDim2.new(0.5,0,0,8)
-RTF.Size=UDim2.new(0,130,0,50)
-RTF.BackgroundColor3=Color3.new(0,0,0)
-RTF.BackgroundTransparency=0.1
-RTF.Visible=false
-RTF.Active=true
-RTF.Draggable=true
-Instance.new("UICorner",RTF).CornerRadius=UDim.new(0,10)
-RTV=Instance.new("TextLabel",RTF)
-RTV.Size=UDim2.new(1,0,1,0)
-RTV.BackgroundTransparency=1
-RTV.Text="0:00"
-RTV.TextColor3=Color3.new(1,1,1)
-RTV.Font=Enum.Font.GothamBold
-RTV.TextSize=22
 
--- ============================================================
--- BIG SHOOT BUTTON (drag fixed for PC)
--- ============================================================
+-- BIG SHOOT BUTTON
 BGI=Instance.new("ScreenGui")
 BGI.Name="AW_BigShoot"
 BGI.ResetOnSpawn=false
@@ -2001,7 +1937,6 @@ BB.TextWrapped=true
 BB.AutoButtonColor=false
 BB.BorderSizePixel=0
 BB.Active=true
-BB.Parent=BW
 Instance.new("UICorner",BB).CornerRadius=UDim.new(0,12)
 BS=Instance.new("UIStroke",BB)
 BS.Color=WK
@@ -2028,11 +1963,10 @@ end
 BD=nil
 BB.InputBegan:Connect(function(i)
     if i.UserInputType~=Enum.UserInputType.MouseButton1 and i.UserInputType~=Enum.UserInputType.Touch then return end
-    BD={input=i,start=i.Position,startPos=BW.Position,moved=false}
+    BD={start=i.Position,startPos=BW.Position,moved=false}
 end)
 UIS.InputChanged:Connect(function(i)
     if not BD then return end
-    -- PC FIX: don't compare InputObject references; use UserInputType check instead
     if i.UserInputType~=Enum.UserInputType.MouseMovement and i.UserInputType~=Enum.UserInputType.Touch then return end
     if isIdLocked("bigShootButton") then return end
     local d=i.Position-BD.start
@@ -2052,8 +1986,8 @@ UIS.InputEnded:Connect(function(i)
         RSW()
         if state.animationsEnabled then
             local s=Instance.new("UIScale",BW)
-            TweenService:Create(s,TweenInfo.new(0.1,EAS),{Scale=0.88}):Play()
-            TweenService:Create(s,TweenInfo.new(0.45,Enum.EasingStyle.Elastic),{Scale=1}):Play()
+            pcall(function() TweenService:Create(s,TweenInfo.new(0.1,EAS),{Scale=0.88}):Play() end)
+            pcall(function() TweenService:Create(s,TweenInfo.new(0.45,Enum.EasingStyle.Elastic),{Scale=1}):Play() end)
             task.delay(0.6,function() if s and s.Parent then s:Destroy() end end)
         end
     else
@@ -2063,7 +1997,7 @@ UIS.InputEnded:Connect(function(i)
     end
 end)
 
--- Floating buttons
+-- FLOATING BUTTONS
 FG=Instance.new("ScreenGui")
 FG.Name="AW_FloatingActions"
 FG.ResetOnSpawn=false
@@ -2185,9 +2119,7 @@ local function ASH(b,s)
     b.Rotation=ro
     return ro
 end
-
--- Track drag per button (PC FIX: use UserInputType check)
-local floatDrag = {} -- id -> {start, sp, moved}
+local floatDrag={}
 
 local function RFB()
     for _,c in ipairs(FG:GetChildren()) do
@@ -2241,13 +2173,13 @@ local function RFB()
             attachSpin(in2,iO)
             FBs[d.id]={def=d,btn=bt,inner=in2,outer=ou}
             RFV(d)
-            local thisId = d.id
+            local thisId=d.id
             bt.InputBegan:Connect(function(ii)
                 if ii.UserInputType~=Enum.UserInputType.Touch and ii.UserInputType~=Enum.UserInputType.MouseButton1 then return end
                 floatDrag[thisId]={start=ii.Position,sp=bt.Position,moved=false}
             end)
             UIS.InputChanged:Connect(function(ii)
-                local ds = floatDrag[thisId]
+                local ds=floatDrag[thisId]
                 if not ds then return end
                 if ii.UserInputType~=Enum.UserInputType.Touch and ii.UserInputType~=Enum.UserInputType.MouseMovement then return end
                 if isIdLocked(thisId) then return end
@@ -2259,7 +2191,7 @@ local function RFB()
                 end
             end)
             UIS.InputEnded:Connect(function(ii)
-                local ds = floatDrag[thisId]
+                local ds=floatDrag[thisId]
                 if not ds then return end
                 if ii.UserInputType~=Enum.UserInputType.MouseButton1 and ii.UserInputType~=Enum.UserInputType.Touch then return end
                 floatDrag[thisId]=nil
@@ -2280,7 +2212,7 @@ local function RFB()
                     if d.key=="shootThroughWall" and state.shootThroughWall and state.silentAimWallCheck then
                         state.silentAimWallCheck=false
                         local refs=_G.__AW_ALLTOGGLES and _G.__AW_ALLTOGGLES["silentAimWallCheck"]
-                        if refs then
+                        if refs and refs.pl and refs.pi and refs.dt then
                             pcall(function()
                                 TweenService:Create(refs.pl,TweenInfo.new(0.28,EAB,EAO),{BackgroundColor3=Color3.fromRGB(28,28,30)}):Play()
                                 TweenService:Create(refs.pi,TweenInfo.new(0.28,EAB,EAO),{BackgroundColor3=Color3.fromRGB(18,18,20)}):Play()
@@ -2288,8 +2220,6 @@ local function RFB()
                                     Position=UDim2.new(0,4,0.5,-8),
                                     BackgroundColor3=Color3.fromRGB(200,200,200)
                                 }):Play()
-                                local gg=refs.rs:FindFirstChild("SpinGrad")
-                                if gg then setSGC(gg,false) end
                             end)
                         end
                     end
@@ -2310,7 +2240,7 @@ local function SFV(v)
 end
 RFB()
 
--- Main UI
+-- MAIN UI
 SG2=Instance.new("ScreenGui")
 SG2.Name="Appleware"
 SG2.Parent=PlayerGui
@@ -2345,8 +2275,10 @@ task.spawn(function()
         p=(p+dt*0.8)%(math.pi*2)
         local t=(math.sin(p)+1)*0.5
         if MSS and MSS.Parent then
-            MSS.Transparency=0.35+t*0.35
-            MSS.Thickness=1.4+t*1.2
+            pcall(function()
+                MSS.Transparency=0.35+t*0.35
+                MSS.Thickness=1.4+t*1.2
+            end)
         end
     end
 end)
@@ -2471,15 +2403,19 @@ local function ST(n)
         local tc
         if nm==SEC then tc=Color3.fromRGB(0,0,0)
         else tc=ia and cc(SC.tabTextActiveColor) or cc(SC.tabTextColor) end
-        TweenService:Create(b,TweenInfo.new(0.32,EAS),{
-            BackgroundTransparency=ia and 0 or 1,
-            BackgroundColor3=ia and cc(SC.cardHoverColor) or cc(SC.tabBgColor),
-            TextColor3=tc
-        }):Play()
+        pcall(function()
+            TweenService:Create(b,TweenInfo.new(0.32,EAS),{
+                BackgroundTransparency=ia and 0 or 1,
+                BackgroundColor3=ia and cc(SC.cardHoverColor) or cc(SC.tabBgColor),
+                TextColor3=tc
+            }):Play()
+        end)
     end
     if pageGs[o] then
         local op=pages[o]
-        TweenService:Create(op,TweenInfo.new(0.24,EAB,EAI),{Position=UDim2.new(-0.12,0,0,0)}):Play()
+        pcall(function()
+            TweenService:Create(op,TweenInfo.new(0.24,EAB,EAI),{Position=UDim2.new(-0.12,0,0,0)}):Play()
+        end)
         task.delay(0.24,function()
             if pageGs[o] then
                 pageGs[o].Visible=false
@@ -2491,7 +2427,9 @@ local function ST(n)
         pageGs[n].Visible=true
         local np=pages[n]
         np.Position=UDim2.new(0.12,0,0,0)
-        TweenService:Create(np,TweenInfo.new(0.45,EAB,EAO),{Position=UDim2.new(0,0,0,0)}):Play()
+        pcall(function()
+            TweenService:Create(np,TweenInfo.new(0.45,EAB,EAO),{Position=UDim2.new(0,0,0,0)}):Play()
+        end)
         sF(np)
     end
     task.delay(0.24,function() sw=false end)
@@ -2518,9 +2456,10 @@ local function CTB(n,f)
 end
 for i,n in ipairs(TABS) do CTB(n,i==1) end
 
-_G.__AW_ALLTOGGLES = _G.__AW_ALLTOGGLES or {}
+_G.__AW_ALLTOGGLES=_G.__AW_ALLTOGGLES or {}
 
 local function TGG(pg,name,order,key)
+    if not pg then return end
     local row=Instance.new("Frame",pg)
     row.Size=UDim2.new(1,0,0,40)
     row.LayoutOrder=order
@@ -2535,7 +2474,7 @@ local function TGG(pg,name,order,key)
     lb.Size=UDim2.new(1,-64,1,0)
     lb.Position=UDim2.new(0,14,0,0)
     lb.BackgroundTransparency=1
-    lb.Text=name
+    lb.Text=tostring(name or "")
     lb.TextColor3=cc(SC.textColor)
     lb.Font=Enum.Font.GothamMedium
     lb.TextSize=12.5
@@ -2567,15 +2506,18 @@ local function TGG(pg,name,order,key)
     ht.Text=""
     ht.AutoButtonColor=false
     ht.MouseButton1Click:Connect(function()
+        if not key then return end
         local ns=not state[key]
         state[key]=ns
         local ac=cc(SC.accentColor)
-        TweenService:Create(pl,TweenInfo.new(0.28,EAB,EAO),{BackgroundColor3=ns and ac or Color3.fromRGB(28,28,30)}):Play()
-        TweenService:Create(pi,TweenInfo.new(0.28,EAB,EAO),{BackgroundColor3=ns and ac or Color3.fromRGB(18,18,20)}):Play()
-        TweenService:Create(dt,TweenInfo.new(0.4,Enum.EasingStyle.Elastic,EAO),{
-            Position=ns and UDim2.new(1,-20,0.5,-8) or UDim2.new(0,4,0.5,-8),
-            BackgroundColor3=ns and Color3.new(0,0,0) or Color3.fromRGB(200,200,200)
-        }):Play()
+        pcall(function()
+            TweenService:Create(pl,TweenInfo.new(0.28,EAB,EAO),{BackgroundColor3=ns and ac or Color3.fromRGB(28,28,30)}):Play()
+            TweenService:Create(pi,TweenInfo.new(0.28,EAB,EAO),{BackgroundColor3=ns and ac or Color3.fromRGB(18,18,20)}):Play()
+            TweenService:Create(dt,TweenInfo.new(0.4,Enum.EasingStyle.Elastic,EAO),{
+                Position=ns and UDim2.new(1,-20,0.5,-8) or UDim2.new(0,4,0.5,-8),
+                BackgroundColor3=ns and Color3.new(0,0,0) or Color3.fromRGB(200,200,200)
+            }):Play()
+        end)
         local g=rs:FindFirstChild("SpinGrad")
         if g then setSGC(g,ns) end
         if key=="bigButtonEnabled" and BW then BW.Visible=ns end
@@ -2586,7 +2528,7 @@ local function TGG(pg,name,order,key)
         if key=="shootThroughWall" and ns and state.silentAimWallCheck then
             state.silentAimWallCheck=false
             local refs=_G.__AW_ALLTOGGLES["silentAimWallCheck"]
-            if refs then
+            if refs and refs.pl and refs.pi and refs.dt then
                 pcall(function()
                     TweenService:Create(refs.pl,TweenInfo.new(0.28,EAB,EAO),{BackgroundColor3=Color3.fromRGB(28,28,30)}):Play()
                     TweenService:Create(refs.pi,TweenInfo.new(0.28,EAB,EAO),{BackgroundColor3=Color3.fromRGB(18,18,20)}):Play()
@@ -2594,12 +2536,15 @@ local function TGG(pg,name,order,key)
                         Position=UDim2.new(0,4,0.5,-8),
                         BackgroundColor3=Color3.fromRGB(200,200,200)
                     }):Play()
-                    local gg=refs.rs:FindFirstChild("SpinGrad")
-                    if gg then setSGC(gg,false) end
                 end)
             end
-            if FBM["silentAimWC"] then RFV(FBM["silentAimWC"]) end
-            _G.__AW_NOTIFY("Silent Aim Wall Check auto-disabled (magic bullet on)")
+        end
+        if key=="shootThroughWall" and ns then
+            local refs2=_G.__AW_ALLTOGGLES["silentAimWallCheck"]
+            if refs2 and refs2.rs then
+                local gg=refs2.rs:FindFirstChild("SpinGrad")
+                if gg then setSGC(gg,false) end
+            end
         end
         local LTP={"loopTpMap","loopTpLobby","loopTpMurderer","loopTpSheriff","loopTpCustom"}
         local isLtp=false
@@ -2611,16 +2556,18 @@ local function TGG(pg,name,order,key)
                     local rowToggles=_G.__AW_TPTOGGLES
                     if rowToggles and rowToggles[lk] then
                         local rt=rowToggles[lk]
-                        pcall(function()
-                            TweenService:Create(rt.pl,TweenInfo.new(0.28,EAB,EAO),{BackgroundColor3=Color3.fromRGB(28,28,30)}):Play()
-                            TweenService:Create(rt.pi,TweenInfo.new(0.28,EAB,EAO),{BackgroundColor3=Color3.fromRGB(18,18,20)}):Play()
-                            TweenService:Create(rt.dt,TweenInfo.new(0.4,Enum.EasingStyle.Elastic,EAO),{
-                                Position=UDim2.new(0,4,0.5,-8),
-                                BackgroundColor3=Color3.fromRGB(200,200,200)
-                            }):Play()
+                        if rt.pl and rt.pi and rt.dt then
+                            pcall(function()
+                                TweenService:Create(rt.pl,TweenInfo.new(0.28,EAB,EAO),{BackgroundColor3=Color3.fromRGB(28,28,30)}):Play()
+                                TweenService:Create(rt.pi,TweenInfo.new(0.28,EAB,EAO),{BackgroundColor3=Color3.fromRGB(18,18,20)}):Play()
+                                TweenService:Create(rt.dt,TweenInfo.new(0.4,Enum.EasingStyle.Elastic,EAO),{
+                                    Position=UDim2.new(0,4,0.5,-8),
+                                    BackgroundColor3=Color3.fromRGB(200,200,200)
+                                }):Play()
+                            end)
                             local gg=rt.rs:FindFirstChild("SpinGrad")
                             if gg then setSGC(gg,false) end
-                        end)
+                        end
                     end
                 end
             end
@@ -2640,6 +2587,7 @@ local function TGG(pg,name,order,key)
 end
 
 local function ABN(pg,name,order,cb)
+    if not pg then return nil end
     local b=Instance.new("TextButton",pg)
     b.Size=UDim2.new(1,0,0,38)
     b.LayoutOrder=order
@@ -2657,17 +2605,20 @@ local function ABN(pg,name,order,cb)
     l.Size=UDim2.new(1,-12,1,0)
     l.Position=UDim2.new(0,12,0,0)
     l.BackgroundTransparency=1
-    l.Text=name
+    l.Text=tostring(name or "")
     l.TextColor3=cc(SC.textColor)
     l.Font=Enum.Font.GothamMedium
     l.TextSize=12.5
     l.TextXAlignment=Enum.TextXAlignment.Left
     if state.animationsEnabled then aB(b) aR(b) end
-    b.MouseButton1Click:Connect(cb)
+    b.MouseButton1Click:Connect(function()
+        if cb then pcall(cb) end
+    end)
     return b
 end
 
 local function ASEC(pg,text,order)
+    if not pg then return end
     local w=Instance.new("Frame",pg)
     w.Size=UDim2.new(1,0,0,22)
     w.LayoutOrder=order
@@ -2681,7 +2632,7 @@ local function ASEC(pg,text,order)
     l.Size=UDim2.new(1,-18,1,0)
     l.Position=UDim2.new(0,16,0,0)
     l.BackgroundTransparency=1
-    l.Text=text
+    l.Text=tostring(text or "")
     l.TextColor3=cc(SC.tabTextColor)
     l.Font=Enum.Font.GothamBold
     l.TextSize=11
@@ -2689,6 +2640,8 @@ local function ASEC(pg,text,order)
 end
 
 local function MSL(pg,label,order,iv,mnV,mxV,sK,oCh)
+    if not pg then return end
+    iv=tonumber(iv) or mnV
     local row=Instance.new("Frame",pg)
     row.Size=UDim2.new(1,0,0,56)
     row.LayoutOrder=order
@@ -2698,7 +2651,7 @@ local function MSL(pg,label,order,iv,mnV,mxV,sK,oCh)
     lb.Size=UDim2.new(0.6,0,0,24)
     lb.Position=UDim2.new(0,14,0,4)
     lb.BackgroundTransparency=1
-    lb.Text=label
+    lb.Text=tostring(label or "")
     lb.TextColor3=cc(SC.textColor)
     lb.Font=Enum.Font.GothamMedium
     lb.TextSize=11
@@ -2719,12 +2672,12 @@ local function MSL(pg,label,order,iv,mnV,mxV,sK,oCh)
     tr.BackgroundColor3=cc(SC.borderColor)
     Instance.new("UICorner",tr).CornerRadius=UDim.new(1,0)
     local fl=Instance.new("Frame",tr)
-    fl.Size=UDim2.new((iv-mnV)/(mxV-mnV),0,1,0)
+    fl.Size=UDim2.new(math.clamp((iv-mnV)/(mxV-mnV),0,1),0,1,0)
     fl.BackgroundColor3=cc(SC.accentColor)
     Instance.new("UICorner",fl).CornerRadius=UDim.new(1,0)
     local kn=Instance.new("Frame",tr)
     kn.Size=UDim2.new(0,16,0,16)
-    kn.Position=UDim2.new((iv-mnV)/(mxV-mnV),0,0.5,-8)
+    kn.Position=UDim2.new(math.clamp((iv-mnV)/(mxV-mnV),0,1),0,0.5,-8)
     kn.BackgroundColor3=cc(SC.textColor)
     Instance.new("UICorner",kn).CornerRadius=UDim.new(1,0)
     local dr=false
@@ -2768,11 +2721,12 @@ local function MSL(pg,label,order,iv,mnV,mxV,sK,oCh)
 end
 
 local function MIN(pg,order,ph,val,onC)
+    if not pg then return nil end
     local b=Instance.new("TextBox",pg)
     b.Size=UDim2.new(1,0,0,36)
     b.LayoutOrder=order
     b.BackgroundColor3=cc(SC.cardColor)
-    b.PlaceholderText=ph
+    b.PlaceholderText=tostring(ph or "")
     b.PlaceholderColor3=cc(SC.tabTextColor)
     b.Text=val or ""
     b.TextColor3=cc(SC.textColor)
@@ -2780,128 +2734,8 @@ local function MIN(pg,order,ph,val,onC)
     b.TextSize=12
     b.ClearTextOnFocus=false
     Instance.new("UICorner",b).CornerRadius=UDim.new(0,10)
-    b.FocusLost:Connect(function() onC(b.Text) end)
+    b.FocusLost:Connect(function() if onC then onC(b.Text) end end)
     return b
-end
-
--- Headless
-local hlConfigs = {
-    {id="78837807518622", on=false, track=nil, freeze=nil, stopped=nil, key="headless1"},
-    {id="117080641351340", on=false, track=nil, freeze=nil, stopped=nil, key="headless2"},
-    {id="136055001302601", on=false, track=nil, freeze=nil, stopped=nil, key="headless3"}
-}
-local function stopHl(cfg)
-    if cfg.stopped then pcall(function() cfg.stopped:Disconnect() end) cfg.stopped=nil end
-    if cfg.track then pcall(function() cfg.track:Stop() cfg.track:Destroy() end) cfg.track=nil end
-end
-local function playHl(cfg)
-    local c = LP.Character
-    if not c then return end
-    local hum = c:FindFirstChildOfClass("Humanoid")
-    if not hum then return end
-    local animator = hum:FindFirstChildOfClass("Animator") or hum
-    stopHl(cfg)
-    local a = Instance.new("Animation")
-    a.AnimationId = "rbxassetid://"..cfg.id
-    local track
-    pcall(function() track = animator:LoadAnimation(a) end)
-    if not track then return end
-    track.Priority = Enum.AnimationPriority.Action
-    track.Looped = true
-    pcall(function() track:Play() end)
-    cfg.track = track
-    cfg.stopped = track.Stopped:Connect(function()
-        if cfg.on and LP.Character then task.wait(0.1) playHl(cfg) end
-    end)
-end
-LP.CharacterAdded:Connect(function()
-    task.wait(0.6)
-    for _, cfg in ipairs(hlConfigs) do
-        if state[cfg.key] then
-            cfg.on = true
-            playHl(cfg)
-        end
-    end
-end)
-task.spawn(function()
-    while true do
-        task.wait(0.15)
-        for _, cfg in ipairs(hlConfigs) do
-            local newOn = state[cfg.key] and true or false
-            if newOn ~= cfg.on then
-                cfg.on = newOn
-                if newOn then playHl(cfg)
-                else
-                    stopHl(cfg)
-                    if cfg.freeze then pcall(function() cfg.freeze:Disconnect() end) cfg.freeze=nil end
-                end
-            end
-        end
-    end
-end)
-
--- Wall hop
-do
-    local rp = RaycastParams.new()
-    rp.FilterType = Enum.RaycastFilterType.Exclude
-    local flicking = false
-    local flickCooldown = 0
-    task.spawn(function()
-        while true do
-            task.wait(0.03)
-            wallHopInfJump = false
-            if state.wallHop and al() then
-                local ch = LP.Character
-                local rt = ch:FindFirstChild("HumanoidRootPart")
-                local h = ch:FindFirstChildOfClass("Humanoid")
-                if rt and h then
-                    rp.FilterDescendantsInstances = {ch}
-                    local dirs = {
-                        rt.CFrame.LookVector,
-                        -rt.CFrame.LookVector,
-                        rt.CFrame.RightVector,
-                        -rt.CFrame.RightVector
-                    }
-                    local hit = nil
-                    for _, d in ipairs(dirs) do
-                        if d.Magnitude > 0.05 then
-                            local r = Workspace:Raycast(rt.Position, d.Unit * 3.5, rp)
-                            if r then hit = r break end
-                        end
-                    end
-                    if hit then
-                        wallHopInfJump = true
-                        if state.wallHopFlick and UIS:IsKeyDown(Enum.KeyCode.Space) and not flicking and tick() > flickCooldown then
-                            flicking = true
-                            flickCooldown = tick() + 0.35
-                            local cam = Workspace.CurrentCamera
-                            if cam then
-                                local scf = cam.CFrame
-                                local flatNormal = Vector3.new(hit.Normal.X, 0, hit.Normal.Z)
-                                if flatNormal.Magnitude > 0.1 then
-                                    flatNormal = flatNormal.Unit
-                                    local newCF = CFrame.lookAt(cam.CFrame.Position, cam.CFrame.Position + flatNormal * 10)
-                                    cam.CFrame = newCF
-                                    task.wait(0.09)
-                                    if cam then cam.CFrame = scf end
-                                end
-                            end
-                            task.wait(0.05)
-                            flicking = false
-                        end
-                    end
-                end
-            end
-        end
-    end)
-    UIS.JumpRequest:Connect(function()
-        if not LP.Character then return end
-        local h = LP.Character:FindFirstChildOfClass("Humanoid")
-        if not h then return end
-        if state.infJumpEnabled or wallHopInfJump then
-            pcall(function() h:ChangeState(Enum.HumanoidStateType.Jumping) end)
-        end
-    end)
 end
 
 -- SECRET TAB
@@ -2925,7 +2759,7 @@ do
     hl.Size=UDim2.new(1,-12,1,0)
     hl.Position=UDim2.new(0,12,0,0)
     hl.BackgroundTransparency=1
-    hl.Text="Target: "..(mn[state.hitboxExpanderTarget or "murderer"])
+    hl.Text="Target: "..(mn[state.hitboxExpanderTarget or "murderer"] or "Murderer Only")
     hl.TextColor3=cc(SC.textColor)
     hl.Font=Enum.Font.GothamMedium
     hl.TextSize=12.5
@@ -2975,151 +2809,6 @@ ASEC(pages[SEC],"FPS & Ping Monitor",170)
 TGG(pages[SEC],"FPS Monitor",171,"fpsPingMonitor")
 TGG(pages[SEC],"Color FPS",172,"fpsPingColor")
 TGG(pages[SEC],"Disable Trading",181,"disableTrading")
-
--- RADIO ABUSE
-ASEC(pages[SEC],"Radio Abuse",200)
-MIN(pages[SEC],201,"Audio ID to add...",state.radioInputId or "",function(t)
-    state.radioInputId = t
-    saveSettings()
-end)
-ABN(pages[SEC],"Add Audio ID",202,function()
-    local id = tostring(state.radioInputId or ""):gsub("%s","")
-    if id == "" then _G.__AW_NOTIFY("Enter an audio ID") return end
-    state.radioAudioList = state.radioAudioList or {}
-    for _, v in ipairs(state.radioAudioList) do
-        if tostring(v) == id then _G.__AW_NOTIFY("Already in list") return end
-    end
-    table.insert(state.radioAudioList, id)
-    if #state.radioAudioList == 1 then state.radioSelectedAudio = id end
-    saveSettings()
-    _G.__AW_NOTIFY("Added audio "..id)
-    if _G.__AW_REFRESH_RADIO_LIST then pcall(_G.__AW_REFRESH_RADIO_LIST) end
-end)
-local raListFrame = Instance.new("Frame", pages[SEC])
-raListFrame.Size = UDim2.new(1,0,0,0)
-raListFrame.AutomaticSize = Enum.AutomaticSize.Y
-raListFrame.LayoutOrder = 203
-raListFrame.BackgroundTransparency = 1
-local raListLayout = Instance.new("UIListLayout", raListFrame)
-raListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-raListLayout.Padding = UDim.new(0,4)
-_G.__AW_REFRESH_RADIO_LIST = function()
-    for _, c in ipairs(raListFrame:GetChildren()) do
-        if c:IsA("GuiObject") and c ~= raListLayout then c:Destroy() end
-    end
-    state.radioAudioList = state.radioAudioList or {}
-    if #state.radioAudioList == 0 then
-        local empty = Instance.new("TextLabel", raListFrame)
-        empty.Size = UDim2.new(1,0,0,26)
-        empty.LayoutOrder = 1
-        empty.BackgroundColor3 = cc(SC.cardColor)
-        empty.Text = "No songs selected"
-        empty.TextColor3 = cc(SC.tabTextColor)
-        empty.Font = Enum.Font.Gotham
-        empty.TextSize = 11
-        Instance.new("UICorner", empty).CornerRadius = UDim.new(0,6)
-        return
-    end
-    for i, id in ipairs(state.radioAudioList) do
-        local r = Instance.new("Frame", raListFrame)
-        r.Size = UDim2.new(1,0,0,32)
-        r.LayoutOrder = i
-        local isSel = (tostring(state.radioSelectedAudio) == tostring(id))
-        r.BackgroundColor3 = isSel and cc(SC.cardHoverColor) or cc(SC.cardColor)
-        Instance.new("UICorner", r).CornerRadius = UDim.new(0,8)
-        local stk = Instance.new("UIStroke", r)
-        stk.Color = isSel and cc(SC.accentColor) or Color3.fromRGB(40,40,45)
-        stk.Thickness = 1
-        stk.Transparency = isSel and 0 or 0.4
-        local lbl = Instance.new("TextLabel", r)
-        lbl.Size = UDim2.new(1,-90,1,0)
-        lbl.Position = UDim2.new(0,12,0,0)
-        lbl.BackgroundTransparency = 1
-        lbl.Text = tostring(id)
-        lbl.TextColor3 = isSel and cc(SC.accentColor) or cc(SC.textColor)
-        lbl.Font = Enum.Font.GothamBold
-        lbl.TextSize = 12
-        lbl.TextXAlignment = Enum.TextXAlignment.Left
-        local selBtn = Instance.new("TextButton", r)
-        selBtn.Size = UDim2.new(0,70,0,24)
-        selBtn.Position = UDim2.new(1,-76,0.5,-12)
-        selBtn.BackgroundColor3 = isSel and cc(SC.accentColor) or Color3.fromRGB(30,30,34)
-        selBtn.Text = isSel and "Selected" or "Select"
-        selBtn.TextColor3 = isSel and Color3.new(0,0,0) or Color3.new(1,1,1)
-        selBtn.Font = Enum.Font.GothamBold
-        selBtn.TextSize = 10.5
-        selBtn.AutoButtonColor = false
-        Instance.new("UICorner", selBtn).CornerRadius = UDim.new(0,6)
-        selBtn.MouseButton1Click:Connect(function()
-            state.radioSelectedAudio = tostring(id)
-            saveSettings()
-            if _G.__AW_REFRESH_RADIO_LIST then pcall(_G.__AW_REFRESH_RADIO_LIST) end
-        end)
-    end
-end
-_G.__AW_REFRESH_RADIO_LIST()
-ABN(pages[SEC],"Play Audio",204,function()
-    if not hasRadioPass then _G.__AW_NOTIFY("Radio gamepass not detected.", 6) return end
-    local id = state.radioSelectedAudio
-    if not id or id == "" then id = state.radioAbuseSongId end
-    if not id or id == "" then _G.__AW_NOTIFY("No audio selected") return end
-    playRadioAudio(id)
-    _G.__AW_NOTIFY("Playing "..tostring(id))
-end)
-ABN(pages[SEC],"Pause / Stop Audio",205,function()
-    stopRadioAudio()
-    _G.__AW_NOTIFY("Stopped audio")
-end)
-ABN(pages[SEC],"Restart Audio",206,function()
-    if not hasRadioPass then _G.__AW_NOTIFY("Radio gamepass not detected.", 6) return end
-    local id = state.radioSelectedAudio
-    if not id or id == "" then id = state.radioAbuseSongId end
-    if not id or id == "" then _G.__AW_NOTIFY("No audio selected") return end
-    stopRadioAudio()
-    task.wait(0.2)
-    playRadioAudio(id)
-    _G.__AW_NOTIFY("Restarted "..tostring(id))
-end)
-ABN(pages[SEC],"Spam Selected (x5)",207,function()
-    if not hasRadioPass then _G.__AW_NOTIFY("Radio gamepass not detected.", 6) return end
-    local id = state.radioSelectedAudio
-    if not id or id == "" then id = state.radioAbuseSongId end
-    if not id or id == "" then _G.__AW_NOTIFY("No audio selected") return end
-    task.spawn(function()
-        for i = 1, 5 do
-            playRadioAudio(id)
-            task.wait(0.1)
-        end
-        _G.__AW_NOTIFY("Spammed 5x")
-    end)
-end)
-ABN(pages[SEC],"Delete Selected",208,function()
-    local id = state.radioSelectedAudio
-    if not id or id == "" then _G.__AW_NOTIFY("No audio selected") return end
-    state.radioAudioList = state.radioAudioList or {}
-    local removed = false
-    for i, v in ipairs(state.radioAudioList) do
-        if tostring(v) == tostring(id) then
-            table.remove(state.radioAudioList, i)
-            removed = true
-            break
-        end
-    end
-    if not removed then _G.__AW_NOTIFY("Not found") return end
-    if #state.radioAudioList > 0 then
-        state.radioSelectedAudio = tostring(state.radioAudioList[1])
-    else
-        state.radioSelectedAudio = ""
-    end
-    saveSettings()
-    _G.__AW_NOTIFY("Deleted "..tostring(id))
-    if _G.__AW_REFRESH_RADIO_LIST then pcall(_G.__AW_REFRESH_RADIO_LIST) end
-end)
-TGG(pages[SEC],"Auto Play Audio",209,"radioAutoPlay")
-ASEC(pages[SEC],"Radio Spam",220)
-TGG(pages[SEC],"Enable Radio Abuse",221,"radioAbuse")
-TGG(pages[SEC],"Use Selected Song",222,"radioAbuseUseSelected")
-MSL(pages[SEC],"Spam Rate (per sec)",223,state.radioAbuseRate or 30,1,200,"radioAbuseRate")
 
 -- FARM TAB
 TGG(pages["Farm"],"Farm",1,"farm")
@@ -3409,7 +3098,7 @@ TGG(pages["Webhook"],"Auto Send",1,"sendOnFull")
 MIN(pages["Webhook"],3,"Webhook URL...",SC.webhookUrl,function(t) SC.webhookUrl=t saveSettings() end)
 MIN(pages["Webhook"],4,"Discord User ID...",SC.discordUserId,function(t) SC.discordUserId=t saveSettings() end)
 
--- MISC TAB (add FPS Booster + Perk Notify)
+-- MISC TAB
 TGG(pages["Misc"],"Anti AFK",1,"afk")
 TGG(pages["Misc"],"Auto Grab Gun",3,"gun")
 TGG(pages["Misc"],"Anti-Void",7,"antiVoid")
@@ -3528,65 +3217,65 @@ for i,sp in ipairs(SHP) do
 end
 ASEC(pages["Button"],"Manage Floating Buttons",30)
 do
-    local mSearch = Instance.new("TextBox", pages["Button"])
-    mSearch.Size = UDim2.new(1, 0, 0, 34)
-    mSearch.LayoutOrder = 31
-    mSearch.BackgroundColor3 = cc(SC.cardColor)
-    mSearch.PlaceholderText = "Search..."
-    mSearch.PlaceholderColor3 = cc(SC.tabTextColor)
-    mSearch.Text = ""
-    mSearch.TextColor3 = cc(SC.textColor)
-    mSearch.Font = Enum.Font.Gotham
-    mSearch.TextSize = 12
-    mSearch.ClearTextOnFocus = false
-    Instance.new("UICorner", mSearch).CornerRadius = UDim.new(0, 10)
-    local mList = Instance.new("ScrollingFrame", pages["Button"])
-    mList.Size = UDim2.new(1, 0, 0, 300)
-    mList.LayoutOrder = 32
-    mList.BackgroundTransparency = 1
-    mList.ScrollBarThickness = 3
-    mList.CanvasSize = UDim2.new(0, 0, 0, 0)
-    mList.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    local mLayout = Instance.new("UIListLayout", mList)
-    mLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    mLayout.Padding = UDim.new(0, 5)
+    local mSearch=Instance.new("TextBox",pages["Button"])
+    mSearch.Size=UDim2.new(1,0,0,34)
+    mSearch.LayoutOrder=31
+    mSearch.BackgroundColor3=cc(SC.cardColor)
+    mSearch.PlaceholderText="Search..."
+    mSearch.PlaceholderColor3=cc(SC.tabTextColor)
+    mSearch.Text=""
+    mSearch.TextColor3=cc(SC.textColor)
+    mSearch.Font=Enum.Font.Gotham
+    mSearch.TextSize=12
+    mSearch.ClearTextOnFocus=false
+    Instance.new("UICorner",mSearch).CornerRadius=UDim.new(0,10)
+    local mList=Instance.new("ScrollingFrame",pages["Button"])
+    mList.Size=UDim2.new(1,0,0,300)
+    mList.LayoutOrder=32
+    mList.BackgroundTransparency=1
+    mList.ScrollBarThickness=3
+    mList.CanvasSize=UDim2.new(0,0,0,0)
+    mList.AutomaticCanvasSize=Enum.AutomaticSize.Y
+    local mLayout=Instance.new("UIListLayout",mList)
+    mLayout.SortOrder=Enum.SortOrder.LayoutOrder
+    mLayout.Padding=UDim.new(0,5)
     local refreshManagerFB
-    refreshManagerFB = function(filter)
-        for _, c in ipairs(mList:GetChildren()) do
-            if c:IsA("GuiObject") and c ~= mLayout then c:Destroy() end
+    refreshManagerFB=function(filter)
+        for _,c in ipairs(mList:GetChildren()) do
+            if c:IsA("GuiObject") and c~=mLayout then c:Destroy() end
         end
-        filter = string.lower(filter or "")
-        local i = 0
-        for _, def in ipairs(FBD) do
-            if filter == "" or string.find(string.lower(def.label), filter, 1, true) then
-                i = i + 1
-                local isOn = state.floatEnabledButtons[def.id]
-                local row = Instance.new("Frame", mList)
-                row.Size = UDim2.new(1, 0, 0, 32)
-                row.LayoutOrder = i
-                row.BackgroundColor3 = cc(SC.cardColor)
-                Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
-                local nl = Instance.new("TextLabel", row)
-                nl.Size = UDim2.new(0.6, 0, 1, 0)
-                nl.Position = UDim2.new(0, 10, 0, 0)
-                nl.BackgroundTransparency = 1
-                nl.Text = def.label
-                nl.TextColor3 = cc(SC.textColor)
-                nl.Font = Enum.Font.GothamMedium
-                nl.TextSize = 11.5
-                nl.TextXAlignment = Enum.TextXAlignment.Left
-                local ab = Instance.new("TextButton", row)
-                ab.Size = UDim2.new(0, 62, 0, 24)
-                ab.Position = UDim2.new(1, -70, 0.5, -12)
-                ab.BackgroundColor3 = isOn and Color3.fromRGB(160, 40, 40) or Color3.fromRGB(35, 140, 65)
-                ab.Text = isOn and "Remove" or "Add"
-                ab.TextColor3 = Color3.new(1, 1, 1)
-                ab.Font = Enum.Font.GothamBold
-                ab.TextSize = 10.5
-                Instance.new("UICorner", ab).CornerRadius = UDim.new(0, 6)
+        filter=string.lower(filter or "")
+        local i=0
+        for _,def in ipairs(FBD) do
+            if filter=="" or string.find(string.lower(def.label),filter,1,true) then
+                i=i+1
+                local isOn=state.floatEnabledButtons[def.id]
+                local row=Instance.new("Frame",mList)
+                row.Size=UDim2.new(1,0,0,32)
+                row.LayoutOrder=i
+                row.BackgroundColor3=cc(SC.cardColor)
+                Instance.new("UICorner",row).CornerRadius=UDim.new(0,8)
+                local nl=Instance.new("TextLabel",row)
+                nl.Size=UDim2.new(0.6,0,1,0)
+                nl.Position=UDim2.new(0,10,0,0)
+                nl.BackgroundTransparency=1
+                nl.Text=def.label
+                nl.TextColor3=cc(SC.textColor)
+                nl.Font=Enum.Font.GothamMedium
+                nl.TextSize=11.5
+                nl.TextXAlignment=Enum.TextXAlignment.Left
+                local ab=Instance.new("TextButton",row)
+                ab.Size=UDim2.new(0,62,0,24)
+                ab.Position=UDim2.new(1,-70,0.5,-12)
+                ab.BackgroundColor3=isOn and Color3.fromRGB(160,40,40) or Color3.fromRGB(35,140,65)
+                ab.Text=isOn and "Remove" or "Add"
+                ab.TextColor3=Color3.new(1,1,1)
+                ab.Font=Enum.Font.GothamBold
+                ab.TextSize=10.5
+                Instance.new("UICorner",ab).CornerRadius=UDim.new(0,6)
                 ab.MouseButton1Click:Connect(function()
-                    state.floatEnabledButtons[def.id] = not state.floatEnabledButtons[def.id]
-                    if state.floatEnabledButtons[def.id] then state.floatButtonPositions[def.id] = nil end
+                    state.floatEnabledButtons[def.id]=not state.floatEnabledButtons[def.id]
+                    if state.floatEnabledButtons[def.id] then state.floatButtonPositions[def.id]=nil end
                     RFB()
                     refreshManagerFB(mSearch.Text)
                     saveSettings()
@@ -3813,7 +3502,7 @@ do
     local function rf()
         vl.Text=string.format("%.1fx",SC.selectedScale or 1)
         if _G.__AW_MAINSCALE then
-            TweenService:Create(_G.__AW_MAINSCALE,TweenInfo.new(0.22,EAS),{Scale=SC.selectedScale or 1}):Play()
+            pcall(function() TweenService:Create(_G.__AW_MAINSCALE,TweenInfo.new(0.22,EAS),{Scale=SC.selectedScale or 1}):Play() end)
         end
     end
     mi.MouseButton1Click:Connect(function()
@@ -3843,288 +3532,6 @@ ABN(pages["UI"],"Unload Script",31,function()
     task.wait(0.3)
     if _G.ApplewareUnload then pcall(function() _G.ApplewareUnload() end) end
 end)
-
--- EMOTES TAB (abbreviated - uses same EM table as before)
-ASEC(pages["Emotes"],"Emote Browser",1)
-do
-    local EM={
-        {id=3360689775,name="Salute"},{id=5915779043,name="Applaud"},{id=3360692915,name="Tilt"},
-        {id=3823158750,name="Godlike"},{id=5230661597,name="Bored"},{id=15506503658,name="Victory"},
-        {id=3576717965,name="Shy"},{id=5917570207,name="Floss"},{id=4849502101,name="Sad"},
-        {id=3576968026,name="Shrug"},{id=3576686446,name="Hello"},{id=3762654854,name="Greatest"},
-        {id=4102315500,name="Haha"},{id=3934986896,name="Dizzy"},{id=4212496830,name="Zombie"},
-        {id=4849499887,name="Happy"},{id=4272351660,name="Fast Hands"},{id=4849497510,name="Power Blast"},
-        {id=3994130516,name="Bodybuilder"},{id=5938365243,name="Dolphin"},{id=3576823880,name="Point2"},
-        {id=4940597758,name="Cower"},{id=5104377791,name="Hero Landing"},{id=4646306583,name="Curtsy"},
-        {id=5915776835,name="High Wave"},{id=3360686498,name="Stadium"},{id=4940602656,name="Jump Wave"},
-        {id=7202898984,name="Wrists"},{id=7202900159,name="Wake Up"},{id=79439718544597,name="Default Dance"}
-    }
-    local efG=Instance.new("ScreenGui")
-    efG.Name="AW_EmoteFloats"
-    efG.ResetOnSpawn=false
-    efG.DisplayOrder=999993
-    efG.IgnoreGuiInset=true
-    efG.Enabled=true
-    efG.Parent=PlayerGui
-    emoteFloatButtons={}
-    state.emoteFloatButtons=state.emoteFloatButtons or {}
-    state.emoteFloatPositions=state.emoteFloatPositions or {}
-    local function pEm(id)
-        local h=LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
-        if not h then return end
-        pcall(function() h:PlayEmoteAndGetAnimTrackById(tonumber(id)) end)
-    end
-    local emoteDrag={}
-    local function bEF(id,em)
-        id=tostring(id)
-        if emoteFloatButtons[id] then return end
-        local ou=Instance.new("Frame",efG)
-        ou.AnchorPoint=Vector2.new(0,0)
-        ou.BackgroundTransparency=1
-        ou.Size=UDim2.new(0,60,0,60)
-        ou.Visible=true
-        ou.Active=true
-        local sp=state.emoteFloatPositions[id]
-        if sp then ou.Position=UDim2.new(sp.xScale or 0,sp.xOffset or 20,sp.yScale or 0,sp.yOffset or 200)
-        else ou.Position=UDim2.new(0,20,0,200+#emoteFloatButtons*66) end
-        local bt=Instance.new("TextButton",ou)
-        bt.Size=UDim2.new(1,0,1,0)
-        bt.BackgroundColor3=Color3.fromRGB(20,20,24)
-        bt.BackgroundTransparency=0
-        bt.Text=""
-        bt.AutoButtonColor=false
-        bt.Visible=true
-        bt.Active=true
-        bt.ZIndex=2
-        Instance.new("UICorner",bt).CornerRadius=UDim.new(0,10)
-        local st=Instance.new("UIStroke",bt)
-        st.Color=cc(SC.accentColor)
-        st.Thickness=2
-        st.Transparency=0
-        local img=Instance.new("ImageLabel",bt)
-        img.Size=UDim2.new(0.85,0,0.85,0)
-        img.Position=UDim2.new(0.075,0,0.075,0)
-        img.BackgroundTransparency=1
-        img.Image="rbxthumb://type=Asset&id="..id.."&w=150&h=150"
-        img.ScaleType=Enum.ScaleType.Fit
-        img.ZIndex=3
-        bt.InputBegan:Connect(function(inp)
-            if inp.UserInputType~=Enum.UserInputType.Touch and inp.UserInputType~=Enum.UserInputType.MouseButton1 then return end
-            emoteDrag[id]={start=inp.Position,sp=ou.Position,moved=false}
-        end)
-        UIS.InputChanged:Connect(function(inp)
-            local ds=emoteDrag[id]
-            if not ds then return end
-            if inp.UserInputType~=Enum.UserInputType.Touch and inp.UserInputType~=Enum.UserInputType.MouseMovement then return end
-            local d=inp.Position-ds.start
-            if d.Magnitude>6 then ds.moved=true end
-            if ds.moved then
-                ou.Position=UDim2.new(ds.sp.X.Scale,ds.sp.X.Offset+d.X,ds.sp.Y.Scale,ds.sp.Y.Offset+d.Y)
-            end
-        end)
-        UIS.InputEnded:Connect(function(inp)
-            local ds=emoteDrag[id]
-            if not ds then return end
-            if inp.UserInputType~=Enum.UserInputType.MouseButton1 and inp.UserInputType~=Enum.UserInputType.Touch then return end
-            emoteDrag[id]=nil
-            if ds.moved then
-                state.emoteFloatPositions[id]={xScale=ou.Position.X.Scale,xOffset=ou.Position.X.Offset,yScale=ou.Position.Y.Scale,yOffset=ou.Position.Y.Offset}
-                saveSettings()
-            else
-                pEm(id)
-            end
-        end)
-        emoteFloatButtons[id]={btn=bt,outer=ou,emote=em}
-    end
-    local function rEF(id)
-        id=tostring(id)
-        local r=emoteFloatButtons[id]
-        if r then r.outer:Destroy() emoteFloatButtons[id]=nil end
-    end
-    _G.__AW_EMOTE_FLOAT_REFRESH=function()
-        pcall(function()
-            efG.Enabled=true
-            if not efG.Parent then efG.Parent=PlayerGui end
-        end)
-        for _,r in pairs(emoteFloatButtons) do
-            if r.btn then r.btn.Visible=true end
-            if r.outer then r.outer.Visible=true end
-        end
-    end
-    local tb=Instance.new("TextButton",pages["Emotes"])
-    tb.Size=UDim2.new(1,0,0,42)
-    tb.LayoutOrder=2
-    tb.BackgroundColor3=cc(SC.cardColor)
-    tb.Text=""
-    tb.AutoButtonColor=false
-    Instance.new("UICorner",tb).CornerRadius=UDim.new(0,10)
-    local ts=Instance.new("UIStroke",tb)
-    ts.Color=cc(SC.accentColor)
-    ts.Thickness=1.5
-    ts.Transparency=0.4
-    local tl=Instance.new("TextLabel",tb)
-    tl.Size=UDim2.new(1,-12,1,0)
-    tl.Position=UDim2.new(0,12,0,0)
-    tl.BackgroundTransparency=1
-    tl.Text=state.emoteMenuOpen and "Close Emote Menu" or "Open Emote Menu"
-    tl.TextColor3=cc(SC.accentColor)
-    tl.Font=Enum.Font.GothamBold
-    tl.TextSize=13
-    tl.TextXAlignment=Enum.TextXAlignment.Left
-    local mc=Instance.new("Frame",pages["Emotes"])
-    mc.Size=UDim2.new(1,0,0,0)
-    mc.LayoutOrder=3
-    mc.BackgroundTransparency=1
-    mc.ClipsDescendants=true
-    mc.Visible=false
-    local ml=Instance.new("UIListLayout",mc)
-    ml.SortOrder=Enum.SortOrder.LayoutOrder
-    ml.Padding=UDim.new(0,6)
-    local sb=Instance.new("TextBox",mc)
-    sb.Size=UDim2.new(1,0,0,40)
-    sb.LayoutOrder=1
-    sb.BackgroundColor3=cc(SC.cardColor)
-    sb.PlaceholderText="Search emotes..."
-    sb.PlaceholderColor3=cc(SC.tabTextColor)
-    sb.Text=state.emoteSearch or ""
-    sb.TextColor3=cc(SC.textColor)
-    sb.Font=Enum.Font.Gotham
-    sb.TextSize=13
-    sb.ClearTextOnFocus=false
-    sb.TextXAlignment=Enum.TextXAlignment.Left
-    Instance.new("UICorner",sb).CornerRadius=UDim.new(0,10)
-    local gs=Instance.new("ScrollingFrame",mc)
-    gs.Size=UDim2.new(1,0,0,420)
-    gs.LayoutOrder=2
-    gs.BackgroundColor3=cc(SC.cardColor)
-    gs.BackgroundTransparency=0.5
-    gs.BorderSizePixel=0
-    gs.ScrollBarThickness=3
-    gs.CanvasSize=UDim2.new(0,0,0,0)
-    gs.AutomaticCanvasSize=Enum.AutomaticSize.Y
-    Instance.new("UICorner",gs).CornerRadius=UDim.new(0,10)
-    local gl=Instance.new("UIGridLayout",gs)
-    gl.CellSize=UDim2.new(0,120,0,150)
-    gl.CellPadding=UDim2.new(0,6,0,6)
-    gl.SortOrder=Enum.SortOrder.LayoutOrder
-    local rendered={}
-    local function rG()
-        for _,c in ipairs(rendered) do c:Destroy() end
-        rendered={}
-        local q=string.lower(state.emoteSearch or "")
-        for i,em in ipairs(EM) do
-            if q=="" or string.find(string.lower(em.name),q,1,true) then
-                local card=Instance.new("Frame",gs)
-                card.LayoutOrder=i
-                card.BackgroundColor3=cc(SC.cardColor)
-                Instance.new("UICorner",card).CornerRadius=UDim.new(0,8)
-                local st=Instance.new("UIStroke",card)
-                st.Color=cc(SC.accentColor)
-                st.Thickness=1
-                st.Transparency=0.5
-                local img=Instance.new("ImageLabel",card)
-                img.Size=UDim2.new(1,-8,0,80)
-                img.Position=UDim2.new(0,4,0,4)
-                img.BackgroundTransparency=1
-                img.Image="rbxthumb://type=Asset&id="..em.id.."&w=150&h=150"
-                img.ScaleType=Enum.ScaleType.Fit
-                local nm=Instance.new("TextLabel",card)
-                nm.Size=UDim2.new(1,-8,0,16)
-                nm.Position=UDim2.new(0,4,0,86)
-                nm.BackgroundTransparency=1
-                nm.Text=em.name
-                nm.TextColor3=cc(SC.textColor)
-                nm.Font=Enum.Font.GothamMedium
-                nm.TextSize=10
-                nm.TextTruncate=Enum.TextTruncate.AtEnd
-                nm.TextXAlignment=Enum.TextXAlignment.Left
-                local pb=Instance.new("TextButton",card)
-                pb.Size=UDim2.new(1,-32,0,24)
-                pb.Position=UDim2.new(0,4,0,106)
-                pb.BackgroundColor3=cc(SC.accentColor)
-                pb.Text=">"
-                pb.TextColor3=Color3.new(0,0,0)
-                pb.Font=Enum.Font.GothamBold
-                pb.TextSize=13
-                pb.AutoButtonColor=false
-                Instance.new("UICorner",pb).CornerRadius=UDim.new(0,6)
-                local cb=Instance.new("TextButton",card)
-                cb.Size=UDim2.new(0,24,0,24)
-                cb.Position=UDim2.new(1,-28,0,106)
-                cb.BackgroundColor3=state.emoteFloatButtons[tostring(em.id)] and cc(SC.accentColor) or Color3.fromRGB(30,30,32)
-                cb.Text="*"
-                cb.TextColor3=Color3.new(1,1,1)
-                cb.Font=Enum.Font.GothamBold
-                cb.TextSize=12
-                cb.AutoButtonColor=false
-                Instance.new("UICorner",cb).CornerRadius=UDim.new(1,0)
-                pb.MouseButton1Click:Connect(function() pEm(em.id) end)
-                cb.MouseButton1Click:Connect(function()
-                    local c=state.emoteFloatButtons[tostring(em.id)] and true or false
-                    if c then
-                        state.emoteFloatButtons[tostring(em.id)]=nil
-                        rEF(em.id)
-                        cb.BackgroundColor3=Color3.fromRGB(30,30,32)
-                        _G.__AW_NOTIFY("Removed emote float")
-                    else
-                        state.emoteFloatButtons[tostring(em.id)]=true
-                        bEF(em.id,em)
-                        cb.BackgroundColor3=cc(SC.accentColor)
-                        _G.__AW_NOTIFY("Added emote float: "..em.name)
-                    end
-                    saveSettings()
-                end)
-                table.insert(rendered,card)
-            end
-        end
-    end
-    local sTok=0
-    sb:GetPropertyChangedSignal("Text"):Connect(function()
-        sTok=sTok+1
-        local mt=sTok
-        state.emoteSearch=sb.Text
-        task.delay(0.2,function() if sTok==mt then rG() end end)
-    end)
-    local function rMV()
-        tl.Text=state.emoteMenuOpen and "Close Emote Menu" or "Open Emote Menu"
-        if state.emoteMenuOpen then
-            mc.Visible=true
-            mc.Size=UDim2.new(1,0,0,0)
-            TweenService:Create(mc,TweenInfo.new(0.35,EAB,EAO),{Size=UDim2.new(1,0,0,466)}):Play()
-            rG()
-        else
-            TweenService:Create(mc,TweenInfo.new(0.22,EAS,EAI),{Size=UDim2.new(1,0,0,0)}):Play()
-            task.delay(0.24,function() if not state.emoteMenuOpen then mc.Visible=false end end)
-        end
-    end
-    tb.MouseButton1Click:Connect(function()
-        state.emoteMenuOpen=not state.emoteMenuOpen
-        saveSettings()
-        rMV()
-    end)
-    ABN(pages["Emotes"],"Clear All Emote Floats",4,function()
-        for _,r in pairs(emoteFloatButtons) do pcall(function() r.outer:Destroy() end) end
-        emoteFloatButtons={}
-        state.emoteFloatButtons={}
-        state.emoteFloatPositions={}
-        saveSettings()
-        rG()
-        _G.__AW_NOTIFY("Cleared emote floats")
-    end)
-    task.defer(function()
-        rMV()
-        for idStr,on in pairs(state.emoteFloatButtons or {}) do
-            if on then
-                local idN=tonumber(idStr)
-                if idN then
-                    for _,em in ipairs(EM) do
-                        if em.id==idN then bEF(idN,em) break end
-                    end
-                end
-            end
-        end
-    end)
-end
 
 -- OPEN/CLOSE BUTTON
 fb=Instance.new("TextButton",SG2)
@@ -4370,7 +3777,7 @@ task.spawn(function()
     end
 end)
 
--- =================== FPS BOOSTER ===================
+-- FPS BOOSTER
 task.spawn(function()
     local applied=false
     local saved={}
@@ -4378,7 +3785,7 @@ task.spawn(function()
     local removedParticles={}
     while true do
         task.wait(0.3)
-        if state.fpsBooster then
+        if state.fpsBooster and _G.ApplewareActive ~= false then
             if not applied then
                 applied=true
                 pcall(function()
@@ -4431,7 +3838,6 @@ task.spawn(function()
         end
     end
 end)
--- =====================================================
 
 -- INVISIBILITY
 INVIS_POSITION=Vector3.new(-25.95,84,3537.55)
@@ -4530,7 +3936,7 @@ task.spawn(function()
                     local d=(mr.Position-mm.Position).Magnitude
                     if not dodgeActive and d<=range then
                         dodgeActive=true
-                        _G.__AW_NOTIFY('<font color="#5aaaFF">Auto Dodge activated</font>', 2)
+                        _G.__AW_NOTIFY('<font color="#5aaaFF">Auto Dodge activated</font>',2)
                     elseif dodgeActive and d>range+8 then
                         dodgeActive=false
                     end
@@ -4552,7 +3958,7 @@ task.spawn(function()
     local mvl=0.1
     while true do
         RunService.Heartbeat:Wait()
-        if state.touchFling then
+        if state.touchFling and _G.ApplewareActive ~= false then
             local c=LP.Character
             local hrp=c and c:FindFirstChild("HumanoidRootPart")
             while state.touchFling and not (c and c.Parent and hrp and hrp.Parent) do
@@ -4578,6 +3984,7 @@ end)
 -- AIMBOT
 local CAT=nil
 RunService.RenderStepped:Connect(function(dt)
+    if _G.ApplewareActive==false then return end
     if not al() then CAT=nil return end
     if not (state.aimbotMurderer or state.aimbotSheriff) then CAT=nil return end
     local cm=Workspace.CurrentCamera
@@ -4693,6 +4100,7 @@ task.spawn(function()
     while true do
         local pdl=(tick()<EFU) and 0.02 or 0.1
         task.wait(pdl)
+        if _G.ApplewareActive==false then break end
         if not EF2 or not EF2.Parent then
             EF2=GOE()
             EC={}
@@ -4817,7 +4225,7 @@ task.spawn(function()
                     txt.Font=Enum.Font.GothamBold
                     txt.TextSize=12
                     txt.Parent=bb
-                    GC2[v]={hl=hl, bb=bb}
+                    GC2[v]={hl=hl,bb=bb}
                 end
             end
             for k,v in pairs(GC2) do
@@ -4849,6 +4257,7 @@ end
 task.spawn(function()
     while true do
         task.wait(0.05)
+        if _G.ApplewareActive==false then break end
         if not state.farm and not state.xpFarm then CCFT()
         elseif not al() then CCFT()
         else
@@ -4922,9 +4331,11 @@ task.spawn(function()
     end
 end)
 
+-- AUTO SHOOT LOOP
 task.spawn(function()
     while true do
         task.wait(0.1)
+        if _G.ApplewareActive==false then break end
         if state.autoShootMurderer and IBF() and al() then
             if CFF() and GM() then
                 task.spawn(function() pcall(FSS) end)
@@ -4935,6 +4346,7 @@ end)
 task.spawn(function()
     while true do
         task.wait(0.3)
+        if _G.ApplewareActive==false then break end
         if state.gun and al() then pcall(grabNearestGun) end
     end
 end)
@@ -4961,6 +4373,7 @@ end)
 task.spawn(function()
     while true do
         task.wait(2)
+        if _G.ApplewareActive==false then break end
         if al() and IIR() and IBF() then
             local mr=getPlayerRole(LP)
             local sr=false
@@ -4977,6 +4390,7 @@ end)
 task.spawn(function()
     while true do
         task.wait(1)
+        if _G.ApplewareActive==false then break end
         if al() and not state.xpFarm and IBF() then
             if state.autoKillAll then
                 local k=FT("Knife")
@@ -4988,6 +4402,7 @@ end)
 task.spawn(function()
     while true do
         task.wait(1)
+        if _G.ApplewareActive==false then break end
         if al() and IBF() and (state.loopFlingAll or state.loopFlingMur or state.loopFlingSheriff or state.loopFlingCustom) then
             if state.loopFlingAll then
                 for _,p in ipairs(Players:GetPlayers()) do
@@ -5020,6 +4435,7 @@ end)
 task.spawn(function()
     while true do
         task.wait(0.5)
+        if _G.ApplewareActive==false then break end
         if state.flingAura and al() then
             local mr=LP.Character:FindFirstChild("HumanoidRootPart")
             if mr then
@@ -5036,6 +4452,7 @@ end)
 task.spawn(function()
     while true do
         task.wait(0.4)
+        if _G.ApplewareActive==false then break end
         if state.removeBarriers then
             pcall(function()
                 local parts=collectBarrierParts()
@@ -5049,6 +4466,7 @@ end)
 task.spawn(function()
     while true do
         task.wait(0.15)
+        if _G.ApplewareActive==false then break end
         if state.voidPlatform then
             EVP()
             local r=LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
@@ -5070,6 +4488,7 @@ end)
 task.spawn(function()
     while true do
         task.wait(0.6)
+        if _G.ApplewareActive==false then break end
         if al() and IIR() and IBF() then
             if state.loopTpMap then pcall(function() TTM(true) end) end
             if state.loopTpLobby then pcall(TTL) end
@@ -5084,6 +4503,7 @@ task.spawn(function()
     local LK={"loopFlingAll","loopFlingMur","loopFlingSheriff","loopFlingCustom"}
     while true do
         task.wait(0.25)
+        if _G.ApplewareActive==false then break end
         local nr=IIR()
         if nr and not wr then
             local en={}
@@ -5098,6 +4518,7 @@ task.spawn(function()
     end
 end)
 
+-- HITBOX
 function getHitboxTargets()
     local tg={}
     local md=state.hitboxExpanderTarget or "murderer"
@@ -5181,6 +4602,7 @@ end
 task.spawn(function()
     while true do
         task.wait(0.1)
+        if _G.ApplewareActive==false then break end
         if state.hitboxExpander then
             local tg=getHitboxTargets()
             local ts={}
@@ -5199,6 +4621,7 @@ task.spawn(function()
     end
 end)
 
+-- BARRIERS
 function isBarrierName(n)
     if n=="THICC" or n=="Glitchproof" or n=="Glitch" then return true end
     if n=="KillBrick" or n=="Kill Brick" or n=="KillBricks" then return true end
@@ -5269,7 +4692,7 @@ function lockButtonCertain(idOrLabel,lock)
     saveSettings()
 end
 
--- FPS / PING
+-- FPS/PING
 MG=Instance.new("ScreenGui")
 MG.Name="AW_FPS_Ping"
 MG.ResetOnSpawn=false
@@ -5325,7 +4748,7 @@ do
         while true do
             task.wait(0.5)
             if MG.Enabled then
-                local ok,p=pcall(function() return Stats.Network.ServerStatsItem["Data Ping"]:GetValueString() end)
+                local ok,p=pcall(function() return StatsService.Network.ServerStatsItem["Data Ping"]:GetValueString() end)
                 if ok and p then
                     local n=tonumber(tostring(p):match("%-?%d+")) or 0
                     PL.Text="PING: "..n
@@ -5346,9 +4769,7 @@ task.spawn(function()
     end
 end)
 
--- =====================================================
--- HUD (PC DRAG FIXED)
--- =====================================================
+-- HUD
 HUDG=Instance.new("ScreenGui")
 HUDG.Name="AW_HUD"
 HUDG.ResetOnSpawn=false
@@ -5367,19 +4788,16 @@ HUDF.BorderSizePixel=0
 HUDF.Visible=state.hudEnabled
 HUDF.Active=true
 Instance.new("UICorner",HUDF).CornerRadius=UDim.new(0,10)
-
 local HUDStroke=Instance.new("UIStroke",HUDF)
 HUDStroke.Color=Color3.fromRGB(90,90,95)
 HUDStroke.Thickness=1
 HUDStroke.Transparency=0.3
-
 local HUDAccent=Instance.new("Frame",HUDF)
 HUDAccent.Size=UDim2.new(0,3,1,-16)
 HUDAccent.Position=UDim2.new(0,8,0,8)
 HUDAccent.BackgroundColor3=Color3.fromRGB(190,190,195)
 HUDAccent.BorderSizePixel=0
 Instance.new("UICorner",HUDAccent).CornerRadius=UDim.new(1,0)
-
 HUDLabel=Instance.new("TextLabel",HUDF)
 HUDLabel.Size=UDim2.new(1,-28,1,-14)
 HUDLabel.Position=UDim2.new(0,20,0,8)
@@ -5416,7 +4834,6 @@ UIS.InputEnded:Connect(function(i)
     saveSettings()
 end)
 
--- HUD content updater (fixed: uses proper FPS accumulators)
 do
     local frames=0
     local lastT=tick()
@@ -5429,13 +4846,13 @@ do
                 local fps=math.floor(frames/(now-lastT)+0.5)
                 frames=0
                 lastT=now
-                if HUDF.Visible then
+                if HUDF.Visible and _G.ApplewareActive ~= false then
                     local role="Innocent"
                     pcall(function() role=getPlayerRole(LP) end)
                     local rc=RC(role)
                     local ping=0
                     pcall(function()
-                        local ok,p=pcall(function() return Stats.Network.ServerStatsItem["Data Ping"]:GetValueString() end)
+                        local ok,p=pcall(function() return StatsService.Network.ServerStatsItem["Data Ping"]:GetValueString() end)
                         if ok and p then ping=tonumber(tostring(p):match("%-?%d+")) or 0 end
                     end)
                     local pcount=#Players:GetPlayers()
@@ -5466,6 +4883,7 @@ end
 task.spawn(function()
     while true do
         task.wait(0.5)
+        if _G.ApplewareActive==false then break end
         local tr=ReplicatedStorage:FindFirstChild("Trade")
         if tr then
             local sr=tr:FindFirstChild("SendRequest")
@@ -5488,390 +4906,7 @@ task.spawn(function()
     end
 end)
 
--- PRIVATE CHAT
-local privateChatGui = Instance.new("ScreenGui")
-privateChatGui.Name = "AW_PrivateChat"
-privateChatGui.ResetOnSpawn = false
-privateChatGui.DisplayOrder = 9999998
-privateChatGui.IgnoreGuiInset = true
-pcall(function() privateChatGui.Parent = CoreGui end)
-if not privateChatGui.Parent then privateChatGui.Parent = PlayerGui end
-
-local privateChatFrame = Instance.new("Frame", privateChatGui)
-privateChatFrame.Size = UDim2.new(0, 500, 0, 440)
-privateChatFrame.Position = UDim2.new(0.5, -250, 0.5, -220)
-privateChatFrame.BackgroundColor3 = Color3.fromRGB(6, 6, 8)
-privateChatFrame.BorderSizePixel = 0
-privateChatFrame.Visible = false
-privateChatFrame.Active = true
-privateChatFrame.ClipsDescendants = true
-Instance.new("UICorner", privateChatFrame).CornerRadius = UDim.new(0, 14)
-
-local pcStroke = Instance.new("UIStroke", privateChatFrame)
-pcStroke.Color = Color3.fromRGB(200, 200, 205)
-pcStroke.Thickness = 2
-
-local pcDragBar = Instance.new("TextButton", privateChatFrame)
-pcDragBar.Size = UDim2.new(1, -46, 0, 44)
-pcDragBar.Position = UDim2.new(0, 8, 0, 4)
-pcDragBar.BackgroundTransparency = 1
-pcDragBar.Text = ""
-pcDragBar.ZIndex = 3
-pcDragBar.Active = true
-
-local pcTitle = Instance.new("TextLabel", pcDragBar)
-pcTitle.Size = UDim2.new(1, -80, 0, 20)
-pcTitle.Position = UDim2.new(0, 42, 0, 6)
-pcTitle.BackgroundTransparency = 1
-pcTitle.Text = "AppleWare Private Chat"
-pcTitle.TextColor3 = Color3.fromRGB(235, 235, 240)
-pcTitle.Font = Enum.Font.GothamBold
-pcTitle.TextSize = 15
-pcTitle.TextXAlignment = Enum.TextXAlignment.Left
-
-local pcSubtitle = Instance.new("TextLabel", pcDragBar)
-pcSubtitle.Size = UDim2.new(1, -80, 0, 14)
-pcSubtitle.Position = UDim2.new(0, 42, 0, 24)
-pcSubtitle.BackgroundTransparency = 1
-pcSubtitle.Text = "https://awh.filho.wtf"
-pcSubtitle.TextColor3 = Color3.fromRGB(140, 140, 145)
-pcSubtitle.Font = Enum.Font.Gotham
-pcSubtitle.TextSize = 10
-pcSubtitle.TextXAlignment = Enum.TextXAlignment.Left
-
-local pcClose = Instance.new("TextButton", privateChatFrame)
-pcClose.Size = UDim2.new(0, 30, 0, 30)
-pcClose.Position = UDim2.new(1, -36, 0, 8)
-pcClose.BackgroundColor3 = Color3.fromRGB(40, 40, 44)
-pcClose.Text = "X"
-pcClose.TextColor3 = Color3.new(1, 1, 1)
-pcClose.Font = Enum.Font.GothamBold
-pcClose.TextSize = 14
-pcClose.AutoButtonColor = false
-Instance.new("UICorner", pcClose).CornerRadius = UDim.new(0, 8)
-pcClose.MouseButton1Click:Connect(function() privateChatFrame.Visible = false end)
-
-local pcDragState = nil
-pcDragBar.InputBegan:Connect(function(i)
-    if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-        pcDragState = { start = i.Position, startPos = privateChatFrame.Position }
-    end
-end)
-UIS.InputChanged:Connect(function(i)
-    if not pcDragState then return end
-    if i.UserInputType ~= Enum.UserInputType.MouseMovement and i.UserInputType ~= Enum.UserInputType.Touch then return end
-    local d = i.Position - pcDragState.start
-    privateChatFrame.Position = UDim2.new(
-        pcDragState.startPos.X.Scale, pcDragState.startPos.X.Offset + d.X,
-        pcDragState.startPos.Y.Scale, pcDragState.startPos.Y.Offset + d.Y
-    )
-end)
-UIS.InputEnded:Connect(function(i)
-    if not pcDragState then return end
-    if i.UserInputType ~= Enum.UserInputType.MouseButton1 and i.UserInputType ~= Enum.UserInputType.Touch then return end
-    pcDragState = nil
-end)
-
-local pcTabRow = Instance.new("Frame", privateChatFrame)
-pcTabRow.Size = UDim2.new(1, -20, 0, 32)
-pcTabRow.Position = UDim2.new(0, 10, 0, 54)
-pcTabRow.BackgroundTransparency = 1
-local pcTabChat = Instance.new("TextButton", pcTabRow)
-pcTabChat.Size = UDim2.new(0, 110, 1, 0)
-pcTabChat.Text = "Chat"
-pcTabChat.Font = Enum.Font.GothamBold
-pcTabChat.TextSize = 12
-pcTabChat.AutoButtonColor = false
-Instance.new("UICorner", pcTabChat).CornerRadius = UDim.new(0, 8)
-local pcTabCmds = Instance.new("TextButton", pcTabRow)
-pcTabCmds.Size = UDim2.new(0, 110, 1, 0)
-pcTabCmds.Position = UDim2.new(0, 116, 0, 0)
-pcTabCmds.Text = "Commands"
-pcTabCmds.Font = Enum.Font.GothamBold
-pcTabCmds.TextSize = 12
-pcTabCmds.AutoButtonColor = false
-Instance.new("UICorner", pcTabCmds).CornerRadius = UDim.new(0, 8)
-
-local pcBody = Instance.new("Frame", privateChatFrame)
-pcBody.Size = UDim2.new(1, -20, 1, -152)
-pcBody.Position = UDim2.new(0, 10, 0, 92)
-pcBody.BackgroundColor3 = Color3.fromRGB(12, 12, 14)
-pcBody.BorderSizePixel = 0
-pcBody.ClipsDescendants = true
-Instance.new("UICorner", pcBody).CornerRadius = UDim.new(0, 10)
-
-local pcChatPage = Instance.new("Frame", pcBody)
-pcChatPage.Size = UDim2.new(1, 0, 1, 0)
-pcChatPage.BackgroundTransparency = 1
-pcChatPage.Visible = true
-local pcScroll = Instance.new("ScrollingFrame", pcChatPage)
-pcScroll.Size = UDim2.new(1, 0, 1, 0)
-pcScroll.BackgroundTransparency = 1
-pcScroll.BorderSizePixel = 0
-pcScroll.ScrollBarThickness = 4
-pcScroll.ScrollBarImageColor3 = Color3.fromRGB(160, 160, 165)
-pcScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-pcScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-local pcLayout = Instance.new("UIListLayout", pcScroll)
-pcLayout.SortOrder = Enum.SortOrder.LayoutOrder
-pcLayout.Padding = UDim.new(0, 6)
-local pcPad2 = Instance.new("UIPadding", pcScroll)
-pcPad2.PaddingTop = UDim.new(0, 10)
-pcPad2.PaddingBottom = UDim.new(0, 10)
-pcPad2.PaddingLeft = UDim.new(0, 12)
-pcPad2.PaddingRight = UDim.new(0, 12)
-
-local pcCmdsPage = Instance.new("Frame", pcBody)
-pcCmdsPage.Size = UDim2.new(1, 0, 1, 0)
-pcCmdsPage.BackgroundTransparency = 1
-pcCmdsPage.Visible = false
-local pcCmdScroll = Instance.new("ScrollingFrame", pcCmdsPage)
-pcCmdScroll.Size = UDim2.new(1, 0, 1, 0)
-pcCmdScroll.BackgroundTransparency = 1
-pcCmdScroll.ScrollBarThickness = 4
-pcCmdScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-pcCmdScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-local pcCmdLayout = Instance.new("UIListLayout", pcCmdScroll)
-pcCmdLayout.SortOrder = Enum.SortOrder.LayoutOrder
-pcCmdLayout.Padding = UDim.new(0, 4)
-local pcCmdPad = Instance.new("UIPadding", pcCmdScroll)
-pcCmdPad.PaddingTop = UDim.new(0, 10)
-pcCmdPad.PaddingBottom = UDim.new(0, 10)
-pcCmdPad.PaddingLeft = UDim.new(0, 12)
-pcCmdPad.PaddingRight = UDim.new(0, 12)
-
-local pcStatusBar = Instance.new("Frame", privateChatFrame)
-pcStatusBar.Size = UDim2.new(1, -20, 0, 18)
-pcStatusBar.Position = UDim2.new(0, 10, 1, -50)
-pcStatusBar.BackgroundTransparency = 1
-local pcStatus = Instance.new("TextLabel", pcStatusBar)
-pcStatus.Size = UDim2.new(1, 0, 1, 0)
-pcStatus.BackgroundTransparency = 1
-pcStatus.Text = "connecting..."
-pcStatus.TextColor3 = Color3.fromRGB(140, 140, 145)
-pcStatus.Font = Enum.Font.Gotham
-pcStatus.TextSize = 10
-pcStatus.TextXAlignment = Enum.TextXAlignment.Left
-
-local pcInputWrap = Instance.new("Frame", privateChatFrame)
-pcInputWrap.Size = UDim2.new(1, -20, 0, 38)
-pcInputWrap.Position = UDim2.new(0, 10, 1, -38)
-pcInputWrap.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
-Instance.new("UICorner", pcInputWrap).CornerRadius = UDim.new(0, 10)
-local pcInputStroke = Instance.new("UIStroke", pcInputWrap)
-pcInputStroke.Color = Color3.fromRGB(60, 60, 65)
-pcInputStroke.Thickness = 1
-
-local pcInput = Instance.new("TextBox", pcInputWrap)
-pcInput.Size = UDim2.new(1, -16, 1, 0)
-pcInput.Position = UDim2.new(0, 12, 0, 0)
-pcInput.BackgroundTransparency = 1
-pcInput.PlaceholderText = "Type a message or .command..."
-pcInput.PlaceholderColor3 = Color3.fromRGB(120, 120, 125)
-pcInput.Text = ""
-pcInput.TextColor3 = Color3.new(1, 1, 1)
-pcInput.Font = Enum.Font.Gotham
-pcInput.TextSize = 12
-pcInput.ClearTextOnFocus = false
-pcInput.TextXAlignment = Enum.TextXAlignment.Left
-
-local pcMsgCount = 0
-local seenMsgIds = {}
-local function addPrivateMessage(sender, message, isSystem, msgId)
-    if msgId and seenMsgIds[msgId] then return end
-    if msgId then seenMsgIds[msgId] = true end
-    pcMsgCount = pcMsgCount + 1
-    local isOwn = (sender == LP.Name or sender == LP.DisplayName)
-    local msg = Instance.new("Frame", pcScroll)
-    msg.Size = UDim2.new(1, -12, 0, 24)
-    msg.BackgroundTransparency = 1
-    msg.LayoutOrder = pcMsgCount
-    local bubble = Instance.new("Frame", msg)
-    bubble.AnchorPoint = isOwn and Vector2.new(1, 0) or Vector2.new(0, 0)
-    bubble.Position = isOwn and UDim2.new(1, 0, 0, 0) or UDim2.new(0, 0, 0, 0)
-    bubble.AutomaticSize = Enum.AutomaticSize.X
-    bubble.Size = UDim2.new(0, 0, 1, 0)
-    bubble.BackgroundColor3 = isSystem and Color3.fromRGB(50, 40, 20) or (isOwn and Color3.fromRGB(30, 60, 40) or Color3.fromRGB(24, 24, 28))
-    Instance.new("UICorner", bubble).CornerRadius = UDim.new(0, 10)
-    local bpad = Instance.new("UIPadding", bubble)
-    bpad.PaddingLeft = UDim.new(0, 10)
-    bpad.PaddingRight = UDim.new(0, 10)
-    local lbl = Instance.new("TextLabel", bubble)
-    lbl.BackgroundTransparency = 1
-    lbl.AutomaticSize = Enum.AutomaticSize.X
-    lbl.Size = UDim2.new(0, 0, 1, 0)
-    lbl.Text = tostring(sender) .. ": " .. tostring(message)
-    lbl.TextColor3 = isSystem and Color3.fromRGB(255, 200, 100) or (isOwn and Color3.fromRGB(200, 255, 210) or Color3.fromRGB(215, 215, 220))
-    lbl.Font = Enum.Font.Gotham
-    lbl.TextSize = 12
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.TextWrapped = true
-    task.defer(function()
-        if pcScroll and pcScroll.Parent then
-            pcScroll.CanvasPosition = Vector2.new(0, math.max(0, pcScroll.AbsoluteCanvasSize.Y - pcScroll.AbsoluteWindowSize.Y))
-        end
-    end)
-end
-
-local pcActiveTab = "chat"
-local function setPcTab(t)
-    pcActiveTab = t
-    pcChatPage.Visible = (t == "chat")
-    pcCmdsPage.Visible = (t == "cmds")
-    pcInputWrap.Visible = (t == "chat")
-    local function style(btn, active)
-        if active then
-            btn.BackgroundColor3 = Color3.fromRGB(190, 190, 195)
-            btn.TextColor3 = Color3.new(0, 0, 0)
-        else
-            btn.BackgroundColor3 = Color3.fromRGB(30, 30, 34)
-            btn.TextColor3 = Color3.new(1, 1, 1)
-        end
-    end
-    style(pcTabChat, t == "chat")
-    style(pcTabCmds, t == "cmds")
-end
-pcTabChat.MouseButton1Click:Connect(function() setPcTab("chat") end)
-pcTabCmds.MouseButton1Click:Connect(function() setPcTab("cmds") end)
-
-local helpEntries = {
-    {"General","header"},
-    {".help","Open Commands tab"},
-    {".showui / .hideui","Show/hide main UI"},
-    {".private","Toggle private chat"},
-    {".unload","Unload the entire script"},
-    {"Combat","header"},
-    {".aimbot [sheriff]","Toggle aimbot"},
-    {".silentaim","Toggle silent aim"},
-    {".shoot","Fire at murderer"},
-    {".shootwall","Shoot through walls"},
-    {".fling <user>","Fling a player"},
-    {".flingall / .flingmur","Fling all / murderer"},
-    {".killsher / .killall / .killcust","Kill sheriff / all / custom (knife)"},
-    {"Movement","header"},
-    {".fly / .noclip","Toggle fly / noclip"},
-    {".speed <n>","Set walk speed"},
-    {".jump <n>","Set jump power"},
-    {"Teleport","header"},
-    {".tpmap / .tplobby","TP to map / lobby"},
-    {".tpmur / .tpsher","TP to murderer / sheriff"},
-    {".to <user>","TP to a player by username or display name"},
-    {"Utility","header"},
-    {".grabgun","Grab nearest gun"},
-    {".removebarriers","Remove barriers"},
-    {".reset","Reset character"},
-    {".invisible","Toggle invisible"},
-    {".hud","Toggle HUD"},
-    {".antifling","Toggle anti-fling"},
-    {".radioabuse","Toggle radio spam"},
-    {".rj","Rejoin the current server"},
-    {".shop","Server hop to a random server"}
-}
-for i, entry in ipairs(helpEntries) do
-    local n, d = entry[1], entry[2]
-    local row = Instance.new("Frame", pcCmdScroll)
-    row.LayoutOrder = i
-    row.BackgroundTransparency = 1
-    if d == "header" then
-        row.Size = UDim2.new(1, 0, 0, 26)
-        local tl = Instance.new("TextLabel", row)
-        tl.Size = UDim2.new(1, 0, 1, 0)
-        tl.BackgroundTransparency = 1
-        tl.Text = "-- " .. n .. " --"
-        tl.TextColor3 = Color3.fromRGB(200, 200, 205)
-        tl.Font = Enum.Font.GothamBold
-        tl.TextSize = 12
-        tl.TextXAlignment = Enum.TextXAlignment.Left
-    else
-        row.Size = UDim2.new(1, 0, 0, 20)
-        local cl = Instance.new("TextLabel", row)
-        cl.Size = UDim2.new(0, 180, 1, 0)
-        cl.BackgroundTransparency = 1
-        cl.Text = n
-        cl.TextColor3 = Color3.fromRGB(120, 255, 140)
-        cl.Font = Enum.Font.Code
-        cl.TextSize = 12
-        cl.TextXAlignment = Enum.TextXAlignment.Left
-        local dl = Instance.new("TextLabel", row)
-        dl.Size = UDim2.new(1, -190, 1, 0)
-        dl.Position = UDim2.new(0, 190, 0, 0)
-        dl.BackgroundTransparency = 1
-        dl.Text = d
-        dl.TextColor3 = Color3.fromRGB(180, 180, 185)
-        dl.Font = Enum.Font.Gotham
-        dl.TextSize = 11
-        dl.TextXAlignment = Enum.TextXAlignment.Left
-    end
-end
-setPcTab("chat")
-
-local RELAY_URL = state.privateChatRelayUrl or "https://api.npoint.io/795defab3ba6f023d5bc"
-local function httpGetJson(url)
-    local ok, res = pcall(function()
-        if syn and syn.request then return syn.request({Url=url, Method="GET"})
-        elseif request then return request({Url=url, Method="GET"})
-        elseif http_request then return http_request({Url=url, Method="GET"})
-        else return {Body = game:HttpGet(url)} end
-    end)
-    if not ok or not res then return nil end
-    local body = type(res) == "table" and (res.Body or res.body) or res
-    if type(body) ~= "string" or body == "" then return nil end
-    local parseOk, data = pcall(function() return HttpService:JSONDecode(body) end)
-    if not parseOk or type(data) ~= "table" then return nil end
-    return data
-end
-local function httpPostJson(url, tbl)
-    local body = HttpService:JSONEncode(tbl)
-    local ok, res = pcall(function()
-        if syn and syn.request then return syn.request({Url=url, Method="POST", Headers={["Content-Type"]="application/json"}, Body=body})
-        elseif request then return request({Url=url, Method="POST", Headers={["Content-Type"]="application/json"}, Body=body})
-        elseif http_request then return http_request({Url=url, Method="POST", Headers={["Content-Type"]="application/json"}, Body=body})
-        else return {Body = game:HttpGet(url, true, body)} end
-    end)
-    return ok, res
-end
-local function sendToRelay(name, message)
-    task.spawn(function()
-        task.wait(math.random() * 0.5)
-        local data = httpGetJson(RELAY_URL) or {}
-        local msgs = data.messages
-        if type(msgs) ~= "table" then msgs = {} end
-        local entry = {
-            id = tostring(tick()) .. "_" .. tostring(math.random(100000, 999999)),
-            name = tostring(name),
-            message = tostring(message),
-            ts = os.time()
-        }
-        table.insert(msgs, entry)
-        while #msgs > 200 do table.remove(msgs, 1) end
-        local ok = httpPostJson(RELAY_URL, {messages = msgs})
-        if ok then pcStatus.Text = "Sent " .. os.date("%H:%M:%S")
-        else pcStatus.Text = "Send failed" end
-    end)
-end
-task.spawn(function()
-    while true do
-        task.wait(3)
-        local data = httpGetJson(RELAY_URL)
-        if data and type(data.messages) == "table" then
-            for _, entry in ipairs(data.messages) do
-                if type(entry) == "table" and entry.id and entry.name and entry.message then
-                    local id = tostring(entry.id)
-                    if not seenMsgIds[id] and entry.name ~= LP.Name then
-                        addPrivateMessage(entry.name, entry.message, false, id)
-                    elseif not seenMsgIds[id] and entry.name == LP.Name then
-                        seenMsgIds[id] = true
-                    end
-                end
-            end
-            pcStatus.Text = "Synced " .. os.date("%H:%M:%S")
-        end
-    end
-end)
-
--- =============================================================
--- COMMAND PROCESSOR (with FIXED .shop)
--- =============================================================
+-- COMMAND PROCESSOR
 _G.__AW_RUN_COMMAND = function(raw)
     if not raw or raw == "" then return end
     if _G.ApplewareActive == false then return end
@@ -5883,6 +4918,7 @@ _G.__AW_RUN_COMMAND = function(raw)
     local function toggle(key, label)
         state[key] = not state[key]
         _G.__AW_NOTIFY('<font color="'..(state[key] and "#5aff8c" or "#ff5a5a")..'">'..(label or key)..'</font> '..(state[key] and "on" or "off"))
+        if FBM[key] then RFV(FBM[key]) end
         saveSettings()
     end
     local function turnOff(key, label)
@@ -5956,14 +4992,11 @@ _G.__AW_RUN_COMMAND = function(raw)
         _G.__AW_NOTIFY("Loop teleports off")
     elseif cmd == "unsheriff" then turnOff("sheriffFlickToggle","Sheriff Flick")
     elseif cmd == "help" or cmd == "h" or cmd == "?" then
-        if not privateChatFrame.Visible then privateChatFrame.Visible = true end
-        setPcTab("cmds")
+        _G.__AW_NOTIFY("Commands: .fly .noclip .speed .jump .aimbot .silentaim .shoot .flingall .killsher .tpmap .tpmur .to <user> .grabgun .removebarriers .reset .hud .antifling .fpsbooster .rj .shop .unload .showui .hideui")
     elseif cmd == "showui" then
         if _G.__AW_SHOWUI then _G.__AW_SHOWUI() end
     elseif cmd == "hideui" then
         if _G.__AW_HIDEUI then _G.__AW_HIDEUI() end
-    elseif cmd == "private" or cmd == "pc" then
-        privateChatFrame.Visible = not privateChatFrame.Visible
     elseif cmd == "unload" then
         _G.__AW_NOTIFY("Unloading...")
         task.wait(0.3)
@@ -6051,33 +5084,12 @@ _G.__AW_RUN_COMMAND = function(raw)
         pcall(function()
             TeleportService:TeleportToPlaceInstance(PlaceId, game.JobId, LP)
         end)
-    -- ============= FIXED .shop COMMAND =============
     elseif cmd == "shop" then
         _G.__AW_NOTIFY("Server hopping...")
         task.spawn(function()
-            local function doTeleport(servers)
-                if not servers or #servers == 0 then
-                    _G.__AW_NOTIFY("No available server found.")
-                    return false
-                end
-                local pick = servers[math.random(1, #servers)]
-                if not pick or not pick.id then
-                    _G.__AW_NOTIFY("Invalid server data.")
-                    return false
-                end
-                local ok, err = pcall(function()
-                    TeleportService:TeleportToPlaceInstance(PlaceId, pick.id, LP)
-                end)
-                if not ok then
-                    _G.__AW_NOTIFY("Teleport failed: "..tostring(err))
-                    return false
-                end
-                return true
-            end
             local url = ("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100"):format(PlaceId)
             local body
-            -- Try multiple HTTP methods, in order of preference
-            local ok1 = pcall(function()
+            pcall(function()
                 if syn and syn.request then
                     local r = syn.request({Url=url, Method="GET"})
                     if r and r.Body then body = r.Body end
@@ -6103,7 +5115,7 @@ _G.__AW_RUN_COMMAND = function(raw)
                 pcall(function() body = game:HttpGet(url) end)
             end
             if not body then
-                _G.__AW_NOTIFY("HTTP request blocked by executor.")
+                _G.__AW_NOTIFY("HTTP blocked by executor.")
                 return
             end
             local ok2, data = pcall(function() return HttpService:JSONDecode(body) end)
@@ -6122,32 +5134,22 @@ _G.__AW_RUN_COMMAND = function(raw)
                 end
             end
             if #avail == 0 then
-                -- fallback: just rejoin current
                 _G.__AW_NOTIFY("No open servers. Rejoining current...")
                 pcall(function() TeleportService:Teleport(PlaceId, LP) end)
                 return
             end
-            doTeleport(avail)
+            local pick = avail[math.random(1,#avail)]
+            local okT, errT = pcall(function()
+                TeleportService:TeleportToPlaceInstance(PlaceId, pick.id, LP)
+            end)
+            if not okT then _G.__AW_NOTIFY("Teleport failed: "..tostring(errT)) end
         end)
-    -- ================================================
     elseif cmd == "reset" then
         local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
         if h then h.Health = 0 end
     elseif cmd == "invisible" or cmd == "inv" then toggle("invisibleEnabled","Invisible")
     else _G.__AW_NOTIFY("Unknown: ."..cmd) end
 end
-
-pcInput.FocusLost:Connect(function(enterPressed)
-    if not enterPressed or pcInput.Text == "" then return end
-    local msg = pcInput.Text
-    pcInput.Text = ""
-    if string.sub(msg, 1, 1) == "." then
-        pcall(_G.__AW_RUN_COMMAND, msg)
-        return
-    end
-    addPrivateMessage(LP.Name, msg, false)
-    sendToRelay(LP.Name, msg)
-end)
 
 LP.Chatted:Connect(function(msg)
     if string.sub(msg, 1, 1) == "." then
