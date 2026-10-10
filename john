@@ -1,4 +1,4 @@
--- Appleware (PC Optimized Build with all fixes)
+-- Appleware (PC Optimized Build - Fully Fixed)
 if _G.ApplewareLoaded and _G.ApplewareUnload then
     local r=nil
     local pg=Instance.new("ScreenGui") pg.Name="AW_ReloadPrompt" pg.ResetOnSpawn=false pg.DisplayOrder=9999999 pg.IgnoreGuiInset=true
@@ -347,8 +347,6 @@ local BK=Color3.new(0,0,0)
 
 -- ============================================================
 -- PC-OPTIMIZED DRAG HELPER
--- Uses UIS.InputChanged (not target.InputChanged) so it works
--- reliably on PC with MouseButton1 + MouseMovement.
 -- ============================================================
 local function makeDraggable(target, opts)
     opts = opts or {}
@@ -772,9 +770,7 @@ local function getPlayerRole(plr)
     return "Innocent"
 end
 
--- ============================================================
 -- MURDERER PERK DETECTION
--- ============================================================
 local PERK_KEYS = {"Perk","perk","MurdererPerk","murdererPerk","EquippedPerk","PerkName","PerkId","ActivePerk","Power"}
 local function getMurdererPerk(plr)
     if not plr then return nil end
@@ -821,9 +817,17 @@ local function getMurdererPerk(plr)
     return nil
 end
 
--- ============================================================
--- MURDERER PERK NOTIFIER
--- ============================================================
+local function FPBR(r)
+    for _,p in ipairs(Players:GetPlayers()) do
+        if p~=LP and p.Character and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health>0 and getPlayerRole(p)==r then
+            return p
+        end
+    end
+    return nil
+end
+local function GM() return FPBR("Murderer") end
+
+-- MURDERER PERK NOTIFIER (below GM definition - fixed)
 task.spawn(function()
     local lastMurderer, lastPerk = nil, nil
     while true do
@@ -851,16 +855,6 @@ task.spawn(function()
         end
     end
 end)
-
-local function FPBR(r)
-    for _,p in ipairs(Players:GetPlayers()) do
-        if p~=LP and p.Character and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health>0 and getPlayerRole(p)==r then
-            return p
-        end
-    end
-    return nil
-end
-local function GM() return FPBR("Murderer") end
 
 GUN={"Gun","Revolver","Pistol"}
 local function PHG(p)
@@ -1401,9 +1395,7 @@ local function TSM()
 end
 local function FSS() return TSM() end
 
--- ============================================================
--- FIXED SILENT AIM WALL CHECK with notification + auto-shoot
--- ============================================================
+-- SILENT AIM WALL CHECK with notification + auto-shoot
 local wallCheckWaiting = false
 local function FSSUserTriggered()
     if not state.shootThroughWall and state.silentAimWallCheck then
@@ -1869,10 +1861,7 @@ task.spawn(function()
     end
 end)
 
--- ============================================================
 -- FPS BOOSTER
--- Disables shadows, post-effects, particles, terrain details
--- ============================================================
 local fpsBoosterState = {
     savedShadows = nil,
     savedEffects = nil,
@@ -1927,9 +1916,6 @@ local function applyFPSBooster()
             end
             if p:IsA("BasePart") then
                 p.CastShadow = false
-            end
-            if p:IsA("Decal") or p:IsA("Texture") then
-                -- leave textures alone, they don't hurt much
             end
         end)
     end
@@ -2031,7 +2017,7 @@ if shouldShowWhatsNew then
         wnBodyLayout.Padding = UDim.new(0, 10)
         local whatsNewItems = {
             {"PC Optimizations", "All buttons, HUD and windows now drag properly on PC with mouse."},
-            {"FPS Booster", "New toggle in Misc tab - disables shadows, particles, post FX for higher FPS."},
+            {"FPS Booster", "New toggle in Misc - disables shadows, particles, post FX for higher FPS."},
             {"Murderer Perk Notify", "New toggle that alerts you what perk the murderer has."},
             {"Silent Aim Wall Check", "Shows 'Waiting for visible murderer...' then auto-shoots once visible."},
             {"Fixed .shop", "Robust server hop - tries multiple HTTP methods and both sort orders."},
@@ -2136,7 +2122,6 @@ RTV.Text="0:00"
 RTV.TextColor3=Color3.new(1,1,1)
 RTV.Font=Enum.Font.GothamBold
 RTV.TextSize=22
-makeDraggable(RTF)
 
 -- Big shoot button
 BGI=Instance.new("ScreenGui")
@@ -2193,20 +2178,16 @@ local function RSW()
     end)
 end
 
--- PC-OPTIMIZED BIG BUTTON DRAG (works with mouse + touch)
-local bigBtnMoved = false
-makeDraggable(BB, {
+-- Big button drag (drags wrapper BW, not inner BB)
+makeDraggable(BW, {
     threshold = 8,
     canDrag = function() return isIdLocked("bigShootButton") end,
     onEnd = function(moved)
-        bigBtnMoved = moved
         if moved then
             state.bigButtonX = BW.Position.X.Scale
             state.bigButtonY = BW.Position.Y.Scale
             saveSettings()
         else
-            state.bigButtonX = BW.Position.X.Scale
-            state.bigButtonY = BW.Position.Y.Scale
             RSW()
             if state.animationsEnabled then
                 local s=Instance.new("UIScale",BW)
@@ -2217,10 +2198,6 @@ makeDraggable(BB, {
         end
     end
 })
--- keep BW wrapper in sync with BB position
-BB:GetPropertyChangedSignal("Position"):Connect(function()
-    -- BW is the parent; BB moves inside it. We instead move BW.
-end)
 
 -- Floating buttons
 FG=Instance.new("ScreenGui")
@@ -2386,7 +2363,6 @@ local function RFB()
             attachSpin(in2,iO)
             FBs[d.id]={def=d,btn=bt,inner=in2}
             RFV(d)
-            -- PC-optimized drag
             makeDraggable(bt, {
                 threshold = 6,
                 canDrag = function() return isIdLocked(d.id) end,
@@ -2436,6 +2412,7 @@ local function SFV(v)
     end
     if _G.__AW_EMOTE_FLOAT_REFRESH then pcall(_G.__AW_EMOTE_FLOAT_REFRESH) end
 end
+RFB()
 
 -- Main UI
 SG2=Instance.new("ScreenGui")
@@ -2478,7 +2455,6 @@ task.spawn(function()
     end
 end)
 
--- PC-optimized main window drag (via drag bar)
 DRS=Instance.new("TextButton",MN)
 DRS.Size=UDim2.new(1,-140,0,34)
 DRS.Position=UDim2.new(0,140,0,0)
@@ -2486,25 +2462,7 @@ DRS.BackgroundTransparency=1
 DRS.Text=""
 DRS.ZIndex=20
 
-makeDraggable(DRS, {
-    threshold = 4,
-    onMove = function()
-        MW.Position = UDim2.new(
-            MW.Position.X.Scale,
-            MW.Position.X.Offset,
-            MW.Position.Y.Scale,
-            MW.Position.Y.Offset
-        )
-    end,
-    onEnd = function(moved)
-        state.mainX = MW.Position.X.Scale
-        state.mainY = MW.Position.Y.Scale
-        saveSettings()
-    end
-})
-
--- Note: makeDraggable moves DRS which is inside MN inside MW.
--- We need MW to move instead. Instead use a dedicated drag handler:
+-- Main window drag (single handler, PC-safe)
 local mwDragging, mwStart, mwStartPos = false, nil, nil
 DRS.InputBegan:Connect(function(i)
     if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
@@ -4012,7 +3970,7 @@ ABN(pages["UI"],"Unload Script",31,function()
     if _G.ApplewareUnload then pcall(function() _G.ApplewareUnload() end) end
 end)
 
--- EMOTES TAB (abbreviated but functional)
+-- EMOTES TAB (abbreviated)
 ASEC(pages["Emotes"],"Emote Browser",1)
 do
     local EM={
@@ -5397,7 +5355,7 @@ do
     end)
 end
 
--- HUD (with PC-optimized drag)
+-- HUD
 HUDG=Instance.new("ScreenGui")
 HUDG.Name="AW_HUD"
 HUDG.ResetOnSpawn=false
@@ -5442,7 +5400,6 @@ HUDLabel.TextYAlignment=Enum.TextYAlignment.Top
 HUDLabel.RichText=true
 HUDLabel.TextWrapped=true
 
--- PC-optimized HUD drag
 local hudStart, hudStartPos, hudDragging = nil, nil, false
 HUDF.InputBegan:Connect(function(i)
     if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
@@ -5466,8 +5423,6 @@ UIS.InputEnded:Connect(function(i)
     if not hudDragging then return end
     if i.UserInputType~=Enum.UserInputType.MouseButton1 and i.UserInputType~=Enum.UserInputType.Touch then return end
     hudDragging = false
-    local cam = Workspace.CurrentCamera
-    local vw = cam and cam.ViewportSize.X or 1920
     state.hudX = math.clamp(HUDF.Position.X.Scale, 0, 1)
     state.hudY = math.clamp(HUDF.Position.Y.Scale, 0, 1)
     saveSettings()
@@ -5544,7 +5499,7 @@ task.spawn(function()
     end
 end)
 
--- PRIVATE CHAT (with PC-optimized drag)
+-- PRIVATE CHAT
 local privateChatGui = Instance.new("ScreenGui")
 privateChatGui.Name = "AW_PrivateChat"
 privateChatGui.ResetOnSpawn = false
@@ -5562,14 +5517,6 @@ privateChatFrame.Visible = false
 privateChatFrame.Active = true
 privateChatFrame.ClipsDescendants = true
 Instance.new("UICorner", privateChatFrame).CornerRadius = UDim.new(0, 14)
-
-local pcGradient = Instance.new("UIGradient", privateChatFrame)
-pcGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(10, 10, 14)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(6, 6, 8)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(4, 4, 6))
-})
-pcGradient.Rotation = 45
 
 local pcStroke = Instance.new("UIStroke", privateChatFrame)
 pcStroke.Color = Color3.fromRGB(200, 200, 205)
@@ -5596,7 +5543,7 @@ local pcSubtitle = Instance.new("TextLabel", pcDragBar)
 pcSubtitle.Size = UDim2.new(1, -80, 0, 14)
 pcSubtitle.Position = UDim2.new(0, 42, 0, 24)
 pcSubtitle.BackgroundTransparency = 1
-pcSubtitle.Text = "https://awh.filho.wt"
+pcSubtitle.Text = "https://awh.filho.wtf"
 pcSubtitle.TextColor3 = Color3.fromRGB(140, 140, 145)
 pcSubtitle.Font = Enum.Font.Gotham
 pcSubtitle.TextSize = 10
@@ -5614,7 +5561,6 @@ pcClose.AutoButtonColor = false
 Instance.new("UICorner", pcClose).CornerRadius = UDim.new(0, 8)
 pcClose.MouseButton1Click:Connect(function() privateChatFrame.Visible = false end)
 
--- PC-optimized private chat drag
 local pcStart, pcStartPos, pcDragging = nil, nil, false
 pcDragBar.InputBegan:Connect(function(i)
     if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
@@ -5638,7 +5584,6 @@ UIS.InputEnded:Connect(function(i)
     pcDragging = false
 end)
 
--- private chat body
 local pcTabRow = Instance.new("Frame", privateChatFrame)
 pcTabRow.Size = UDim2.new(1, -20, 0, 32)
 pcTabRow.Position = UDim2.new(0, 10, 0, 54)
