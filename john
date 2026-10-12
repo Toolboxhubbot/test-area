@@ -168,7 +168,6 @@ state={
     loopTpMap=false,loopTpLobby=false,loopTpMurderer=false,loopTpSheriff=false,loopTpCustom=false,
     spinBot=false,spinBotSpeed=20,
     voteRespawnCount=5,voteRespawnDelay=0.05,radioAutoPlay=false,radioSelectedSongId="",
-    radioAbuse=false,radioAbuseRate=30,radioAbuseSongId="1837879082",radioAbuseUseSelected=true,
     radioInputId="",radioAudioList={},radioSelectedAudio="",
     autoRejoin=false,
     headless1=false,headless2=false,headless3=false,
@@ -239,10 +238,9 @@ TD={
     removeBarriers="Remove Barriers",feAnimEnabled="FE Anim",
     voidPlatform="Void Platform",loopTpMap="TP Map",loopTpLobby="TP Lobby",
     loopTpMurderer="TP Mur",loopTpSheriff="TP Sher",loopTpCustom="TP Cust",
-    spinBot="Spin Bot",hideUI="Hide UI",radioAutoPlay="Radio Auto Play",
+    spinBot="Spin Bot",hideUI="Hide UI",radioAutoPlay="Auto Play",
     headless1="Headless V1",headless2="Headless V2",headless3="Headless V3",
-    hudEnabled="HUD",
-    radioAbuse="Radio Abuse"
+    hudEnabled="HUD"
 }
 
 function saveSettings()
@@ -1529,8 +1527,9 @@ function GVN()
     end
     return mn
 end
--- RADIO HELPERS (ATAOs method)
+-- RADIO (ATAOs method, simplified)
 PlaySongRemote = nil
+songNameCache = {}
 function getPlaySongRemote()
     if PlaySongRemote and PlaySongRemote.Parent then return PlaySongRemote end
     local inv = ReplicatedStorage:FindFirstChild("Remotes")
@@ -1548,6 +1547,18 @@ function getPlaySongRemote()
         return found
     end
     return nil
+end
+
+function getSongName(id)
+    id = tostring(id)
+    if songNameCache[id] then return songNameCache[id] end
+    local name = id
+    pcall(function()
+        local ok, info = pcall(function() return MarketplaceService:GetProductInfo(tonumber(id)) end)
+        if ok and info and info.Name and info.Name ~= "" then name = info.Name end
+    end)
+    songNameCache[id] = name
+    return name
 end
 
 function playRadioAudio(songId)
@@ -1615,65 +1626,16 @@ function replayRadioAudio(songId)
 end
 
 task.spawn(function()
-    while true do
-        if state.radioAbuse and al() then
-            local songId
-            if state.radioAbuseUseSelected and state.radioSelectedAudio and state.radioSelectedAudio~="" then
-                songId = tostring(state.radioSelectedAudio)
-            else
-                songId = tostring(state.radioAbuseSongId or "1837879082")
-            end
-            local id = songId:match("%d+")
-            if id then
-                local remote = getPlaySongRemote()
-                if remote then
-                    local url = "https://www.roblox.com/asset/?id="..id
-                    pcall(function()
-                        if remote:IsA("RemoteEvent") then
-                            remote:FireServer(url)
-                        elseif remote:IsA("RemoteFunction") then
-                            remote:InvokeServer(url)
-                        end
-                    end)
-                end
-            end
-            local rate = math.clamp(state.radioAbuseRate or 30, 1, 200)
-            task.wait(1/rate)
-        else
-            task.wait(0.15)
-        end
-    end
-end)
-
-lastAutoPlayed = nil
-task.spawn(function()
-    while true do
-        task.wait(0.25)
-        if state.radioAutoPlay and state.radioSelectedAudio and state.radioSelectedAudio ~= "" then
-            if lastAutoPlayed ~= state.radioSelectedAudio then
-                lastAutoPlayed = state.radioSelectedAudio
-                playRadioAudio(state.radioSelectedAudio)
-            end
-        end
-    end
-end)
-
-task.spawn(function()
     LP.CharacterAdded:Connect(function()
         task.wait(1.5)
         if state.radioAutoPlay and state.radioSelectedAudio and state.radioSelectedAudio ~= "" then
-            playRadioAudio(state.radioSelectedAudio)
+            local id = tostring(state.radioSelectedAudio):match("%d+")
+            if id then
+                playRadioAudio(id)
+                _G.__AW_NOTIFY("Auto playing: <b>"..getSongName(id).."</b>", 4)
+            end
         end
     end)
-end)
-
-task.spawn(function()
-    while true do
-        task.wait(2)
-        if state.loopStealGun and al() then
-            pcall(stealGun)
-        end
-    end
 end)
 
 if shouldShowWhatsNew then
@@ -1720,14 +1682,13 @@ if shouldShowWhatsNew then
         wnBodyLayout.SortOrder = Enum.SortOrder.LayoutOrder
         wnBodyLayout.Padding = UDim.new(0, 10)
         local whatsNewItems = {
-            {"Hitbox Integration (Shooting)", "Silent aim and magic bullet now target the expanded hitbox when enabled."},
-            {"Shoot Murderer Button", "Auto-equips your gun, fires (respects Silent Aim WC), then de-equips."},
-            {"Radio Abuse Fixed", "Uses MM2's real Remotes.Inventory.PlaySong with proper URL args."},
-            {"FPS Booster", "Misc toggle that strips heavy lighting / particles."},
+            {"Radio Simplified", "Play Audio and Auto Play now work directly - no enable toggle needed. Song names are shown."},
+            {"Hitbox Integration (Shooting)", "Silent aim and magic bullet now target the expanded hitbox."},
+            {"Shoot Murderer Button", "Auto-equips, fires, de-equips."},
+            {"FPS Booster", "Strips heavy lighting / particles."},
             {"Perk Notify", "Alerts you what perk the murderer has."},
             {"Server Hop Fixed", ".shop works reliably."},
-            {"PC Dragging", "Big button, floating buttons and HUD drag properly on PC."},
-            {"Knife Kills", "Kill All / Kill Sheriff / Kill Custom still use HandleTouched."}
+            {"Knife Kills", "Kill All / Sheriff / Custom use HandleTouched only."}
         }
         for i, item in ipairs(whatsNewItems) do
             local card = Instance.new("Frame", wnBody)
@@ -1820,32 +1781,25 @@ function RSW()
     task.spawn(function()
         local hum = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
         if not hum then SWR=false return end
-
         local equippedGun = LP.Character:FindFirstChild("Gun")
         local backpack = LP:FindFirstChild("Backpack")
         local backpackGun = backpack and backpack:FindFirstChild("Gun")
         local wasEquipped = equippedGun ~= nil
         local gunToUse = equippedGun or backpackGun
-
         if not gunToUse then
             _G.__AW_NOTIFY("<font color='#ff5a5a'>No gun found</font>", 2)
             SWR=false
             return
         end
-
         if not wasEquipped and backpackGun then
             pcall(function() hum:EquipTool(backpackGun) end)
             task.wait(0.12)
         end
-
         pcall(FSSUserTriggered)
-
         task.wait(0.15)
-
         if not wasEquipped then
             pcall(function() hum:UnequipTools() end)
         end
-
         SWR=false
     end)
 end
@@ -2274,6 +2228,20 @@ function TGG(pg,name,order,key)
         if key=="voidPlatform" and not ns then RVP() end
         if key=="hudEnabled" and HUDF then HUDF.Visible=ns end
         if FBM[key] then RFV(FBM[key]) end
+        if key=="radioAutoPlay" then
+            if ns then
+                local id = state.radioSelectedAudio
+                if id and id ~= "" then
+                    local nid = tostring(id):match("%d+")
+                    if nid then
+                        playRadioAudio(nid)
+                        _G.__AW_NOTIFY("Auto playing: <b>"..getSongName(nid).."</b>", 4)
+                    end
+                else
+                    _G.__AW_NOTIFY("<font color='#ff5a5a'>No song selected</font>", 3)
+                end
+            end
+        end
         if key=="shootThroughWall" and ns and state.silentAimWallCheck then
             state.silentAimWallCheck=false
             local refs=_G.__AW_ALLTOGGLES["silentAimWallCheck"]
@@ -2615,8 +2583,8 @@ TGG(pages[SEC],"FPS Monitor",171,"fpsPingMonitor")
 TGG(pages[SEC],"Color FPS",172,"fpsPingColor")
 TGG(pages[SEC],"Disable Trading",181,"disableTrading")
 
--- RADIO ABUSE UI
-ASEC(pages[SEC],"Radio Abuse",200)
+-- RADIO UI (simplified)
+ASEC(pages[SEC],"Radio",200)
 MIN(pages[SEC],201,"Audio ID to add...",state.radioInputId or "",function(t)
     state.radioInputId = t
     saveSettings()
@@ -2629,15 +2597,11 @@ ABN(pages[SEC],"Add Audio ID",202,function()
     for _, v in ipairs(state.radioAudioList) do
         if tostring(v) == id then _G.__AW_NOTIFY("Already in list") return end
     end
-    local displayName = id
-    pcall(function()
-        local ok, info = pcall(function() return MarketplaceService:GetProductInfo(tonumber(id)) end)
-        if ok and info and info.Name and info.Name ~= "" then displayName = info.Name end
-    end)
+    local displayName = getSongName(id)
     table.insert(state.radioAudioList, id)
     if #state.radioAudioList == 1 then state.radioSelectedAudio = id end
     saveSettings()
-    _G.__AW_NOTIFY("Added: "..displayName.." ("..id..")")
+    _G.__AW_NOTIFY("Added: <b>"..displayName.."</b> ("..id..")")
     if _G.__AW_REFRESH_RADIO_LIST then pcall(_G.__AW_REFRESH_RADIO_LIST) end
 end)
 raListFrame = Instance.new("Frame", pages[SEC])
@@ -2669,9 +2633,11 @@ _G.__AW_REFRESH_RADIO_LIST = function()
         stk.Thickness = 1 stk.Transparency = isSel and 0 or 0.4
         local lbl = Instance.new("TextLabel", r)
         lbl.Size = UDim2.new(1,-90,1,0) lbl.Position = UDim2.new(0,12,0,0)
-        lbl.BackgroundTransparency = 1 lbl.Text = tostring(id)
+        lbl.BackgroundTransparency = 1
+        lbl.Text = getSongName(id).."  ("..tostring(id)..")"
         lbl.TextColor3 = isSel and cc(SC.accentColor) or cc(SC.textColor)
-        lbl.Font = Enum.Font.GothamBold lbl.TextSize = 12 lbl.TextXAlignment = Enum.TextXAlignment.Left
+        lbl.Font = Enum.Font.GothamBold lbl.TextSize = 11 lbl.TextXAlignment = Enum.TextXAlignment.Left
+        lbl.TextTruncate = Enum.TextTruncate.AtEnd
         local selBtn = Instance.new("TextButton", r)
         selBtn.Size = UDim2.new(0,70,0,24) selBtn.Position = UDim2.new(1,-76,0.5,-12)
         selBtn.BackgroundColor3 = isSel and cc(SC.accentColor) or Color3.fromRGB(30,30,34)
@@ -2689,12 +2655,13 @@ end
 _G.__AW_REFRESH_RADIO_LIST()
 ABN(pages[SEC],"Play Audio",204,function()
     local id = state.radioSelectedAudio
-    if not id or id == "" then id = state.radioAbuseSongId end
-    if not id or id == "" then _G.__AW_NOTIFY("No audio selected") return end
-    if playRadioAudio(id) then
-        _G.__AW_NOTIFY("Playing "..tostring(id))
+    if not id or id == "" then _G.__AW_NOTIFY("<font color='#ff5a5a'>No song selected</font>") return end
+    local nid = tostring(id):match("%d+")
+    if not nid then _G.__AW_NOTIFY("<font color='#ff5a5a'>Invalid song ID</font>") return end
+    if playRadioAudio(nid) then
+        _G.__AW_NOTIFY("Playing: <b>"..getSongName(nid).."</b>", 4)
     else
-        _G.__AW_NOTIFY("<font color='#ff5a5a'>Failed - check PlaySong remote</font>")
+        _G.__AW_NOTIFY("<font color='#ff5a5a'>Failed - PlaySong remote not found</font>")
     end
 end)
 ABN(pages[SEC],"Pause / Stop Audio",205,function()
@@ -2703,33 +2670,23 @@ ABN(pages[SEC],"Pause / Stop Audio",205,function()
 end)
 ABN(pages[SEC],"Restart Audio",206,function()
     local id = state.radioSelectedAudio
-    if not id or id == "" then id = state.radioAbuseSongId end
-    if not id or id == "" then _G.__AW_NOTIFY("No audio selected") return end
+    if not id or id == "" then _G.__AW_NOTIFY("<font color='#ff5a5a'>No song selected</font>") return end
+    local nid = tostring(id):match("%d+")
+    if not nid then _G.__AW_NOTIFY("<font color='#ff5a5a'>Invalid song ID</font>") return end
     stopRadioAudio()
     task.wait(0.2)
-    if replayRadioAudio(id) then
-        _G.__AW_NOTIFY("Restarted "..tostring(id))
+    if replayRadioAudio(nid) then
+        _G.__AW_NOTIFY("Restarting: <b>"..getSongName(nid).."</b>", 4)
     else
         _G.__AW_NOTIFY("<font color='#ff5a5a'>Failed to restart</font>")
     end
 end)
-ABN(pages[SEC],"Spam Selected (x5)",207,function()
-    local id = state.radioSelectedAudio
-    if not id or id == "" then id = state.radioAbuseSongId end
-    if not id or id == "" then _G.__AW_NOTIFY("No audio selected") return end
-    task.spawn(function()
-        for i = 1, 5 do
-            playRadioAudio(id)
-            task.wait(0.1)
-        end
-        _G.__AW_NOTIFY("Spammed 5x")
-    end)
-end)
 ABN(pages[SEC],"Delete Selected",208,function()
     local id = state.radioSelectedAudio
-    if not id or id == "" then _G.__AW_NOTIFY("No audio selected") return end
+    if not id or id == "" then _G.__AW_NOTIFY("No song selected") return end
     state.radioAudioList = state.radioAudioList or {}
     local removed = false
+    local name = getSongName(id)
     for i, v in ipairs(state.radioAudioList) do
         if tostring(v) == tostring(id) then
             table.remove(state.radioAudioList, i)
@@ -2744,14 +2701,10 @@ ABN(pages[SEC],"Delete Selected",208,function()
         state.radioSelectedAudio = ""
     end
     saveSettings()
-    _G.__AW_NOTIFY("Deleted "..tostring(id))
+    _G.__AW_NOTIFY("Deleted: <b>"..name.."</b>")
     if _G.__AW_REFRESH_RADIO_LIST then pcall(_G.__AW_REFRESH_RADIO_LIST) end
 end)
-TGG(pages[SEC],"Auto Play Audio",209,"radioAutoPlay")
-ASEC(pages[SEC],"Radio Spam",220)
-TGG(pages[SEC],"Enable Radio Abuse",221,"radioAbuse")
-TGG(pages[SEC],"Use Selected Song",222,"radioAbuseUseSelected")
-MSL(pages[SEC],"Spam Rate (per sec)",223,state.radioAbuseRate or 30,1,200,"radioAbuseRate")
+TGG(pages[SEC],"Auto Play Selected Song",209,"radioAutoPlay")
 
 -- FARM TAB
 TGG(pages["Farm"],"Farm",1,"farm")
@@ -5206,6 +5159,7 @@ _G.__AW_RUN_COMMAND = function(raw)
         saveSettings()
     elseif cmd == "unsilentaim" then turnOff("silentAimEnabled","Silent Aim")
     elseif cmd == "unhitbox" then turnOff("hitboxExpander","Hitbox Expander")
+    elseif cmd == "unradio" then turnOff("radioAutoPlay","Auto Play")
     elseif cmd == "help" or cmd == "h" or cmd == "?" then
         if not privateChatFrame.Visible then privateChatFrame.Visible = true end
         setPcTab("cmds")
