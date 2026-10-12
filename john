@@ -40,10 +40,10 @@ local LP=Players.LocalPlayer
 local PlaceId=game.PlaceId
 local PlayerGui=LP:WaitForChild("PlayerGui",10)
 
-local CFG_DIR="ApplewareConfigs"
-local CFG_FILE="Appleware.json"
+CFG_DIR="ApplewareConfigs"
+CFG_FILE="Appleware.json"
 pcall(function() if makefolder and isfolder and not isfolder(CFG_DIR) then makefolder(CFG_DIR) end end)
-local function cfgPath() if isfolder and isfolder(CFG_DIR) then return CFG_DIR.."/"..CFG_FILE end return CFG_FILE end
+function cfgPath() if isfolder and isfolder(CFG_DIR) then return CFG_DIR.."/"..CFG_FILE end return CFG_FILE end
 
 -- LOADING SCREEN
 _G.__AW_LOADING_DONE=false
@@ -169,11 +169,11 @@ task.spawn(function()
     _G.__AW_LOADING_DONE=true
 end)
 
-local FIRST_FLAG = CFG_DIR.."/AW_FirstLoad.txt"
-local WN_FLAG = CFG_DIR.."/AW_ShownWhatsNew.txt"
-local isFirstLoad = true
+FIRST_FLAG = CFG_DIR.."/AW_FirstLoad.txt"
+WN_FLAG = CFG_DIR.."/AW_ShownWhatsNew.txt"
+isFirstLoad = true
 pcall(function() if isfile and isfile(FIRST_FLAG) then isFirstLoad=false end end)
-local shouldShowWhatsNew = true
+shouldShowWhatsNew = true
 pcall(function() if isfile and isfile(WN_FLAG) then shouldShowWhatsNew=false end end)
 
 state={
@@ -286,7 +286,7 @@ TD={
     radioAbuse="Radio Abuse"
 }
 
-local function saveSettings()
+function saveSettings()
     task.spawn(function()
         pcall(function()
             local d={state={},settings={}}
@@ -305,7 +305,7 @@ local function saveSettings()
     end)
 end
 
-local function loadSettings()
+function loadSettings()
     pcall(function()
         if isfile and isfile(cfgPath()) and readfile and not isFirstLoad then
             local d=HttpService:JSONDecode(readfile(cfgPath()))
@@ -337,17 +337,17 @@ for _,k in ipairs(KB) do
     if state.keybinds[k.key]==nil then state.keybinds[k.key]=k.default end
 end
 
-local EAS=Enum.EasingStyle.Quint
-local EAB=Enum.EasingStyle.Back
-local EASF=Enum.EasingStyle.Sine
-local EAO=Enum.EasingDirection.Out
-local EAI=Enum.EasingDirection.In
+EAS=Enum.EasingStyle.Quint
+EAB=Enum.EasingStyle.Back
+EASF=Enum.EasingStyle.Sine
+EAO=Enum.EasingDirection.Out
+EAI=Enum.EasingDirection.In
 
-local SG={}
-local WK=Color3.new(1,1,1)
-local BK=Color3.new(0,0,0)
+SG={}
+WK=Color3.new(1,1,1)
+BK=Color3.new(0,0,0)
 
-local function buildAS(a,b)
+function buildAS(a,b)
     return ColorSequence.new({
         ColorSequenceKeypoint.new(0,a),
         ColorSequenceKeypoint.new(0.5,b),
@@ -355,12 +355,12 @@ local function buildAS(a,b)
     })
 end
 
-local function setSGC(g,on)
+function setSGC(g,on)
     if not g then return end
     g.Color=on and buildAS(WK,BK) or buildAS(BK,WK)
 end
 
-local function attachSpin(s,on,opts)
+function attachSpin(s,on,opts)
     if not s then return nil end
     opts=opts or {}
     s.Color=WK
@@ -390,7 +390,7 @@ task.spawn(function()
     end
 end)
 
-local function aB(b)
+function aB(b)
     if state.animationsEnabled==false then return end
     local s=Instance.new("UIScale",b)
     b.MouseButton1Down:Connect(function()
@@ -403,7 +403,7 @@ local function aB(b)
     b.MouseLeave:Connect(rr)
 end
 
-local function aR(b,c)
+function aR(b,c)
     if state.animationsEnabled==false then return end
     c=c or Color3.new(1,1,1)
     b.ClipsDescendants=true
@@ -429,7 +429,7 @@ local function aR(b,c)
     end)
 end
 
-local function sF(p)
+function sF(p)
     if state.animationsEnabled==false then return end
     local ch={}
     for _,c in ipairs(p:GetChildren()) do
@@ -460,25 +460,25 @@ local function sF(p)
 end
 
 -- Notifications
-local NG=Instance.new("ScreenGui")
+NG=Instance.new("ScreenGui")
 NG.Name="AWNotes"
 NG.ResetOnSpawn=false
 NG.DisplayOrder=999998
 NG.IgnoreGuiInset=true
 NG.Parent=PlayerGui
-local NC=Instance.new("Frame",NG)
+NC=Instance.new("Frame",NG)
 NC.AnchorPoint=Vector2.new(0,1)
 NC.Position=UDim2.new(0,14,1,-14)
 NC.AutomaticSize=Enum.AutomaticSize.Y
 NC.Size=UDim2.new(0,320,0,0)
 NC.BackgroundTransparency=1
-local NL=Instance.new("UIListLayout",NC)
+NL=Instance.new("UIListLayout",NC)
 NL.Padding=UDim.new(0,10)
 NL.VerticalAlignment=Enum.VerticalAlignment.Bottom
 
-local function cc(t) return Color3.fromRGB(t.r or 0,t.g or 0,t.b or 0) end
+function cc(t) return Color3.fromRGB(t.r or 0,t.g or 0,t.b or 0) end
 
-local nCt=0
+nCt=0
 _G.__AW_NOTIFY=function(text,dur)
     if nCt>=10 then return end
     nCt=nCt+1
@@ -545,7 +545,7 @@ _G.__AW_NOTIFY=function(text,dur)
     end)
 end
 
--- ANTI-FLING (persists after unload)
+-- ANTI-FLING
 afConnections = {}
 task.spawn(function()
     local function disableCollide(part)
@@ -588,51 +588,50 @@ task.spawn(function()
     Players.PlayerRemoving:Connect(untrack)
 end)
 
--- Helpers
-local function IIR()
+function IIR()
     for _,m in ipairs(Workspace:GetChildren()) do
         if m:FindFirstChild("CoinContainer") or m.Name=="CoinContainer" then return true end
     end
     return false
 end
-local function IL() return not IIR() end
-local function al()
+function IL() return not IIR() end
+function al()
     local c=LP.Character
     return c and c:FindFirstChild("Humanoid") and c.Humanoid.Health>0 and c:FindFirstChild("HumanoidRootPart")
 end
-local function TIA(p)
+function TIA(p)
     if not p or not p.Parent then return false end
     local c=p.Character
     if not c then return false end
     local h=c:FindFirstChildOfClass("Humanoid")
     return h and h.Health>0
 end
-local function FT(n)
+function FT(n)
     local ch,bp=LP.Character,LP:FindFirstChild("Backpack")
     if ch and ch:FindFirstChild(n) then return ch[n] end
     if bp and bp:FindFirstChild(n) then return bp[n] end
     return nil
 end
-local function IW(p)
+function IW(p)
     if not p then return false end
     for _,x in ipairs(SC.whitelist) do
         if string.lower(x)==string.lower(p.Name) then return true end
     end
     return false
 end
-local function PMN(p,s)
+function PMN(p,s)
     if not p or not s or s=="" then return false end
     local n=string.lower(s)
     if string.lower(p.Name)==n then return true end
     if p.DisplayName and string.lower(p.DisplayName)==n then return true end
     return false
 end
-local function IBF() return al() and IIR() end
-local function TMR() return TTM(false) end
+function IBF() return al() and IIR() end
+function TMR() return TTM(false) end
 
 -- Role detection
-local cachedRoleModule, cachedRoleModuleAt = nil, 0
-local function getCachedRoleData()
+cachedRoleModule, cachedRoleModuleAt = nil, 0
+function getCachedRoleData()
     local now = tick()
     if cachedRoleModule and (now - cachedRoleModuleAt) < 2 then return cachedRoleModule end
     local ok, data = pcall(function()
@@ -661,7 +660,7 @@ local function getCachedRoleData()
     return nil
 end
 
-local function getPlayerRole(plr)
+function getPlayerRole(plr)
     if not plr or not plr.Parent then return "Innocent" end
     local ch = plr.Character
     local bp = plr:FindFirstChild("Backpack")
@@ -713,7 +712,7 @@ local function getPlayerRole(plr)
     return "Innocent"
 end
 
-local function FPBR(r)
+function FPBR(r)
     for _,p in ipairs(Players:GetPlayers()) do
         if p~=LP and p.Character and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health>0 and getPlayerRole(p)==r then
             return p
@@ -721,10 +720,10 @@ local function FPBR(r)
     end
     return nil
 end
-local function GM() return FPBR("Murderer") end
+function GM() return FPBR("Murderer") end
 
 GUN={"Gun","Revolver","Pistol"}
-local function PHG(p)
+function PHG(p)
     if not p then return false end
     local bp,ch=p:FindFirstChild("Backpack"),p.Character
     for _,n in ipairs(GUN) do
@@ -733,8 +732,8 @@ local function PHG(p)
     end
     return false
 end
-local function LHG() return PHG(LP) end
-local function GLSH()
+function LHG() return PHG(LP) end
+function GLSH()
     local gh,o={},{}
     for _,p in ipairs(Players:GetPlayers()) do
         if p~=LP and p.Character and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health>0 then
@@ -751,7 +750,7 @@ local function GLSH()
     for _,p in ipairs(o) do table.insert(res,p) end
     return res
 end
-local function RC(role)
+function RC(role)
     local r=tostring(role or ""):lower()
     if r=="murderer" then return Color3.fromRGB(255,40,40)
     elseif r=="sheriff" or r=="hero" then return Color3.fromRGB(40,130,255)
@@ -764,7 +763,7 @@ RESET_DURATION=2.0
 isLocalFlinging=false
 flingActiveCount=0
 
-local function IRA(uid)
+function IRA(uid)
     local t=activeResets[uid]
     if not t then return false end
     if tick()-t>RESET_DURATION+0.5 then
@@ -774,7 +773,7 @@ local function IRA(uid)
     return true
 end
 
-local function RF(tp,fm)
+function RF(tp,fm)
     if not tp or tp==LP or not tp.Parent then return false end
     if not TIA(tp) then return false end
     if IRA(tp.UserId) then return false end
@@ -865,7 +864,7 @@ local function RF(tp,fm)
     return true
 end
 
-local function FAN()
+function FAN()
     task.spawn(function()
         for _,p in ipairs(Players:GetPlayers()) do
             if p~=LP and not IW(p) and TIA(p) then
@@ -876,7 +875,7 @@ local function FAN()
     end)
 end
 
-local function FSN()
+function FSN()
     task.spawn(function()
         if not al() then return end
         for k in pairs(activeResets) do activeResets[k]=nil end
@@ -895,14 +894,14 @@ local function FSN()
     end)
 end
 
-local function FMN()
+function FMN()
     task.spawn(function()
         local m=GM()
         if m then task.spawn(function() RF(m,true) end) else _G.__AW_NOTIFY("No Murderer") end
     end)
 end
 
-local function FCUN()
+function FCUN()
     task.spawn(function()
         for _,n in ipairs(SC.flingList) do
             for _,p in ipairs(Players:GetPlayers()) do
@@ -915,7 +914,7 @@ local function FCUN()
     end)
 end
 
-local function grabNearestGun()
+function grabNearestGun()
     if not al() then return false end
     local ch = LP.Character
     local hrp = ch and ch:FindFirstChild("HumanoidRootPart")
@@ -964,9 +963,9 @@ local function grabNearestGun()
     end)
     return true
 end
-local function GGN() task.spawn(function() pcall(grabNearestGun) end) end
+function GGN() task.spawn(function() pcall(grabNearestGun) end) end
 
-local function stealGun()
+function stealGun()
     task.spawn(function()
         _G.__AW_NOTIFY("Steal Gun: flinging sheriff")
         local sher = GLSH()[1]
@@ -985,7 +984,7 @@ local function stealGun()
 end
 
 LCF=CFrame.new(14.47,516.73,-25.34)
-local function TTL()
+function TTL()
     local r=LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if r then
         r.Anchored=true
@@ -995,9 +994,9 @@ local function TTL()
     end
 end
 
-local lb=nil
-local lbct=0
-local function DLB()
+lb=nil
+lbct=0
+function DLB()
     for _,o in ipairs(Workspace:GetChildren()) do
         local n=string.lower(o.Name)
         if string.find(n,"lobby",1,true) or string.find(n,"waiting",1,true) then
@@ -1011,7 +1010,7 @@ local function DLB()
     end
     return nil
 end
-local function IIL(pos)
+function IIL(pos)
     local now=tick()
     if not lb or (now-lbct)>5 then lb=DLB() lbct=now end
     if lb then
@@ -1024,8 +1023,8 @@ local function IIL(pos)
     end
     return pos.Y>400
 end
-local ltmn=0
-local function TTM(si)
+ltmn=0
+function TTM(si)
     local r=LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if not r then return false end
     local mf=nil
@@ -1077,7 +1076,7 @@ local function TTM(si)
     if not si then _G.__AW_NOTIFY("TP: "..mf.Name) end
     return true
 end
-local function TTP(p)
+function TTP(p)
     if not p then return end
     local r=LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     local tr=p.Character and p.Character:FindFirstChild("HumanoidRootPart")
@@ -1088,9 +1087,9 @@ local function TTP(p)
         if r.Parent then r.Anchored=false end
     end
 end
-local function TTMU() TTP(GM()) end
-local function TTSH() TTP(GLSH()[1]) end
-local function TTCU()
+function TTMU() TTP(GM()) end
+function TTSH() TTP(GLSH()[1]) end
+function TTCU()
     for _,n in ipairs(SC.flingList) do
         for _,p in ipairs(Players:GetPlayers()) do
             if PMN(p,n) then TTP(p) return end
@@ -1101,7 +1100,7 @@ end
 
 VP=Vector3.new(100,5000,200)
 VPP=nil
-local function EVP()
+function EVP()
     if not VPP or not VPP.Parent then
         local e=Workspace:FindFirstChild("AW_VoidPlatform")
         if e then e:Destroy() end
@@ -1117,13 +1116,13 @@ local function EVP()
         VPP=p
     end
 end
-local function RVP()
+function RVP()
     if VPP and VPP.Parent then VPP:Destroy() end
     VPP=nil
     local e=Workspace:FindFirstChild("AW_VoidPlatform")
     if e then e:Destroy() end
 end
-local function TTVP()
+function TTVP()
     EVP()
     local r=LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if r then
@@ -1139,8 +1138,8 @@ end
 
 SCD=0.4
 LST=-SCD
-local function CFF() return (tick()-LST)>=SCD end
-local function GG()
+function CFF() return (tick()-LST)>=SCD end
+function GG()
     local ch=LP.Character
     local bp=LP:FindFirstChild("Backpack")
     for _,n in ipairs(GUN) do
@@ -1149,7 +1148,7 @@ local function GG()
     end
     return nil
 end
-local function IGE()
+function IGE()
     local ch=LP.Character
     if not ch then return false end
     for _,n in ipairs(GUN) do
@@ -1158,7 +1157,7 @@ local function IGE()
     end
     return false
 end
-local function FSR()
+function FSR()
     local g=GG()
     if g then
         local s=g:FindFirstChild("Shoot",true)
@@ -1181,13 +1180,13 @@ local function FSR()
     end
     return nil
 end
-local function GTP()
+function GTP()
     local m=GM()
     if not m or not m.Character then return nil end
     return m.Character:FindFirstChild("Head") or m.Character:FindFirstChild("HumanoidRootPart")
 end
 
-local function HCS(tp)
+function HCS(tp)
     if not state.silentAimWallCheck then return true end
     if not tp then return true end
     local ch=LP.Character
@@ -1210,7 +1209,7 @@ local function HCS(tp)
     return Workspace:Raycast(origin.Position,d,rp)==nil
 end
 
-local function FSAM()
+function FSAM()
     if not CFF() then return false end
     local pt=GTP()
     if not pt then return false end
@@ -1236,7 +1235,7 @@ local function FSAM()
     end)
     return true
 end
-local function FTW()
+function FTW()
     if not CFF() then return false end
     local m=GM()
     if not m or not m.Character then return false end
@@ -1257,13 +1256,13 @@ local function FTW()
     end)
     return true
 end
-local function TSM()
+function TSM()
     if state.shootThroughWall then return FTW() else return FSAM() end
 end
-local function FSS() return TSM() end
+function FSS() return TSM() end
 
-local waitingForVisible = false
-local function FSSUserTriggered()
+waitingForVisible = false
+function FSSUserTriggered()
     if not state.shootThroughWall and state.silentAimWallCheck then
         local pt=GTP()
         if not pt or not HCS(pt) then
@@ -1297,7 +1296,7 @@ local function FSSUserTriggered()
     FSS()
 end
 
-local function ensureKnifeEquipped()
+function ensureKnifeEquipped()
     local ch=LP.Character
     if not ch then return nil end
     local knife=ch:FindFirstChild("Knife")
@@ -1317,7 +1316,7 @@ local function ensureKnifeEquipped()
     return nil
 end
 
-local function getHandleTouched()
+function getHandleTouched()
     local knife=ensureKnifeEquipped()
     if not knife then return nil end
     local events=knife:FindFirstChild("Events")
@@ -1325,7 +1324,7 @@ local function getHandleTouched()
     return events:FindFirstChild("HandleTouched")
 end
 
-local function killMultipleWithHandle(targets)
+function killMultipleWithHandle(targets)
     if not targets or #targets==0 then return end
     local handleTouched=getHandleTouched()
     if not handleTouched then _G.__AW_NOTIFY("Knife HandleTouched not found") return end
@@ -1345,7 +1344,7 @@ local function killMultipleWithHandle(targets)
     end
 end
 
-local function KAN()
+function KAN()
     task.spawn(function()
         local all={}
         for _,p in ipairs(Players:GetPlayers()) do
@@ -1356,7 +1355,7 @@ local function KAN()
         _G.__AW_NOTIFY("Killed all")
     end)
 end
-local function KSN()
+function KSN()
     task.spawn(function()
         local lv=GLSH()
         if #lv==0 then _G.__AW_NOTIFY("No sheriff") return end
@@ -1364,7 +1363,7 @@ local function KSN()
         _G.__AW_NOTIFY("Killed sheriff")
     end)
 end
-local function KCUN()
+function KCUN()
     task.spawn(function()
         local targets={}
         for _,n in ipairs(SC.flingList) do
@@ -1380,7 +1379,7 @@ local function KCUN()
     end)
 end
 
-local function SHF()
+function SHF()
     if not al() then return end
     if not IGE() then _G.__AW_NOTIFY("Equip gun first") return end
     local m=GM()
@@ -1432,10 +1431,10 @@ task.spawn(function()
 end)
 
 GAC=nil
-local function UGB()
+function UGB()
     if GAC then GAC:Disconnect() GAC=nil end
 end
-local function BG(t)
+function BG(t)
     UGB()
     if not t or t.Name~="Gun" then return end
     GAC=t.Activated:Connect(function()
@@ -1443,7 +1442,7 @@ local function BG(t)
         if state.silentAimEnabled then task.spawn(function() pcall(TSM) end) end
     end)
 end
-local function WC(ch)
+function WC(ch)
     if not ch then return end
     ch.ChildAdded:Connect(function(c)
         if c:IsA("Tool") and c.Name=="Gun" then BG(c) end
@@ -1463,12 +1462,12 @@ end)
 -- Voting
 VS={[1]=Vector3.new(25,508,50),[2]=Vector3.new(13,508,52),[3]=Vector3.new(1,508,49)}
 voting=false
-local function TTVS(i)
+function TTVS(i)
     local r=LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if not r then return end
     r.CFrame=CFrame.new(VS[i])
 end
-local function FVR(si)
+function FVR(si)
     if voting then return end
     voting=true
     task.spawn(function()
@@ -1533,7 +1532,7 @@ local function FVR(si)
         voting=false
     end)
 end
-local function GVN()
+function GVN()
     local mn={"N/A","N/A","N/A"}
     local bd={}
     for _,o in ipairs(Workspace:GetDescendants()) do
@@ -1566,16 +1565,16 @@ local function GVN()
     return mn
 end
 
--- RADIO HELPERS (FIXED)
+-- RADIO HELPERS (GLOBALIZED to save local slots)
 radioRemoteCache=nil
 radioRemoteCacheTime=0
-local RADIO_REMOTE_WHITELIST = {
+RADIO_REMOTE_WHITELIST = {
     "Radio","PlayRadio","RadioPlay","RadioSet","SetRadio",
     "Music","PlayMusic","SetMusic",
     "Song","PlaySong","SetSong","SongPlay",
     "Audio","PlayAudio","SetAudio"
 }
-local function findRadioRemotes()
+function findRadioRemotes()
     local list={}
     local seen={}
     pcall(function()
@@ -1613,7 +1612,7 @@ local function findRadioRemotes()
     radioRemoteCacheTime=tick()
     return list
 end
-local function getRadioRemotes()
+function getRadioRemotes()
     if not radioRemoteCache or #radioRemoteCache==0 or (tick()-radioRemoteCacheTime)>15 then
         radioRemoteCache=findRadioRemotes()
     end
@@ -1624,7 +1623,7 @@ local function getRadioRemotes()
     radioRemoteCache=live
     return live
 end
-local function playRadioAudio(songId)
+function playRadioAudio(songId)
     if not songId or tostring(songId)=="" then return false end
     local sId=tostring(songId)
     local sIdNum=tonumber(sId) or sId
@@ -1646,7 +1645,7 @@ local function playRadioAudio(songId)
     end
     return true
 end
-local function stopRadioAudio()
+function stopRadioAudio()
     local remotes=getRadioRemotes()
     if #remotes>0 then
         for _,rm in ipairs(remotes) do
@@ -1673,8 +1672,8 @@ local function stopRadioAudio()
     end)
 end
 
-local RADIO_GAMEPASS_ID = 1308795
-local hasRadioPass = false
+RADIO_GAMEPASS_ID = 1308795
+hasRadioPass = false
 task.spawn(function()
     task.wait(1)
     pcall(function()
@@ -1686,7 +1685,7 @@ task.spawn(function()
     end
 end)
 
--- RADIO ABUSE LOOP (FIXED)
+-- RADIO ABUSE LOOP
 task.spawn(function()
     while true do
         if state.radioAbuse and al() then
@@ -1721,7 +1720,7 @@ task.spawn(function()
     end
 end)
 
-local lastAutoPlayed = nil
+lastAutoPlayed = nil
 task.spawn(function()
     while true do
         task.wait(0.25)
@@ -1734,7 +1733,6 @@ task.spawn(function()
     end
 end)
 
--- LOOP STEAL GUN
 task.spawn(function()
     while true do
         task.wait(2)
@@ -1765,12 +1763,6 @@ if shouldShowWhatsNew then
         wnFrame.BorderSizePixel = 0
         wnFrame.Active = true
         Instance.new("UICorner", wnFrame).CornerRadius = UDim.new(0, 16)
-        local wnGrad = Instance.new("UIGradient", wnFrame)
-        wnGrad.Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(10, 10, 14)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(4, 4, 6))
-        })
-        wnGrad.Rotation = 90
         local wnStroke = Instance.new("UIStroke", wnFrame)
         wnStroke.Color = Color3.fromRGB(190, 190, 195)
         wnStroke.Thickness = 2
@@ -1783,15 +1775,6 @@ if shouldShowWhatsNew then
         wnTitle.Font = Enum.Font.GothamBold
         wnTitle.TextSize = 20
         wnTitle.TextXAlignment = Enum.TextXAlignment.Left
-        local wnSubtitle = Instance.new("TextLabel", wnFrame)
-        wnSubtitle.Size = UDim2.new(1, -40, 0, 16)
-        wnSubtitle.Position = UDim2.new(0, 20, 0, 48)
-        wnSubtitle.BackgroundTransparency = 1
-        wnSubtitle.Text = "https://awh.filho.wtf"
-        wnSubtitle.TextColor3 = Color3.fromRGB(150, 150, 155)
-        wnSubtitle.Font = Enum.Font.Gotham
-        wnSubtitle.TextSize = 11
-        wnSubtitle.TextXAlignment = Enum.TextXAlignment.Left
         local wnBody = Instance.new("ScrollingFrame", wnFrame)
         wnBody.Size = UDim2.new(1, -40, 1, -140)
         wnBody.Position = UDim2.new(0, 20, 0, 78)
@@ -1804,15 +1787,12 @@ if shouldShowWhatsNew then
         wnBodyLayout.SortOrder = Enum.SortOrder.LayoutOrder
         wnBodyLayout.Padding = UDim.new(0, 10)
         local whatsNewItems = {
-            {"FPS Booster", "New Misc toggle that strips heavy lighting / particles and boosts FPS."},
-            {"Murderer Perk Notify", "Alerts you what perk the murderer has (Throwing Knife, Flashbang, etc)."},
-            {"Silent Aim Wall Check", "Now notifies when waiting for visible murderer and fires when visible."},
-            {"PC Dragging Fixed", "Big button, floating buttons and HUD now drag properly with mouse."},
-            {"Server Hop Fixed", ".shop now works reliably with fallbacks."},
-            {"Radio Abuse Fixed", "Now fires the correct remote with correct args at correct rate."},
-            {"Loop Steal Gun", "Repeatedly flings sheriff and grabs gun."},
-            {"Kill Buttons (HandleTouched)", "Kill Sheriff / Kill All / Kill Custom use the HandleTouched method."},
-            {"Anti-Fling Persists", "Anti-fling stays active after unloading the script."}
+            {"FPS Booster", "New Misc toggle that strips heavy lighting / particles."},
+            {"Murderer Perk Notify", "Alerts you what perk the murderer has."},
+            {"Silent Aim Wall Check", "Shows waiting message and fires when visible."},
+            {"PC Dragging Fixed", "Big button, floating buttons and HUD drag properly now."},
+            {"Server Hop Fixed", ".shop works reliably."},
+            {"Radio Abuse Fixed", "Fires correct remote with correct args."}
         }
         for i, item in ipairs(whatsNewItems) do
             local card = Instance.new("Frame", wnBody)
@@ -1820,15 +1800,6 @@ if shouldShowWhatsNew then
             card.LayoutOrder = i
             card.BackgroundColor3 = Color3.fromRGB(16, 16, 20)
             Instance.new("UICorner", card).CornerRadius = UDim.new(0, 10)
-            local cst = Instance.new("UIStroke", card)
-            cst.Color = Color3.fromRGB(60, 60, 65)
-            cst.Thickness = 1
-            cst.Transparency = 0.4
-            local bar = Instance.new("Frame", card)
-            bar.Size = UDim2.new(0, 3, 1, -16)
-            bar.Position = UDim2.new(0, 10, 0, 8)
-            bar.BackgroundColor3 = Color3.fromRGB(190, 190, 195)
-            Instance.new("UICorner", bar).CornerRadius = UDim.new(1, 0)
             local heading = Instance.new("TextLabel", card)
             heading.Size = UDim2.new(1, -26, 0, 18)
             heading.Position = UDim2.new(0, 22, 0, 6)
@@ -1850,14 +1821,6 @@ if shouldShowWhatsNew then
             desc.TextYAlignment = Enum.TextYAlignment.Top
             desc.TextWrapped = true
         end
-        local wnFooter = Instance.new("TextLabel", wnFrame)
-        wnFooter.Size = UDim2.new(1, -40, 0, 22)
-        wnFooter.Position = UDim2.new(0, 20, 1, -70)
-        wnFooter.BackgroundTransparency = 1
-        wnFooter.Text = "Please read before continuing"
-        wnFooter.TextColor3 = Color3.fromRGB(150, 150, 155)
-        wnFooter.Font = Enum.Font.GothamMedium
-        wnFooter.TextSize = 12
         local wnContinue = Instance.new("TextButton", wnFrame)
         wnContinue.Size = UDim2.new(1, -40, 0, 40)
         wnContinue.Position = UDim2.new(0, 20, 1, -42)
@@ -1868,22 +1831,12 @@ if shouldShowWhatsNew then
         wnContinue.TextSize = 14
         wnContinue.AutoButtonColor = false
         Instance.new("UICorner", wnContinue).CornerRadius = UDim.new(0, 10)
-        local wnContinueStroke = Instance.new("UIStroke", wnContinue)
-        wnContinueStroke.Color = Color3.fromRGB(235, 235, 240)
-        wnContinueStroke.Thickness = 2
-        wnContinueStroke.Transparency = 0.5
         local canContinue = false
         task.delay(1, function()
             if not wnContinue or not wnContinue.Parent then return end
             canContinue = true
             wnContinue.Text = "Continue"
             TweenService:Create(wnContinue, TweenInfo.new(0.3, EAS, EAO), {BackgroundColor3 = Color3.fromRGB(90, 220, 130)}):Play()
-        end)
-        wnContinue.MouseEnter:Connect(function()
-            if canContinue then TweenService:Create(wnContinue, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(110,240,150)}):Play() end
-        end)
-        wnContinue.MouseLeave:Connect(function()
-            if canContinue then TweenService:Create(wnContinue, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(90,220,130)}):Play() end
         end)
         wnContinue.MouseButton1Click:Connect(function()
             if not canContinue then return end
@@ -1957,14 +1910,14 @@ BS.Thickness=3
 BS.Transparency=0
 attachSpin(BS,false,{baseThickness=3})
 FRT=0
-local function SFT()
+function SFT()
     BB.Text="Firing"
     FRT=FRT+1
     local mt=FRT
     task.delay(0.7,function() if mt==FRT then BB.Text="Shoot Murderer" end end)
 end
 SWR=false
-local function RSW()
+function RSW()
     if SWR then return end
     SWR=true
     SFT()
@@ -2099,7 +2052,7 @@ state.lockedButtons=state.lockedButtons or {}
 if not state.floatButtonShape then state.floatButtonShape="circle" end
 
 FBs={}
-local function DPF(i)
+function DPF(i)
     local vw=(Workspace.CurrentCamera and Workspace.CurrentCamera.ViewportSize.X) or 1920
     local cl=state.floatButtonSize+10
     local pr=math.max(1,math.floor((vw-20)/cl))
@@ -2107,7 +2060,7 @@ local function DPF(i)
     local ro=math.floor((i-1)/pr)
     return {xScale=0,xOffset=10+co*cl,yScale=0,yOffset=180+ro*cl}
 end
-local function RFV(d)
+function RFV(d)
     local da=FBs[d.id]
     if not da or not da.btn or not da.btn.Parent then return end
     local iO=false
@@ -2120,7 +2073,7 @@ local function RFV(d)
     da.btn.TextColor3=iO and Color3.new(0,0,0) or Color3.new(1,1,1)
     da.btn.TextStrokeColor3=iO and Color3.new(1,1,1) or Color3.new(0,0,0)
 end
-local function ASH(b,s)
+function ASH(b,s)
     for _,c in ipairs(b:GetChildren()) do
         if c:IsA("UICorner") then c:Destroy() end
     end
@@ -2134,7 +2087,7 @@ local function ASH(b,s)
     b.Rotation=ro
     return ro
 end
-local function RFB()
+function RFB()
     for _,c in ipairs(FG:GetChildren()) do
         if c:IsA("TextButton") or c:IsA("Frame") then c:Destroy() end
     end
@@ -2221,19 +2174,6 @@ local function RFB()
                     if d.key=="voidPlatform" and not state.voidPlatform then RVP() end
                     if d.key=="shootThroughWall" and state.shootThroughWall and state.silentAimWallCheck then
                         state.silentAimWallCheck=false
-                        local refs=_G.__AW_ALLTOGGLES and _G.__AW_ALLTOGGLES["silentAimWallCheck"]
-                        if refs then
-                            pcall(function()
-                                TweenService:Create(refs.pl,TweenInfo.new(0.28,EAB,EAO),{BackgroundColor3=Color3.fromRGB(28,28,30)}):Play()
-                                TweenService:Create(refs.pi,TweenInfo.new(0.28,EAB,EAO),{BackgroundColor3=Color3.fromRGB(18,18,20)}):Play()
-                                TweenService:Create(refs.dt,TweenInfo.new(0.4,Enum.EasingStyle.Elastic,EAO),{
-                                    Position=UDim2.new(0,4,0.5,-8),
-                                    BackgroundColor3=Color3.fromRGB(200,200,200)
-                                }):Play()
-                                local gg=refs.rs:FindFirstChild("SpinGrad")
-                                if gg then setSGC(gg,false) end
-                            end)
-                        end
                     end
                     saveSettings()
                 else
@@ -2243,7 +2183,7 @@ local function RFB()
         end
     end
 end
-local function SFV(v)
+function SFV(v)
     for _,da in pairs(FBs) do
         if da.btn and da.btn.Parent then da.btn.Visible=v end
         if da.outer and da.outer.Parent then da.outer.Visible=v end
@@ -2300,8 +2240,8 @@ DRS.BackgroundTransparency=1
 DRS.Text=""
 DRS.ZIndex=20
 MD=nil
-local function BMD(i) MD={input=i,start=UIS:GetMouseLocation(),startPos=MW.Position} end
-local function EMD(i)
+function BMD(i) MD={input=i,start=UIS:GetMouseLocation(),startPos=MW.Position} end
+function EMD(i)
     if not MD then return end
     if i~=MD.input then return end
     MD=nil
@@ -2378,7 +2318,7 @@ btns={}
 curTab="Farm"
 SEC="Secret"
 
-local function MP(n)
+function MP(n)
     local g=Instance.new("Frame",CT)
     g.Name=n.."_G"
     g.Size=UDim2.new(1,0,1,0)
@@ -2403,7 +2343,7 @@ local function MP(n)
 end
 
 sw=false
-local function ST(n)
+function ST(n)
     if sw or n==curTab then return end
     sw=true
     local o=curTab
@@ -2438,7 +2378,7 @@ local function ST(n)
     end
     task.delay(0.24,function() sw=false end)
 end
-local function CTB(n,f)
+function CTB(n,f)
     local b=Instance.new("TextButton",TLB)
     b.Size=UDim2.new(1,0,0,32)
     b.BackgroundColor3=f and cc(SC.cardHoverColor) or cc(SC.tabBgColor)
@@ -2462,7 +2402,7 @@ for i,n in ipairs(TABS) do CTB(n,i==1) end
 
 _G.__AW_ALLTOGGLES = _G.__AW_ALLTOGGLES or {}
 
-local function TGG(pg,name,order,key)
+function TGG(pg,name,order,key)
     local row=Instance.new("Frame",pg)
     row.Size=UDim2.new(1,0,0,40)
     row.LayoutOrder=order
@@ -2581,7 +2521,7 @@ local function TGG(pg,name,order,key)
     end)
 end
 
-local function ABN(pg,name,order,cb)
+function ABN(pg,name,order,cb)
     local b=Instance.new("TextButton",pg)
     b.Size=UDim2.new(1,0,0,38)
     b.LayoutOrder=order
@@ -2609,7 +2549,7 @@ local function ABN(pg,name,order,cb)
     return b
 end
 
-local function ASEC(pg,text,order)
+function ASEC(pg,text,order)
     local w=Instance.new("Frame",pg)
     w.Size=UDim2.new(1,0,0,22)
     w.LayoutOrder=order
@@ -2630,7 +2570,7 @@ local function ASEC(pg,text,order)
     l.TextXAlignment=Enum.TextXAlignment.Left
 end
 
-local function MSL(pg,label,order,iv,mnV,mxV,sK,oCh)
+function MSL(pg,label,order,iv,mnV,mxV,sK,oCh)
     local row=Instance.new("Frame",pg)
     row.Size=UDim2.new(1,0,0,56)
     row.LayoutOrder=order
@@ -2709,7 +2649,7 @@ local function MSL(pg,label,order,iv,mnV,mxV,sK,oCh)
     end)
 end
 
-local function MIN(pg,order,ph,val,onC)
+function MIN(pg,order,ph,val,onC)
     local b=Instance.new("TextBox",pg)
     b.Size=UDim2.new(1,0,0,36)
     b.LayoutOrder=order
@@ -2726,17 +2666,16 @@ local function MIN(pg,order,ph,val,onC)
     return b
 end
 
--- Headless
-local hlConfigs = {
+hlConfigs = {
     {id="78837807518622", on=false, track=nil, freeze=nil, stopped=nil, key="headless1"},
     {id="117080641351340", on=false, track=nil, freeze=nil, stopped=nil, key="headless2"},
     {id="136055001302601", on=false, track=nil, freeze=nil, stopped=nil, key="headless3"}
 }
-local function stopHl(cfg)
+function stopHl(cfg)
     if cfg.stopped then pcall(function() cfg.stopped:Disconnect() end) cfg.stopped=nil end
     if cfg.track then pcall(function() cfg.track:Stop() cfg.track:Destroy() end) cfg.track=nil end
 end
-local function playHl(cfg)
+function playHl(cfg)
     local c = LP.Character
     if not c then return end
     local hum = c:FindFirstChildOfClass("Humanoid")
@@ -2789,7 +2728,6 @@ task.spawn(function()
     end
 end)
 
--- Wall hop
 do
     local rp = RaycastParams.new()
     rp.FilterType = Enum.RaycastFilterType.Exclude
@@ -2944,12 +2882,12 @@ ABN(pages[SEC],"Add Audio ID",202,function()
     _G.__AW_NOTIFY("Added audio "..id)
     if _G.__AW_REFRESH_RADIO_LIST then pcall(_G.__AW_REFRESH_RADIO_LIST) end
 end)
-local raListFrame = Instance.new("Frame", pages[SEC])
+raListFrame = Instance.new("Frame", pages[SEC])
 raListFrame.Size = UDim2.new(1,0,0,0)
 raListFrame.AutomaticSize = Enum.AutomaticSize.Y
 raListFrame.LayoutOrder = 203
 raListFrame.BackgroundTransparency = 1
-local raListLayout = Instance.new("UIListLayout", raListFrame)
+raListLayout = Instance.new("UIListLayout", raListFrame)
 raListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 raListLayout.Padding = UDim.new(0,4)
 _G.__AW_REFRESH_RADIO_LIST = function()
@@ -3140,7 +3078,7 @@ CLC.BackgroundTransparency=1
 CLL=Instance.new("UIListLayout",CLC)
 CLL.SortOrder=Enum.SortOrder.LayoutOrder
 CLL.Padding=UDim.new(0,4)
-local function RCL()
+function RCL()
     for _,c in ipairs(CLC:GetChildren()) do
         if c:IsA("GuiObject") and c~=CLL then c:Destroy() end
     end
@@ -3220,7 +3158,7 @@ PLP.PaddingTop=UDim.new(0,6)
 PLP.PaddingBottom=UDim.new(0,6)
 PLP.PaddingLeft=UDim.new(0,6)
 PLP.PaddingRight=UDim.new(0,6)
-local function UTL()
+function UTL()
     for _,c in ipairs(playerListToggleBtn:GetChildren()) do
         if c:IsA("TextLabel") then
             c.Text=state.playerListOpen and "Close Player List" or "Open Player List"
@@ -3228,7 +3166,7 @@ local function UTL()
     end
 end
 UTL()
-local function RPL()
+function RPL()
     for _,c in ipairs(PLS:GetChildren()) do
         if c:IsA("GuiObject") and c~=PLL then c:Destroy() end
     end
@@ -3614,7 +3552,7 @@ end
 KKL={}
 KSB={}
 LF2=nil
-local function RASB()
+function RASB()
     for _,b in pairs(KSB) do
         if b and b.Parent then
             b.Text="Set"
@@ -3687,8 +3625,8 @@ ABN(pages["Keybinds"],"Reset All Keybinds",200,function()
     _G.__AW_NOTIFY("Keybinds reset")
 end)
 
-local uiHidden=false
-local function toggleUI()
+uiHidden=false
+function toggleUI()
     uiHidden=not uiHidden
     MW.Visible=not uiHidden
     if SFV then SFV(not uiHidden) end
@@ -4224,7 +4162,7 @@ flyBV=nil
 flyBG=nil
 flyConn=nil
 flyUpHold=false
-local function startFly()
+function startFly()
     local ch=LP.Character
     if not ch then return end
     local hrp=ch:FindFirstChild("HumanoidRootPart")
@@ -4281,7 +4219,7 @@ local function startFly()
         flyBG.CFrame=ccf
     end)
 end
-local function stopFly()
+function stopFly()
     if flyConn then flyConn:Disconnect() flyConn=nil end
     if flyBV and flyBV.Parent then flyBV:Destroy() end
     if flyBG and flyBG.Parent then flyBG:Destroy() end
@@ -4446,7 +4384,7 @@ INVIS_POSITION=Vector3.new(-25.95,84,3537.55)
 invisSeat=nil
 invisWeld=nil
 dodgeActive=false
-local function SCIT(ch,t)
+function SCIT(ch,t)
     if not ch then return end
     for _,d in ipairs(ch:GetDescendants()) do
         if d:IsA("BasePart") or d:IsA("Decal") then
@@ -4454,7 +4392,7 @@ local function SCIT(ch,t)
         end
     end
 end
-local function CIS()
+function CIS()
     if invisWeld and invisWeld.Parent then pcall(function() invisWeld:Destroy() end) end
     if invisSeat and invisSeat.Parent then pcall(function() invisSeat:Destroy() end) end
     invisWeld=nil
@@ -4462,7 +4400,7 @@ local function CIS()
     local e=Workspace:FindFirstChild("invischair")
     if e then pcall(function() e:Destroy() end) end
 end
-local function EI()
+function EI()
     local ch=LP.Character
     if not ch then return end
     local hrp=ch:FindFirstChild("HumanoidRootPart")
@@ -4491,7 +4429,7 @@ local function EI()
     task.wait(0.1)
     SCIT(ch,0.5)
 end
-local function DI()
+function DI()
     CIS()
     if LP.Character then SCIT(LP.Character,0) end
 end
@@ -4584,7 +4522,7 @@ task.spawn(function()
 end)
 
 -- AIMBOT
-local CAT=nil
+CAT=nil
 RunService.RenderStepped:Connect(function(dt)
     if not al() then CAT=nil return end
     if not (state.aimbotMurderer or state.aimbotSheriff) then CAT=nil return end
@@ -4652,7 +4590,7 @@ end)
 EF2=nil
 EC={}
 GC2={}
-local function GOE()
+function GOE()
     local f=CoreGui:FindFirstChild("AW_ESP")
     if f then return f end
     f=PlayerGui:FindFirstChild("AW_ESP")
@@ -4664,20 +4602,20 @@ local function GOE()
     return f
 end
 EF2=GOE()
-local function DE2(e)
+function DE2(e)
     if not e then return end
     pcall(function()
         if e.hl then e.hl:Destroy() end
         if e.bb then e.bb:Destroy() end
     end)
 end
-local function CE(p)
+function CE(p)
     local e=EC[p]
     if not e then return end
     DE2(e)
     EC[p]=nil
 end
-local function CGE()
+function CGE()
     for k,v in pairs(GC2) do
         pcall(function()
             if v.hl then v.hl:Destroy() end
@@ -4847,7 +4785,7 @@ LCF2=tick()
 NCO=12
 CFT=nil
 CTC=nil
-local function CCFT()
+function CCFT()
     if CFT then
         pcall(function() CFT:Cancel() end)
         CFT=nil
@@ -5355,10 +5293,10 @@ do
     end)
 end
 
--- FPS BOOSTER
+-- FPS BOOSTER (all globals)
 FB_ORIG = nil
 FB_ACTIVE = false
-local function saveLightingState()
+function saveLightingState()
     if FB_ORIG then return end
     FB_ORIG = {
         GlobalShadows = Lighting.GlobalShadows,
@@ -5372,7 +5310,7 @@ local function saveLightingState()
         RemovedChildren = {}
     }
 end
-local function applyFpsBoost()
+function applyFpsBoost()
     if FB_ACTIVE then return end
     FB_ACTIVE = true
     saveLightingState()
@@ -5402,7 +5340,7 @@ local function applyFpsBoost()
     end
     _G.__AW_NOTIFY("FPS Booster: <font color='#5aff8c'>ON</font>")
 end
-local function removeFpsBoost()
+function removeFpsBoost()
     if not FB_ACTIVE then return end
     FB_ACTIVE = false
     if not FB_ORIG then return end
@@ -5441,8 +5379,8 @@ task.spawn(function()
 end)
 
 -- MURDERER PERK NOTIFICATION
-local lastPerkByUser = {}
-local lastMurderer = nil
+lastPerkByUser = {}
+lastMurderer = nil
 task.spawn(function()
     while true do
         task.wait(0.75)
@@ -5475,7 +5413,7 @@ task.spawn(function()
                         {name="Trap", label="Trap"},
                         {name="BearTrap", label="Bear Trap"},
                         {name="C4", label="C4"},
-                        {name="Grenade", label="Grenade"},
+                        {name="Grenade", label="Grenade"}
                     }
                     for _, kp in ipairs(knownPerks) do
                         local o = m.Character:FindFirstChild(kp.name) or m:FindFirstChild(kp.name)
@@ -5490,7 +5428,7 @@ task.spawn(function()
                         for _, kp in ipairs({
                             {name="ThrowingKnife", label="Throwing Knife"},
                             {name="ThrowKnife", label="Throwing Knife"},
-                            {name="Flashbang", label="Flashbang"},
+                            {name="Flashbang", label="Flashbang"}
                         }) do
                             if bp:FindFirstChild(kp.name) then perk = kp.label break end
                         end
@@ -5534,12 +5472,12 @@ HUDF.Visible=state.hudEnabled
 HUDF.Active=true
 Instance.new("UICorner",HUDF).CornerRadius=UDim.new(0,10)
 
-local HUDStroke=Instance.new("UIStroke",HUDF)
+HUDStroke=Instance.new("UIStroke",HUDF)
 HUDStroke.Color=Color3.fromRGB(90,90,95)
 HUDStroke.Thickness=1
 HUDStroke.Transparency=0.3
 
-local HUDAccent=Instance.new("Frame",HUDF)
+HUDAccent=Instance.new("Frame",HUDF)
 HUDAccent.Size=UDim2.new(0,3,1,-16)
 HUDAccent.Position=UDim2.new(0,8,0,8)
 HUDAccent.BackgroundColor3=Color3.fromRGB(190,190,195)
@@ -5559,7 +5497,7 @@ HUDLabel.TextYAlignment=Enum.TextYAlignment.Top
 HUDLabel.RichText=true
 HUDLabel.TextWrapped=true
 
-local hudDrag=nil
+hudDrag=nil
 HUDF.InputBegan:Connect(function(i)
     if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
         hudDrag={input=i,start=UIS:GetMouseLocation(),sp=HUDF.Position}
@@ -5653,7 +5591,7 @@ task.spawn(function()
 end)
 
 -- PRIVATE CHAT
-local privateChatGui = Instance.new("ScreenGui")
+privateChatGui = Instance.new("ScreenGui")
 privateChatGui.Name = "AW_PrivateChat"
 privateChatGui.ResetOnSpawn = false
 privateChatGui.DisplayOrder = 9999998
@@ -5661,7 +5599,7 @@ privateChatGui.IgnoreGuiInset = true
 pcall(function() privateChatGui.Parent = CoreGui end)
 if not privateChatGui.Parent then privateChatGui.Parent = PlayerGui end
 
-local privateChatFrame = Instance.new("Frame", privateChatGui)
+privateChatFrame = Instance.new("Frame", privateChatGui)
 privateChatFrame.Size = UDim2.new(0, 500, 0, 440)
 privateChatFrame.Position = UDim2.new(0.5, -250, 0.5, -220)
 privateChatFrame.BackgroundColor3 = Color3.fromRGB(6, 6, 8)
@@ -5671,43 +5609,22 @@ privateChatFrame.Active = true
 privateChatFrame.ClipsDescendants = true
 Instance.new("UICorner", privateChatFrame).CornerRadius = UDim.new(0, 14)
 
-local pcGradient = Instance.new("UIGradient", privateChatFrame)
-pcGradient.Color = ColorSequence.new({
-    ColorSequenceKeypoint.new(0, Color3.fromRGB(10, 10, 14)),
-    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(6, 6, 8)),
-    ColorSequenceKeypoint.new(1, Color3.fromRGB(4, 4, 6))
-})
-pcGradient.Rotation = 45
+privateChatFrame.ClipsDescendants = true
 
-local pcStroke = Instance.new("UIStroke", privateChatFrame)
-pcStroke.Color = Color3.fromRGB(200, 200, 205)
-pcStroke.Thickness = 2
-task.spawn(function()
-    local p = 0
-    while true do
-        local dt = RunService.Heartbeat:Wait()
-        p = (p + dt * 1.4) % (math.pi * 2)
-        local t = (math.sin(p) + 1) * 0.5
-        if pcStroke and pcStroke.Parent then
-            pcStroke.Transparency = 0.3 - t * 0.3
-            pcStroke.Color = Color3.fromRGB(120 + t * 110, 120 + t * 110, 125 + t * 110)
-        end
-    end
-end)
-
-local pcDragBar = Instance.new("TextButton", privateChatFrame)
+pcDragBar = Instance.new("TextButton", privateChatFrame)
 pcDragBar.Size = UDim2.new(1, -46, 0, 44)
 pcDragBar.Position = UDim2.new(0, 8, 0, 4)
 pcDragBar.BackgroundTransparency = 1
 pcDragBar.Text = ""
 pcDragBar.ZIndex = 3
 
-local pcTitleIcon = Instance.new("Frame", pcDragBar)
+pcTitleIcon = Instance.new("Frame", pcDragBar)
 pcTitleIcon.Size = UDim2.new(0, 28, 0, 28)
 pcTitleIcon.Position = UDim2.new(0, 6, 0.5, -14)
 pcTitleIcon.BackgroundColor3 = Color3.fromRGB(190, 190, 195)
 Instance.new("UICorner", pcTitleIcon).CornerRadius = UDim.new(0, 8)
-local pcIconLabel = Instance.new("TextLabel", pcTitleIcon)
+
+pcIconLabel = Instance.new("TextLabel", pcTitleIcon)
 pcIconLabel.Size = UDim2.new(1, 0, 1, 0)
 pcIconLabel.BackgroundTransparency = 1
 pcIconLabel.Text = "A"
@@ -5715,7 +5632,7 @@ pcIconLabel.TextColor3 = Color3.new(0, 0, 0)
 pcIconLabel.Font = Enum.Font.GothamBold
 pcIconLabel.TextSize = 16
 
-local pcTitle = Instance.new("TextLabel", pcDragBar)
+pcTitle = Instance.new("TextLabel", pcDragBar)
 pcTitle.Size = UDim2.new(1, -80, 0, 20)
 pcTitle.Position = UDim2.new(0, 42, 0, 6)
 pcTitle.BackgroundTransparency = 1
@@ -5725,17 +5642,7 @@ pcTitle.Font = Enum.Font.GothamBold
 pcTitle.TextSize = 15
 pcTitle.TextXAlignment = Enum.TextXAlignment.Left
 
-local pcSubtitle = Instance.new("TextLabel", pcDragBar)
-pcSubtitle.Size = UDim2.new(1, -80, 0, 14)
-pcSubtitle.Position = UDim2.new(0, 42, 0, 24)
-pcSubtitle.BackgroundTransparency = 1
-pcSubtitle.Text = "https://awh.filho.wtf"
-pcSubtitle.TextColor3 = Color3.fromRGB(140, 140, 145)
-pcSubtitle.Font = Enum.Font.Gotham
-pcSubtitle.TextSize = 10
-pcSubtitle.TextXAlignment = Enum.TextXAlignment.Left
-
-local pcClose = Instance.new("TextButton", privateChatFrame)
+pcClose = Instance.new("TextButton", privateChatFrame)
 pcClose.Size = UDim2.new(0, 30, 0, 30)
 pcClose.Position = UDim2.new(1, -36, 0, 8)
 pcClose.BackgroundColor3 = Color3.fromRGB(40, 40, 44)
@@ -5747,7 +5654,7 @@ pcClose.AutoButtonColor = false
 Instance.new("UICorner", pcClose).CornerRadius = UDim.new(0, 8)
 pcClose.MouseButton1Click:Connect(function() privateChatFrame.Visible = false end)
 
-local pcDragState = nil
+pcDragState = nil
 pcDragBar.InputBegan:Connect(function(i)
     if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
         pcDragState = { input = i, start = UIS:GetMouseLocation(), startPos = privateChatFrame.Position }
@@ -5765,18 +5672,20 @@ UIS.InputEnded:Connect(function(i)
     if pcDragState and i == pcDragState.input then pcDragState = nil end
 end)
 
-local pcTabRow = Instance.new("Frame", privateChatFrame)
+pcTabRow = Instance.new("Frame", privateChatFrame)
 pcTabRow.Size = UDim2.new(1, -20, 0, 32)
 pcTabRow.Position = UDim2.new(0, 10, 0, 54)
 pcTabRow.BackgroundTransparency = 1
-local pcTabChat = Instance.new("TextButton", pcTabRow)
+
+pcTabChat = Instance.new("TextButton", pcTabRow)
 pcTabChat.Size = UDim2.new(0, 110, 1, 0)
 pcTabChat.Text = "Chat"
 pcTabChat.Font = Enum.Font.GothamBold
 pcTabChat.TextSize = 12
 pcTabChat.AutoButtonColor = false
 Instance.new("UICorner", pcTabChat).CornerRadius = UDim.new(0, 8)
-local pcTabCmds = Instance.new("TextButton", pcTabRow)
+
+pcTabCmds = Instance.new("TextButton", pcTabRow)
 pcTabCmds.Size = UDim2.new(0, 110, 1, 0)
 pcTabCmds.Position = UDim2.new(0, 116, 0, 0)
 pcTabCmds.Text = "Commands"
@@ -5785,7 +5694,7 @@ pcTabCmds.TextSize = 12
 pcTabCmds.AutoButtonColor = false
 Instance.new("UICorner", pcTabCmds).CornerRadius = UDim.new(0, 8)
 
-local pcBody = Instance.new("Frame", privateChatFrame)
+pcBody = Instance.new("Frame", privateChatFrame)
 pcBody.Size = UDim2.new(1, -20, 1, -152)
 pcBody.Position = UDim2.new(0, 10, 0, 92)
 pcBody.BackgroundColor3 = Color3.fromRGB(12, 12, 14)
@@ -5793,11 +5702,12 @@ pcBody.BorderSizePixel = 0
 pcBody.ClipsDescendants = true
 Instance.new("UICorner", pcBody).CornerRadius = UDim.new(0, 10)
 
-local pcChatPage = Instance.new("Frame", pcBody)
+pcChatPage = Instance.new("Frame", pcBody)
 pcChatPage.Size = UDim2.new(1, 0, 1, 0)
 pcChatPage.BackgroundTransparency = 1
 pcChatPage.Visible = true
-local pcScroll = Instance.new("ScrollingFrame", pcChatPage)
+
+pcScroll = Instance.new("ScrollingFrame", pcChatPage)
 pcScroll.Size = UDim2.new(1, 0, 1, 0)
 pcScroll.BackgroundTransparency = 1
 pcScroll.BorderSizePixel = 0
@@ -5805,57 +5715,50 @@ pcScroll.ScrollBarThickness = 4
 pcScroll.ScrollBarImageColor3 = Color3.fromRGB(160, 160, 165)
 pcScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 pcScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-local pcLayout = Instance.new("UIListLayout", pcScroll)
+
+pcLayout = Instance.new("UIListLayout", pcScroll)
 pcLayout.SortOrder = Enum.SortOrder.LayoutOrder
 pcLayout.Padding = UDim.new(0, 6)
-local pcPad2 = Instance.new("UIPadding", pcScroll)
+
+pcPad2 = Instance.new("UIPadding", pcScroll)
 pcPad2.PaddingTop = UDim.new(0, 10)
 pcPad2.PaddingBottom = UDim.new(0, 10)
 pcPad2.PaddingLeft = UDim.new(0, 12)
 pcPad2.PaddingRight = UDim.new(0, 12)
 
-local pcCmdsPage = Instance.new("Frame", pcBody)
+pcCmdsPage = Instance.new("Frame", pcBody)
 pcCmdsPage.Size = UDim2.new(1, 0, 1, 0)
 pcCmdsPage.BackgroundTransparency = 1
 pcCmdsPage.Visible = false
-local pcCmdScroll = Instance.new("ScrollingFrame", pcCmdsPage)
+
+pcCmdScroll = Instance.new("ScrollingFrame", pcCmdsPage)
 pcCmdScroll.Size = UDim2.new(1, 0, 1, 0)
 pcCmdScroll.BackgroundTransparency = 1
 pcCmdScroll.ScrollBarThickness = 4
 pcCmdScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
 pcCmdScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-local pcCmdLayout = Instance.new("UIListLayout", pcCmdScroll)
+
+pcCmdLayout = Instance.new("UIListLayout", pcCmdScroll)
 pcCmdLayout.SortOrder = Enum.SortOrder.LayoutOrder
 pcCmdLayout.Padding = UDim.new(0, 4)
-local pcCmdPad = Instance.new("UIPadding", pcCmdScroll)
+
+pcCmdPad = Instance.new("UIPadding", pcCmdScroll)
 pcCmdPad.PaddingTop = UDim.new(0, 10)
 pcCmdPad.PaddingBottom = UDim.new(0, 10)
 pcCmdPad.PaddingLeft = UDim.new(0, 12)
 pcCmdPad.PaddingRight = UDim.new(0, 12)
 
-local pcStatusBar = Instance.new("Frame", privateChatFrame)
-pcStatusBar.Size = UDim2.new(1, -20, 0, 18)
-pcStatusBar.Position = UDim2.new(0, 10, 1, -50)
-pcStatusBar.BackgroundTransparency = 1
-local pcStatus = Instance.new("TextLabel", pcStatusBar)
-pcStatus.Size = UDim2.new(1, 0, 1, 0)
-pcStatus.BackgroundTransparency = 1
-pcStatus.Text = "connecting..."
-pcStatus.TextColor3 = Color3.fromRGB(140, 140, 145)
-pcStatus.Font = Enum.Font.Gotham
-pcStatus.TextSize = 10
-pcStatus.TextXAlignment = Enum.TextXAlignment.Left
-
-local pcInputWrap = Instance.new("Frame", privateChatFrame)
+pcInputWrap = Instance.new("Frame", privateChatFrame)
 pcInputWrap.Size = UDim2.new(1, -20, 0, 38)
 pcInputWrap.Position = UDim2.new(0, 10, 1, -38)
 pcInputWrap.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
 Instance.new("UICorner", pcInputWrap).CornerRadius = UDim.new(0, 10)
-local pcInputStroke = Instance.new("UIStroke", pcInputWrap)
+
+pcInputStroke = Instance.new("UIStroke", pcInputWrap)
 pcInputStroke.Color = Color3.fromRGB(60, 60, 65)
 pcInputStroke.Thickness = 1
 
-local pcInput = Instance.new("TextBox", pcInputWrap)
+pcInput = Instance.new("TextBox", pcInputWrap)
 pcInput.Size = UDim2.new(1, -16, 1, 0)
 pcInput.Position = UDim2.new(0, 12, 0, 0)
 pcInput.BackgroundTransparency = 1
@@ -5868,18 +5771,10 @@ pcInput.TextSize = 12
 pcInput.ClearTextOnFocus = false
 pcInput.TextXAlignment = Enum.TextXAlignment.Left
 
-pcInput.Focused:Connect(function()
-    TweenService:Create(pcInputStroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(190, 190, 195)}):Play()
-    TweenService:Create(pcInputWrap, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(28, 28, 32)}):Play()
-end)
-pcInput.FocusLost:Connect(function()
-    TweenService:Create(pcInputStroke, TweenInfo.new(0.2), {Color = Color3.fromRGB(60, 60, 65)}):Play()
-    TweenService:Create(pcInputWrap, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(20, 20, 24)}):Play()
-end)
+pcMsgCount = 0
+seenMsgIds = {}
 
-local pcMsgCount = 0
-local seenMsgIds = {}
-local function addPrivateMessage(sender, message, isSystem, msgId)
+function addPrivateMessage(sender, message, isSystem, msgId)
     if msgId and seenMsgIds[msgId] then return end
     if msgId then seenMsgIds[msgId] = true end
     pcMsgCount = pcMsgCount + 1
@@ -5907,7 +5802,6 @@ local function addPrivateMessage(sender, message, isSystem, msgId)
     lbl.Font = Enum.Font.Gotham
     lbl.TextSize = 12
     lbl.TextXAlignment = Enum.TextXAlignment.Left
-    lbl.TextWrapped = false
     task.defer(function()
         if pcScroll and pcScroll.Parent then
             pcScroll.CanvasPosition = Vector2.new(0, math.max(0, pcScroll.AbsoluteCanvasSize.Y - pcScroll.AbsoluteWindowSize.Y))
@@ -5915,8 +5809,8 @@ local function addPrivateMessage(sender, message, isSystem, msgId)
     end)
 end
 
-local pcActiveTab = "chat"
-local function setPcTab(t)
+pcActiveTab = "chat"
+function setPcTab(t)
     pcActiveTab = t
     pcChatPage.Visible = (t == "chat")
     pcCmdsPage.Visible = (t == "cmds")
@@ -5936,39 +5830,19 @@ end
 pcTabChat.MouseButton1Click:Connect(function() setPcTab("chat") end)
 pcTabCmds.MouseButton1Click:Connect(function() setPcTab("cmds") end)
 
-local helpEntries = {
+helpEntries = {
     {"General", "header"},
     {".help", "Open Commands tab"},
     {".showui / .hideui", "Show/hide main UI"},
     {".private", "Toggle private chat"},
     {".unload", "Unload the entire script"},
-    {"Turn Off Any Feature", "header"},
-    {".unfly / .unnoclip", "Turn off fly / noclip"},
-    {".unaimbot", "Turn off aimbot murderer + sheriff"},
-    {".unsilentaim", "Turn off silent aim"},
-    {".unshootwall", "Turn off shoot through walls"},
-    {".unesp / .ungesp", "Turn off player / gun ESP"},
-    {".unhitbox", "Turn off hitbox expander"},
-    {".unspinbot", "Turn off spin bot"},
-    {".unwallhop", "Turn off wall hop"},
-    {".uninvis", "Turn off invisible"},
-    {".unspeed / .unjump", "Turn off speed / jump power"},
-    {".unfullbright", "Turn off fullbright"},
-    {".unfov", "Turn off FOV changer"},
-    {".undodge", "Turn off auto dodge"},
-    {".unflingaura", "Turn off fling aura"},
-    {".unantifling", "Turn off anti-fling"},
-    {".unhud", "Turn off HUD"},
-    {".unradioabuse", "Turn off radio abuse"},
-    {".unfps", "Turn off FPS booster"},
     {"Combat", "header"},
     {".aimbot [sheriff]", "Toggle aimbot"},
     {".silentaim", "Toggle silent aim"},
     {".shoot", "Fire at murderer"},
     {".shootwall", "Shoot through walls"},
-    {".fling <user>", "Fling a player"},
     {".flingall / .flingmur", "Fling all / murderer"},
-    {".killsher / .killall / .killcust", "Kill sheriff / all / custom (knife)"},
+    {".killsher / .killall / .killcust", "Kill sheriff / all / custom"},
     {"Movement", "header"},
     {".fly / .noclip", "Toggle fly / noclip"},
     {".speed <n>", "Set walk speed"},
@@ -5976,15 +5850,14 @@ local helpEntries = {
     {"Teleport", "header"},
     {".tpmap / .tplobby", "TP to map / lobby"},
     {".tpmur / .tpsher", "TP to murderer / sheriff"},
-    {".to <user>", "TP to a player by username or display name"},
+    {".to <user>", "TP to a player"},
     {"Utility", "header"},
     {".grabgun", "Grab nearest gun"},
     {".removebarriers", "Remove barriers"},
     {".reset", "Reset character"},
     {".invisible", "Toggle invisible"},
     {".hud", "Toggle HUD"},
-    {".antifling", "Toggle anti-fling"},
-    {".radioabuse", "Toggle radio spam"},
+    {".fps", "Toggle FPS Booster"},
     {".rj", "Rejoin the current server"},
     {".shop", "Server hop to a random server"}
 }
@@ -6026,9 +5899,9 @@ for i, entry in ipairs(helpEntries) do
 end
 setPcTab("chat")
 
-local RELAY_URL = state.privateChatRelayUrl or "https://api.npoint.io/795defab3ba6f023d5bc"
+RELAY_URL = state.privateChatRelayUrl or "https://api.npoint.io/795defab3ba6f023d5bc"
 
-local function httpGetJson(url)
+function httpGetJson(url)
     local ok, res = pcall(function()
         if syn and syn.request then return syn.request({Url=url, Method="GET"})
         elseif request then return request({Url=url, Method="GET"})
@@ -6043,7 +5916,7 @@ local function httpGetJson(url)
     return data
 end
 
-local function httpPostJson(url, tbl)
+function httpPostJson(url, tbl)
     local body = HttpService:JSONEncode(tbl)
     local ok, res = pcall(function()
         if syn and syn.request then return syn.request({Url=url, Method="POST", Headers={["Content-Type"]="application/json"}, Body=body})
@@ -6054,7 +5927,7 @@ local function httpPostJson(url, tbl)
     return ok, res
 end
 
-local function sendToRelay(name, message)
+function sendToRelay(name, message)
     task.spawn(function()
         task.wait(math.random() * 0.5)
         local data = httpGetJson(RELAY_URL) or {}
@@ -6069,8 +5942,6 @@ local function sendToRelay(name, message)
         table.insert(msgs, entry)
         while #msgs > 200 do table.remove(msgs, 1) end
         local ok = httpPostJson(RELAY_URL, {messages = msgs})
-        if ok then pcStatus.Text = "Sent " .. os.date("%H:%M:%S")
-        else pcStatus.Text = "Send failed" end
     end)
 end
 
@@ -6089,7 +5960,6 @@ task.spawn(function()
                     end
                 end
             end
-            pcStatus.Text = "Synced " .. os.date("%H:%M:%S")
         end
     end
 end)
