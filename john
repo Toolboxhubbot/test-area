@@ -169,7 +169,7 @@ state={
     spinBot=false,spinBotSpeed=20,
     voteRespawnCount=5,voteRespawnDelay=0.05,radioAutoPlay=false,radioSelectedSongId="",
     radioInputId="",radioAudioList={},radioSelectedAudio="",
-    autoRejoin=false,
+    autoRejoin=false,autoLowServer=false,autoLowServerMax=2,
     headless1=false,headless2=false,headless3=false,
     autoDodgeRange=25,
     hudEnabled=false,hudX=0.72,hudY=0.02,
@@ -238,7 +238,8 @@ TD={
     removeBarriers="Remove Barriers",feAnimEnabled="FE Anim",
     voidPlatform="Void Platform",loopTpMap="TP Map",loopTpLobby="TP Lobby",
     loopTpMurderer="TP Mur",loopTpSheriff="TP Sher",loopTpCustom="TP Cust",
-    spinBot="Spin Bot",hideUI="Hide UI",radioAutoPlay="Auto Play",
+    spinBot="Spin Bot",hideUI="Hide UI",radioAutoPlay="Auto Play Selected Song",
+    autoRejoin="Auto Rejoin",autoLowServer="Auto Low Server",
     headless1="Headless V1",headless2="Headless V2",headless3="Headless V3",
     hudEnabled="HUD"
 }
@@ -1527,7 +1528,8 @@ function GVN()
     end
     return mn
 end
--- RADIO (ATAOs method, simplified)
+
+-- RADIO (simplified, ATAOs method)
 PlaySongRemote = nil
 songNameCache = {}
 function getPlaySongRemote()
@@ -1682,13 +1684,14 @@ if shouldShowWhatsNew then
         wnBodyLayout.SortOrder = Enum.SortOrder.LayoutOrder
         wnBodyLayout.Padding = UDim.new(0, 10)
         local whatsNewItems = {
-            {"Radio Simplified", "Play Audio and Auto Play now work directly - no enable toggle needed. Song names are shown."},
-            {"Hitbox Integration (Shooting)", "Silent aim and magic bullet now target the expanded hitbox."},
-            {"Shoot Murderer Button", "Auto-equips, fires, de-equips."},
-            {"FPS Booster", "Strips heavy lighting / particles."},
-            {"Perk Notify", "Alerts you what perk the murderer has."},
-            {"Server Hop Fixed", ".shop works reliably."},
-            {"Knife Kills", "Kill All / Sheriff / Custom use HandleTouched only."}
+            {"Auto Rejoin", "New Misc toggle - rejoins same server after kick/disconnect."},
+            {"Auto Low Server", "New Misc toggle - hops to a server with 2 or fewer players."},
+            {"Radio Simplified", "Play Audio and Auto Play now work directly. Song names are shown."},
+            {"Anti-Void (ATAO)", "Uses FallenPartsDestroyHeight = nan - cannot fall out of map."},
+            {"New Hitbox Expander", "Ball shape + WeldConstraint for better hit detection."},
+            {"Wallhop Flick", "Auto-fires when wall detected, no Space needed."},
+            {"Loop Fling Fixed", "Now builds target list first - no skipped players."},
+            {"Emotes Restored", "Full ~180 emote list back."}
         }
         for i, item in ipairs(whatsNewItems) do
             local card = Instance.new("Frame", wnBody)
@@ -2051,7 +2054,6 @@ function SFV(v)
     if _G.__AW_EMOTE_FLOAT_REFRESH then pcall(_G.__AW_EMOTE_FLOAT_REFRESH) end
 end
 RFB()
-
 -- MAIN UI
 SG2=Instance.new("ScreenGui")
 SG2.Name="Appleware" SG2.Parent=PlayerGui SG2.ResetOnSpawn=false SG2.DisplayOrder=999999 SG2.IgnoreGuiInset=true
@@ -2228,18 +2230,16 @@ function TGG(pg,name,order,key)
         if key=="voidPlatform" and not ns then RVP() end
         if key=="hudEnabled" and HUDF then HUDF.Visible=ns end
         if FBM[key] then RFV(FBM[key]) end
-        if key=="radioAutoPlay" then
-            if ns then
-                local id = state.radioSelectedAudio
-                if id and id ~= "" then
-                    local nid = tostring(id):match("%d+")
-                    if nid then
-                        playRadioAudio(nid)
-                        _G.__AW_NOTIFY("Auto playing: <b>"..getSongName(nid).."</b>", 4)
-                    end
-                else
-                    _G.__AW_NOTIFY("<font color='#ff5a5a'>No song selected</font>", 3)
+        if key=="radioAutoPlay" and ns then
+            local id = state.radioSelectedAudio
+            if id and id ~= "" then
+                local nid = tostring(id):match("%d+")
+                if nid then
+                    playRadioAudio(nid)
+                    _G.__AW_NOTIFY("Auto playing: <b>"..getSongName(nid).."</b>", 4)
                 end
+            else
+                _G.__AW_NOTIFY("<font color='#ff5a5a'>No song selected</font>", 3)
             end
         end
         if key=="shootThroughWall" and ns and state.silentAimWallCheck then
@@ -2466,6 +2466,7 @@ do
     rp.FilterType = Enum.RaycastFilterType.Exclude
     local flicking = false
     local flickCooldown = 0
+    local WALL_CHECK_DIST = 3.5
     task.spawn(function()
         while true do
             task.wait(0.03)
@@ -2480,15 +2481,15 @@ do
                     local hit = nil
                     for _, d in ipairs(dirs) do
                         if d.Magnitude > 0.05 then
-                            local r = Workspace:Raycast(rt.Position, d.Unit * 3.5, rp)
+                            local r = Workspace:Raycast(rt.Position, d.Unit * WALL_CHECK_DIST, rp)
                             if r then hit = r break end
                         end
                     end
                     if hit then
                         wallHopInfJump = true
-                        if state.wallHopFlick and UIS:IsKeyDown(Enum.KeyCode.Space) and not flicking and tick() > flickCooldown then
+                        if state.wallHopFlick and not flicking and tick() > flickCooldown then
                             flicking = true
-                            flickCooldown = tick() + 0.35
+                            flickCooldown = tick() + 0.28
                             local cam = Workspace.CurrentCamera
                             if cam then
                                 local scf = cam.CFrame
@@ -2497,11 +2498,11 @@ do
                                     flatNormal = flatNormal.Unit
                                     local newCF = CFrame.lookAt(cam.CFrame.Position, cam.CFrame.Position + flatNormal * 10)
                                     cam.CFrame = newCF
-                                    task.wait(0.09)
+                                    task.wait(0.08)
                                     if cam then cam.CFrame = scf end
                                 end
                             end
-                            task.wait(0.05)
+                            task.wait(0.04)
                             flicking = false
                         end
                     end
@@ -2945,6 +2946,10 @@ TGG(pages["Misc"],"Anti AFK",1,"afk")
 TGG(pages["Misc"],"Auto Grab Gun",3,"gun")
 TGG(pages["Misc"],"Anti-Void",7,"antiVoid")
 TGG(pages["Misc"],"Anti-Fling",10,"antiFling")
+ASEC(pages["Misc"],"Server",15)
+TGG(pages["Misc"],"Auto Rejoin",16,"autoRejoin")
+TGG(pages["Misc"],"Auto Low Server",17,"autoLowServer")
+MSL(pages["Misc"],"Max Players Allowed",18,state.autoLowServerMax or 2,1,50,"autoLowServerMax")
 ASEC(pages["Misc"],"Performance",20)
 TGG(pages["Misc"],"FPS Booster",21,"fpsBooster")
 ABN(pages["Misc"],"Boost FPS Now",22,function()
@@ -3347,7 +3352,63 @@ do
         {id=114899970878842,name="Death"},{id=5104377791,name="Hero Landing"},{id=5917570207,name="Floss"},
         {id=131763631172236,name="Xaviersobased"},{id=132074413582912,name="California"},{id=15554010118,name="Head Bop"},
         {id=112758073578333,name="Bubbly"},{id=3716636630,name="Monkey"},{id=123015710605336,name="Onion"},
-        {id=4646306583,name="Curtsy"},{id=85936805522788,name="Caramell"},{id=14900153406,name="Feel Special"}
+        {id=4646306583,name="Curtsy"},{id=85936805522788,name="Caramell"},{id=14900153406,name="Feel Special"},
+        {id=102492229412911,name="Tenna Dance"},{id=133142324349281,name="Fish"},{id=10214406616,name="Frosty"},
+        {id=120224229260879,name="Cute Crouch"},{id=15679955281,name="Festive"},{id=4849502101,name="Sad"},
+        {id=10214418283,name="V Pose"},{id=92853367837757,name="Garry"},{id=104485625389237,name="Mine"},
+        {id=139830733782518,name="Phut On"},{id=132382355371060,name="Tank"},{id=103046131635200,name="Love Scenario"},
+        {id=15123050663,name="Bone Bop"},{id=124305244640379,name="Shattered"},{id=134311528115559,name="Hit Beat"},
+        {id=17748346932,name="Heart Shuffle"},{id=93105950995997,name="Caramelldansen"},{id=7466046574,name="Quiet"},
+        {id=96557878503341,name="Caramell 2"},{id=139859849852362,name="Dead"},{id=17360720445,name="Lets Drive"},
+        {id=103102322875221,name="Laser Spin"},{id=3576968026,name="Shrug"},{id=130998336536045,name="Gangnam 2"},
+        {id=84555218084038,name="Helicopter Spin"},{id=71302743123422,name="Popular"},{id=133765015173412,name="Ariana"},
+        {id=115319301809339,name="2 Phut Hon"},{id=70635223083942,name="Be Not Afraid"},{id=17746270218,name="Sturdy"},
+        {id=129149402922241,name="Griddy"},{id=3576686446,name="Hello"},{id=113547795536875,name="Gangnam 3"},
+        {id=126614732606871,name="Sit"},{id=3762654854,name="Greatest"},{id=16572756230,name="Hipmotion"},
+        {id=16276506814,name="Samba"},{id=3576823880,name="Point2"},{id=78459263478161,name="Family Man"},
+        {id=14900151704,name="Likey"},{id=3360686498,name="Stadium"},{id=15571540519,name="Starships"},
+        {id=4940597758,name="Cower"},{id=11394056822,name="Elevate"},{id=117734400993750,name="Virtual Singer"},
+        {id=97263450325496,name="Teto"},{id=4102315500,name="Haha"},{id=79312439851071,name="Hot To Go"},
+        {id=105851216004006,name="Electro"},{id=92707348383277,name="Mesmerizer"},{id=103139492736941,name="Tenna Swing"},
+        {id=15571538346,name="Boom Boom"},{id=15554016057,name="Fall Float"},{id=70615023659736,name="Floating 2"},
+        {id=136740085081295,name="Hidden"},{id=119431985170060,name="Helicopter"},{id=87141651594092,name="Speed Pose"},
+        {id=16303091119,name="Beauty"},{id=3934986896,name="Dizzy"},{id=130726889233022,name="Crybaby"},
+        {id=11309263077,name="Heart Skip"},{id=84511772437190,name="Spinning"},{id=14353417553,name="Air Guitar"},
+        {id=15392927897,name="Sliving"},{id=94796833553521,name="Takedown 1"},{id=120437019363089,name="Griffin"},
+        {id=15506506103,name="Flex Walk"},{id=90608224567833,name="Expendable"},{id=18526338976,name="Breaking"},
+        {id=99818263438846,name="Default Dance"},{id=103197720369544,name="Dani"},{id=75017857395637,name="TV Time"},
+        {id=73683655527605,name="Roadkill"},{id=15392932768,name="IT-Grrrl"},{id=82217023310738,name="Thanos"},
+        {id=102610758906338,name="Possessed"},{id=95323795166399,name="Rat Dance"},{id=127562607220778,name="Gangnam 4"},
+        {id=129132611803602,name="Helicopter 2"},{id=82345302788133,name="Dia Delicia"},{id=15392937495,name="Angles"},
+        {id=4212496830,name="Zombie"},{id=113016438012253,name="Best Mates"},{id=110537281410647,name="Wall Lean"},
+        {id=92903522317071,name="Magnetic"},{id=122899100558551,name="TV Time 2"},{id=75528418031928,name="Rambunct 2"},
+        {id=103040723950430,name="Gojo"},{id=70788193750089,name="Kickn"},{id=5915776835,name="High Wave"},
+        {id=84195923658292,name="Jojo"},{id=110731335896907,name="Headless"},{id=139271706064778,name="Hip Bounce"},
+        {id=4849499887,name="Happy"},{id=127271798262177,name="M3GAN"},{id=104304182344567,name="Hop"},
+        {id=85623000473425,name="Takedown 2"},{id=84067050907557,name="Pickle"},{id=86982022610765,name="Caramell 3"},
+        {id=117301403779781,name="Talm Bout"},{id=84822284410814,name="Maraschino"},{id=97847706148165,name="Kawaii"},
+        {id=89174456614428,name="Daydream"},{id=91023138078288,name="Oh Who"},{id=107978036345855,name="Prince"},
+        {id=71363859760586,name="Freddy"},{id=80877772569772,name="Default OG"},{id=80436375269036,name="Headless Hoop"},
+        {id=93262662842394,name="Sit 2"},{id=75703899901487,name="6 7"},{id=100773414188482,name="Water"},
+        {id=131544122623505,name="Car"},{id=99005087791705,name="Death Pose"},{id=132384701706046,name="Fake Dead"},
+        {id=129916107176034,name="Discombob"},{id=88598010609888,name="Angry Stomp"},{id=132508867759412,name="Xavier"},
+        {id=121167704249654,name="Hide"},{id=137873580964093,name="Human Spinner"},{id=76700167742736,name="Belly"},
+        {id=87826892596287,name="Levitate 2"},{id=70972410468289,name="Fake Dead 2"},{id=134615135651900,name="Head Spin"},
+        {id=13823339506,name="Archer"},{id=109755476052324,name="IShowSpeed"},{id=124828909173982,name="Skibidi"},
+        {id=4272351660,name="Fast Hands"},{id=137006085779408,name="Glitch Plus"},{id=89633087256727,name="Weird Spin"},
+        {id=125032357496729,name="Death Best"},{id=81177294287826,name="Hug"},{id=88721672617892,name="PBJT"},
+        {id=121259524934987,name="Xavier Jig"},{id=121067808279598,name="Parrot"},{id=7202898984,name="Wrists"},
+        {id=120377619472998,name="Macarena"},{id=4940602656,name="Jump Wave"},{id=94663026124741,name="Torture"},
+        {id=120896030393583,name="Get Sturdy"},{id=137261874619072,name="Sponge"},{id=119746055344304,name="Plane"},
+        {id=78620443286892,name="Laying"},{id=108922782921118,name="Pose"},{id=131221550165951,name="Heart Hands"},
+        {id=119454955259757,name="Caramel Hip"},{id=7202900159,name="Wake Up"},{id=79752538807060,name="Griddy 2"},
+        {id=140466682449054,name="Head Spin 2"},{id=107899954696611,name="Spongebob"},{id=96405718067779,name="Cute Sit"},
+        {id=4849497510,name="Power Blast"},{id=89413575288931,name="Blue Shirt"},{id=112924687333965,name="Aura Farm"},
+        {id=100782362883099,name="Car Transform"},{id=102323907950469,name="Space Dance"},{id=110521067391235,name="Jitterbug"},
+        {id=111304332281521,name="Druski"},{id=133600250245899,name="Soda Pop"},{id=133477296392756,name="Rasputin"},
+        {id=122949892043249,name="Sit Idle"},{id=82739386299071,name="Jackpot"},{id=80422524668416,name="Dreamer"},
+        {id=97968838104258,name="Subject 3"},{id=91274761264433,name="Macarena 2"},{id=3994130516,name="Bodybuilder"},
+        {id=5938365243,name="Dolphin"},{id=99563839802389,name="Jumpstyle"},{id=85361710130557,name="Caramell 4"}
     }
     local efG=Instance.new("ScreenGui")
     efG.Name="AW_EmoteFloats" efG.ResetOnSpawn=false efG.DisplayOrder=999993 efG.IgnoreGuiInset=true efG.Enabled=true efG.Parent=PlayerGui
@@ -3735,26 +3796,31 @@ UIS.InputBegan:Connect(function(inp,g)
         end
     end
 end)
+
+-- ANTI-VOID (ATAOs method)
+AV_ORIG_DESTROY_HEIGHT = Workspace.FallenPartsDestroyHeight
+AV_CONN = nil
+AV_ACTIVE = false
 task.spawn(function()
-    local lt=0
     while true do
-        task.wait(0.25)
-        if state.antiVoid and LP.Character then
-            local r=LP.Character:FindFirstChild("HumanoidRootPart")
-            local h=LP.Character:FindFirstChildOfClass("Humanoid")
-            if r and h and h.Health>0 and r.Position.Y<-400 then
-                if tick()-lt>3 then
-                    lt=tick()
-                    r.Anchored=true
-                    r.CFrame=LCF
-                    r.AssemblyLinearVelocity=Vector3.zero
-                    task.wait(0.1)
-                    if r.Parent then r.Anchored=false end
+        task.wait(0.3)
+        if state.antiVoid and not AV_ACTIVE then
+            AV_ACTIVE = true
+            pcall(function() Workspace.FallenPartsDestroyHeight = 0/0 end)
+            AV_CONN = LP.CharacterAdded:Connect(function()
+                task.wait(0.1)
+                if state.antiVoid then
+                    pcall(function() Workspace.FallenPartsDestroyHeight = 0/0 end)
                 end
-            end
+            end)
+        elseif not state.antiVoid and AV_ACTIVE then
+            AV_ACTIVE = false
+            if AV_CONN then pcall(function() AV_CONN:Disconnect() end) AV_CONN = nil end
+            pcall(function() Workspace.FallenPartsDestroyHeight = AV_ORIG_DESTROY_HEIGHT end)
         end
     end
 end)
+
 task.spawn(function()
     local rot=0
     while true do
@@ -4239,17 +4305,85 @@ pcall(function()
         end
     end)
 end)
+
+-- AUTO REJOIN + AUTO LOW SERVER
 QOT=syn and syn.queue_on_teleport or queue_on_teleport or queueonteleport
+
 task.spawn(function()
+    local lastJobId = game.JobId
     while true do
-        if state.autoRejoin and QOT then
-            pcall(function()
-                QOT([[task.wait(2) local ts=game:GetService("TeleportService") local p=game:GetService("Players").LocalPlayer ts:Teleport(game.PlaceId, p)]])
-            end)
+        task.wait(0.5)
+        if state.autoRejoin then
+            local lp = Players.LocalPlayer
+            local disconnected = (not lp) or (not lp.Parent)
+            if disconnected then
+                pcall(function()
+                    TeleportService:TeleportToPlaceInstance(game.PlaceId, lastJobId, lp)
+                end)
+                task.wait(2)
+                if not Players.LocalPlayer or not Players.LocalPlayer.Parent then
+                    pcall(function()
+                        TeleportService:Teleport(game.PlaceId, lp)
+                    end)
+                end
+                task.wait(3)
+            else
+                lastJobId = game.JobId
+            end
         end
-        task.wait(10)
     end
 end)
+
+if QOT then
+    task.spawn(function()
+        while true do
+            task.wait(5)
+            if state.autoRejoin then
+                pcall(function()
+                    QOT([[task.wait(2) local ts=game:GetService("TeleportService") local p=game:GetService("Players").LocalPlayer ts:Teleport(game.PlaceId, p)]])
+                end)
+            end
+        end
+    end)
+end
+
+task.spawn(function()
+    while true do
+        task.wait(6)
+        if state.autoLowServer and al() then
+            local currentPlayers = #Players:GetPlayers()
+            local maxAllowed = math.clamp(state.autoLowServerMax or 2, 1, 50)
+            if currentPlayers > maxAllowed then
+                local ok, body = pcall(function()
+                    return game:HttpGet(("https://games.roblox.com/v1/games/%d/servers/Public?sortOrder=Asc&limit=100&excludeFullGames=true"):format(game.PlaceId))
+                end)
+                if ok and body and body ~= "" then
+                    local parsed = nil
+                    pcall(function() parsed = HttpService:JSONDecode(body) end)
+                    if parsed and parsed.data then
+                        local candidates = {}
+                        for _, srv in ipairs(parsed.data) do
+                            local pcount = tonumber(srv.playing) or 0
+                            if srv.id and srv.id ~= game.JobId and pcount > 0 and pcount <= maxAllowed then
+                                table.insert(candidates, srv)
+                            end
+                        end
+                        if #candidates > 0 then
+                            local pick = candidates[math.random(#candidates)]
+                            _G.__AW_NOTIFY("Hopping to low server ("..pick.playing.." players)", 4)
+                            task.wait(0.5)
+                            pcall(function()
+                                TeleportService:TeleportToPlaceInstance(game.PlaceId, pick.id, LP)
+                            end)
+                            task.wait(5)
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
 task.spawn(function()
     while true do
         task.wait(2)
@@ -4277,38 +4411,52 @@ task.spawn(function()
         end
     end
 end)
+
+-- LOOP FLING (rewritten)
 task.spawn(function()
     while true do
-        task.wait(1)
-        if al() and IBF() and (state.loopFlingAll or state.loopFlingMur or state.loopFlingSheriff or state.loopFlingCustom) then
-            if state.loopFlingAll then
-                for _,p in ipairs(Players:GetPlayers()) do
-                    if p~=LP and al() and not IW(p) and not IRA(p.UserId) then
-                        task.spawn(function() RF(p) end)
-                        task.wait(0.3)
-                    end
-                end
-            elseif state.loopFlingMur then
-                local m=GM()
-                if m and not IW(m) and not IRA(m.UserId) then task.spawn(function() RF(m) end) end
-            elseif state.loopFlingSheriff then
-                if not LHG() then
-                    local lv=GLSH()
-                    for _,t in ipairs(lv) do
-                        if t and not IRA(t.UserId) and not IW(t) then task.spawn(function() RF(t) end) end
-                    end
-                end
-            elseif state.loopFlingCustom then
-                for _,n in ipairs(SC.flingList) do
+        task.wait(0.5)
+        if al() and IBF() then
+            local anyLoop = state.loopFlingAll or state.loopFlingMur or state.loopFlingSheriff or state.loopFlingCustom
+            if anyLoop then
+                local targets = {}
+                if state.loopFlingAll then
                     for _,p in ipairs(Players:GetPlayers()) do
-                        if PMN(p,n) and not IW(p) and not IRA(p.UserId) then task.spawn(function() RF(p) end) end
+                        if p~=LP and TIA(p) and not IW(p) and not IRA(p.UserId) then
+                            table.insert(targets, p)
+                        end
+                    end
+                elseif state.loopFlingMur then
+                    local m = GM()
+                    if m and not IW(m) and not IRA(m.UserId) then table.insert(targets, m) end
+                elseif state.loopFlingSheriff then
+                    local lv = GLSH()
+                    if lv[1] and not IW(lv[1]) and not IRA(lv[1].UserId) then table.insert(targets, lv[1]) end
+                elseif state.loopFlingCustom then
+                    for _,n in ipairs(SC.flingList) do
+                        for _,p in ipairs(Players:GetPlayers()) do
+                            if PMN(p,n) and TIA(p) and not IW(p) and not IRA(p.UserId) then
+                                table.insert(targets, p)
+                            end
+                        end
                     end
                 end
+                for _,p in ipairs(targets) do
+                    if p and TIA(p) and not IRA(p.UserId) then
+                        pcall(function() RF(p, true) end)
+                        task.wait(0.4)
+                    end
+                end
+                task.wait(2)
+            else
+                task.wait(0.5)
             end
-            task.wait(1.5)
+        else
+            task.wait(0.5)
         end
     end
 end)
+
 task.spawn(function()
     while true do
         task.wait(0.5)
@@ -4415,33 +4563,45 @@ function getHitboxTargets()
 end
 function applyHitboxToPlayer(p)
     if not p or killLocked[p.UserId] then return end
-    local ch=p.Character
+    local ch = p.Character
     if not ch then return end
-    local hrp=ch:FindFirstChild("HumanoidRootPart")
-    local hum=ch:FindFirstChildOfClass("Humanoid")
-    if not hrp or not hum or hum.Health<=0 then return end
-    local sz=state.hitboxExpanderSize or 15
-    local hb=ch:FindFirstChild("AW_Hitbox")
+    local hrp = ch:FindFirstChild("HumanoidRootPart")
+    local hum = ch:FindFirstChildOfClass("Humanoid")
+    if not hrp or not hum or hum.Health <= 0 then return end
+    local sz = state.hitboxExpanderSize or 15
+    local hb = ch:FindFirstChild("AW_Hitbox")
     if not hb then
-        hb=Instance.new("Part")
-        hb.Name="AW_Hitbox" hb.Size=Vector3.new(sz,sz,sz) hb.Transparency=1
-        hb.CanCollide=false hb.CanQuery=true hb.CanTouch=true hb.CastShadow=false
-        hb.Massless=true hb.Anchored=false hb.Locked=false
-        pcall(function() hb.CustomPhysicalProperties=PhysicalProperties.new(0.01,0.3,0.5,1,1) end)
-        hb.CFrame=hrp.CFrame hb.Parent=ch
-        local wd=Instance.new("Weld")
-        wd.Name="AW_HitboxWeld" wd.Part0=hrp wd.Part1=hb
-        wd.C0=CFrame.new(0,0,0) wd.C1=CFrame.new(0,0,0) wd.Parent=hb
+        hb = Instance.new("Part")
+        hb.Name = "AW_Hitbox"
+        hb.Shape = Enum.PartType.Ball
+        hb.Size = Vector3.new(sz, sz, sz)
+        hb.Transparency = 1
+        hb.CanCollide = false
+        hb.CanQuery = true
+        hb.CanTouch = true
+        hb.CastShadow = false
+        hb.Massless = true
+        hb.Anchored = false
+        hb.Locked = true
+        pcall(function() hb.CustomPhysicalProperties = PhysicalProperties.new(0.01, 0.3, 0.5, 1, 1) end)
+        hb.CFrame = hrp.CFrame
+        hb.Parent = ch
+        local wd = Instance.new("WeldConstraint")
+        wd.Name = "AW_HitboxWeld"
+        wd.Part0 = hrp
+        wd.Part1 = hb
+        wd.Parent = hb
     else
         pcall(function()
-            hb.Size=Vector3.new(sz,sz,sz)
-            hb.CanCollide=false hb.CanQuery=true hb.CanTouch=true hb.CastShadow=false
-            hb.Transparency=1 hb.Massless=true hb.Anchored=false hb.Locked=false
+            hb.Shape = Enum.PartType.Ball
+            hb.Size = Vector3.new(sz, sz, sz)
+            hb.CanCollide = false
+            hb.CanQuery = true
+            hb.CanTouch = true
+            hb.CastShadow = false
+            hb.Transparency = 1
+            hb.Massless = true
         end)
-        if not hb:FindFirstChild("AW_HitboxWeld") then
-            local wd=Instance.new("Weld")
-            wd.Name="AW_HitboxWeld" wd.Part0=hrp wd.Part1=hb wd.Parent=hb
-        end
     end
 end
 function removeHitboxFromPlayer(p)
@@ -5160,6 +5320,9 @@ _G.__AW_RUN_COMMAND = function(raw)
     elseif cmd == "unsilentaim" then turnOff("silentAimEnabled","Silent Aim")
     elseif cmd == "unhitbox" then turnOff("hitboxExpander","Hitbox Expander")
     elseif cmd == "unradio" then turnOff("radioAutoPlay","Auto Play")
+    elseif cmd == "unantivoid" then turnOff("antiVoid","Anti-Void")
+    elseif cmd == "unautorejoin" then turnOff("autoRejoin","Auto Rejoin")
+    elseif cmd == "unlowserver" then turnOff("autoLowServer","Auto Low Server")
     elseif cmd == "help" or cmd == "h" or cmd == "?" then
         if not privateChatFrame.Visible then privateChatFrame.Visible = true end
         setPcTab("cmds")
@@ -5279,6 +5442,13 @@ _G.ApplewareUnload = function()
     if flyConn then pcall(function() flyConn:Disconnect() end) end
     if flyBV and flyBV.Parent then pcall(function() flyBV:Destroy() end) end
     if flyBG and flyBG.Parent then pcall(function() flyBG:Destroy() end) end
+    pcall(function()
+        if AV_CONN then AV_CONN:Disconnect() AV_CONN = nil end
+        if AV_ACTIVE then
+            AV_ACTIVE = false
+            Workspace.FallenPartsDestroyHeight = AV_ORIG_DESTROY_HEIGHT
+        end
+    end)
     pcall(function()
         for p, e in pairs(EC) do
             if e then
