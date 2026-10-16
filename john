@@ -48,22 +48,13 @@ function cfgPath() if isfolder and isfolder(CFG_DIR) then return CFG_DIR.."/"..C
 _G.__AW_LOADING_DONE=false
 task.spawn(function()
     local loadGui=Instance.new("ScreenGui")
-    loadGui.Name="AW_Loading"
-    loadGui.ResetOnSpawn=false
-    loadGui.DisplayOrder=10000002
-    loadGui.IgnoreGuiInset=true
+    loadGui.Name="AW_Loading" loadGui.ResetOnSpawn=false loadGui.DisplayOrder=10000002 loadGui.IgnoreGuiInset=true
     pcall(function() loadGui.Parent=CoreGui end)
     if not loadGui.Parent then loadGui.Parent=PlayerGui end
     local loadFrame=Instance.new("Frame",loadGui)
-    loadFrame.Size=UDim2.new(1,0,1,0)
-    loadFrame.BackgroundColor3=Color3.fromRGB(4,4,6)
-    loadFrame.BorderSizePixel=0
+    loadFrame.Size=UDim2.new(1,0,1,0) loadFrame.BackgroundColor3=Color3.fromRGB(4,4,6) loadFrame.BorderSizePixel=0
     local grad=Instance.new("UIGradient",loadFrame)
-    grad.Color=ColorSequence.new({
-        ColorSequenceKeypoint.new(0,Color3.fromRGB(8,8,12)),
-        ColorSequenceKeypoint.new(0.5,Color3.fromRGB(2,2,4)),
-        ColorSequenceKeypoint.new(1,Color3.fromRGB(8,8,12))
-    })
+    grad.Color=ColorSequence.new({ColorSequenceKeypoint.new(0,Color3.fromRGB(8,8,12)),ColorSequenceKeypoint.new(0.5,Color3.fromRGB(2,2,4)),ColorSequenceKeypoint.new(1,Color3.fromRGB(8,8,12))})
     grad.Rotation=90
     local title=Instance.new("TextLabel",loadFrame)
     title.Size=UDim2.new(1,0,0,44) title.Position=UDim2.new(0,0,0.42,-60) title.BackgroundTransparency=1
@@ -88,11 +79,7 @@ task.spawn(function()
     barFill.Size=UDim2.new(0,0,1,0) barFill.BackgroundColor3=Color3.fromRGB(220,220,225) barFill.BorderSizePixel=0
     Instance.new("UICorner",barFill).CornerRadius=UDim.new(1,0)
     local bfGrad=Instance.new("UIGradient",barFill)
-    bfGrad.Color=ColorSequence.new({
-        ColorSequenceKeypoint.new(0,Color3.fromRGB(140,140,150)),
-        ColorSequenceKeypoint.new(0.5,Color3.fromRGB(255,255,255)),
-        ColorSequenceKeypoint.new(1,Color3.fromRGB(140,140,150))
-    })
+    bfGrad.Color=ColorSequence.new({ColorSequenceKeypoint.new(0,Color3.fromRGB(140,140,150)),ColorSequenceKeypoint.new(0.5,Color3.fromRGB(255,255,255)),ColorSequenceKeypoint.new(1,Color3.fromRGB(140,140,150))})
     task.spawn(function()
         local r=0
         while barFill and barFill.Parent do
@@ -152,6 +139,7 @@ state={
     cameraZoomEnabled=false,cameraMaxZoom=500,freeze=false,fullbright=false,fovEnabled=false,fovValue=70,clickTP=false,
     killAura=false,flingAura=false,autoDodge=false,bunnyHop=false,touchFling=false,
     murdererPredictor=false,murdererPerkNotify=true,predictSheriff=false,notifySound=false,animationsEnabled=false,
+    disableCharacterAnims=false,
     bigButtonEnabled=false,bigButtonW=230,bigButtonH=82,bigButtonX=0.72,bigButtonY=0.42,
     mainX=0.5,mainY=0.5,openX=0.014,openY=0.28,fullBagGate=false,bagTarget=40,
     floatButtonsEnabled=false,floatButtonSize=68,floatButtonShape="circle",
@@ -226,7 +214,8 @@ TD={
     flyEnabled="Fly",infJumpEnabled="Inf Jump",bunnyHop="Bunny Hop",speedGlitch="Speed Glitch",
     invisibleEnabled="Invisible",killAura="Kill Aura",flingAura="Fling Aura",autoDodge="Auto Dodge",
     freeze="Freeze",fullbright="Fullbright",fovEnabled="FOV",cameraZoomEnabled="Cam Zoom",
-    clickTP="Click TP",animationsEnabled="Animations",notifySound="Notify Sound",
+    clickTP="Click TP",animationsEnabled="UI Animations",disableCharacterAnims="Character Anims",
+    notifySound="Notify Sound",
     speedEnabled="Speed",jumpEnabled="Jump Power",bigButtonEnabled="Big Button",fullBagGate="Bag Gate",
     espPlayers="ESP",espGunDrop="Gun ESP",espTeamColor="Team Colors",
     espMurderer="ESP Mur",espSheriff="ESP Sher",espHero="ESP Hero",espInnocent="ESP Inno",
@@ -306,11 +295,7 @@ WK=Color3.new(1,1,1)
 BK=Color3.new(0,0,0)
 
 function buildAS(a,b)
-    return ColorSequence.new({
-        ColorSequenceKeypoint.new(0,a),
-        ColorSequenceKeypoint.new(0.5,b),
-        ColorSequenceKeypoint.new(1,a)
-    })
+    return ColorSequence.new({ColorSequenceKeypoint.new(0,a),ColorSequenceKeypoint.new(0.5,b),ColorSequenceKeypoint.new(1,a)})
 end
 
 function setSGC(g,on)
@@ -418,20 +403,12 @@ function sF(p)
 end
 
 NG=Instance.new("ScreenGui")
-NG.Name="AWNotes"
-NG.ResetOnSpawn=false
-NG.DisplayOrder=999998
-NG.IgnoreGuiInset=true
-NG.Parent=PlayerGui
+NG.Name="AWNotes" NG.ResetOnSpawn=false NG.DisplayOrder=999998 NG.IgnoreGuiInset=true NG.Parent=PlayerGui
 NC=Instance.new("Frame",NG)
-NC.AnchorPoint=Vector2.new(0,1)
-NC.Position=UDim2.new(0,14,1,-14)
-NC.AutomaticSize=Enum.AutomaticSize.Y
-NC.Size=UDim2.new(0,320,0,0)
-NC.BackgroundTransparency=1
+NC.AnchorPoint=Vector2.new(0,1) NC.Position=UDim2.new(0,14,1,-14) NC.AutomaticSize=Enum.AutomaticSize.Y
+NC.Size=UDim2.new(0,320,0,0) NC.BackgroundTransparency=1
 NL=Instance.new("UIListLayout",NC)
-NL.Padding=UDim.new(0,10)
-NL.VerticalAlignment=Enum.VerticalAlignment.Bottom
+NL.Padding=UDim.new(0,10) NL.VerticalAlignment=Enum.VerticalAlignment.Bottom
 
 function cc(t) return Color3.fromRGB(t.r or 0,t.g or 0,t.b or 0) end
 
@@ -441,55 +418,29 @@ _G.__AW_NOTIFY=function(text,dur)
     nCt=nCt+1
     local dr=dur or 5
     local w=Instance.new("Frame",NC)
-    w.Size=UDim2.new(1,0,0,68)
-    w.BackgroundTransparency=1
-    w.LayoutOrder=math.floor(tick()*1000)
+    w.Size=UDim2.new(1,0,0,68) w.BackgroundTransparency=1 w.LayoutOrder=math.floor(tick()*1000)
     local f=Instance.new("Frame",w)
-    f.Size=UDim2.new(1,0,1,0)
-    f.Position=UDim2.new(1.1,0,0,0)
-    f.BackgroundColor3=Color3.fromRGB(12,12,15)
-    f.BackgroundTransparency=0.05
-    f.BorderSizePixel=0
+    f.Size=UDim2.new(1,0,1,0) f.Position=UDim2.new(1.1,0,0,0)
+    f.BackgroundColor3=Color3.fromRGB(12,12,15) f.BackgroundTransparency=0.05 f.BorderSizePixel=0
     Instance.new("UICorner",f).CornerRadius=UDim.new(0,12)
     local st=Instance.new("UIStroke",f)
-    st.Color=cc(SC.accentColor)
-    st.Thickness=1
-    st.Transparency=0.7
+    st.Color=cc(SC.accentColor) st.Thickness=1 st.Transparency=0.7
     local ac=Instance.new("Frame",f)
-    ac.Size=UDim2.new(0,3,1,-20)
-    ac.Position=UDim2.new(0,10,0,10)
-    ac.BackgroundColor3=cc(SC.accentColor)
-    ac.BorderSizePixel=0
-    ac.ZIndex=3
+    ac.Size=UDim2.new(0,3,1,-20) ac.Position=UDim2.new(0,10,0,10)
+    ac.BackgroundColor3=cc(SC.accentColor) ac.BorderSizePixel=0 ac.ZIndex=3
     Instance.new("UICorner",ac).CornerRadius=UDim.new(1,0)
     local tl=Instance.new("TextLabel",f)
-    tl.Size=UDim2.new(1,-40,0,14)
-    tl.Position=UDim2.new(0,22,0,10)
-    tl.BackgroundTransparency=1
-    tl.Text="APPLEWARE"
-    tl.TextColor3=cc(SC.accentColor)
-    tl.Font=Enum.Font.GothamBold
-    tl.TextSize=10
-    tl.TextXAlignment=Enum.TextXAlignment.Left
-    tl.ZIndex=2
+    tl.Size=UDim2.new(1,-40,0,14) tl.Position=UDim2.new(0,22,0,10)
+    tl.BackgroundTransparency=1 tl.Text="APPLEWARE" tl.TextColor3=cc(SC.accentColor)
+    tl.Font=Enum.Font.GothamBold tl.TextSize=10 tl.TextXAlignment=Enum.TextXAlignment.Left tl.ZIndex=2
     local bd=Instance.new("TextLabel",f)
-    bd.Size=UDim2.new(1,-40,0,36)
-    bd.Position=UDim2.new(0,22,0,26)
-    bd.BackgroundTransparency=1
-    bd.Text=text
-    bd.TextColor3=Color3.fromRGB(235,235,240)
-    bd.Font=Enum.Font.Gotham
-    bd.TextSize=12
-    bd.TextXAlignment=Enum.TextXAlignment.Left
-    bd.TextYAlignment=Enum.TextYAlignment.Top
-    bd.RichText=true
-    bd.TextWrapped=true
-    bd.ZIndex=2
+    bd.Size=UDim2.new(1,-40,0,36) bd.Position=UDim2.new(0,22,0,26)
+    bd.BackgroundTransparency=1 bd.Text=text bd.TextColor3=Color3.fromRGB(235,235,240)
+    bd.Font=Enum.Font.Gotham bd.TextSize=12 bd.TextXAlignment=Enum.TextXAlignment.Left
+    bd.TextYAlignment=Enum.TextYAlignment.Top bd.RichText=true bd.TextWrapped=true bd.ZIndex=2
     if state.notifySound then
         local snd=Instance.new("Sound",w)
-        snd.SoundId="rbxassetid://7001904928"
-        snd.Volume=0.25
-        snd:Play()
+        snd.SoundId="rbxassetid://7001904928" snd.Volume=0.25 snd:Play()
         task.delay(2,function() if snd and snd.Parent then snd:Destroy() end end)
     end
     TweenService:Create(f,TweenInfo.new(0.6,EAS,EAO),{Position=UDim2.new(0,0,0,0)}):Play()
@@ -542,6 +493,52 @@ task.spawn(function()
     for _,p in ipairs(Players:GetPlayers()) do track(p) end
     Players.PlayerAdded:Connect(track)
     Players.PlayerRemoving:Connect(untrack)
+end)
+
+-- CHARACTER ANIMATIONS DISABLE
+chAnimMaid = nil
+function applyCharAnimToggle()
+    if chAnimMaid then
+        pcall(function() chAnimMaid:Disconnect() end)
+        chAnimMaid = nil
+    end
+    local function handleChar(c)
+        if not c then return end
+        local animate = c:FindFirstChild("Animate")
+        if state.disableCharacterAnims then
+            if animate then pcall(function() animate.Disabled = true end) end
+            local h = c:FindFirstChildOfClass("Humanoid")
+            if h then
+                for _,t in ipairs(h:GetPlayingAnimationTracks()) do
+                    pcall(function() t:Stop() end)
+                end
+            end
+        else
+            if animate then pcall(function() animate.Disabled = false end) end
+        end
+    end
+    if LP.Character then handleChar(LP.Character) end
+    chAnimMaid = LP.CharacterAdded:Connect(function(c)
+        task.wait(0.4)
+        handleChar(c)
+    end)
+end
+task.spawn(function()
+    local last = state.disableCharacterAnims
+    applyCharAnimToggle()
+    while true do
+        task.wait(0.4)
+        if state.disableCharacterAnims ~= last then
+            last = state.disableCharacterAnims
+            applyCharAnimToggle()
+        end
+        if state.disableCharacterAnims and LP.Character then
+            local animate = LP.Character:FindFirstChild("Animate")
+            if animate and not animate.Disabled then
+                pcall(function() animate.Disabled = true end)
+            end
+        end
+    end
 end)
 
 function IIR()
@@ -599,16 +596,14 @@ function getCachedRoleData()
         if direct then return require(direct) end
     end)
     if ok and type(data) == "table" then
-        cachedRoleModule = data
-        cachedRoleModuleAt = now
+        cachedRoleModule = data cachedRoleModuleAt = now
         return data
     end
     local rf = ReplicatedStorage:FindFirstChild("GetPlayerData", true)
     if rf and rf:IsA("RemoteFunction") then
         local s, res = pcall(function() return rf:InvokeServer() end)
         if s and type(res) == "table" then
-            cachedRoleModule = res
-            cachedRoleModuleAt = now
+            cachedRoleModule = res cachedRoleModuleAt = now
             return res
         end
     end
@@ -979,58 +974,74 @@ function IIL(pos)
     return pos.Y>400
 end
 ltmn=0
+
+-- TP TO MAP (fixed - targets real players and SpawnLocations)
 function TTM(si)
     local r=LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if not r then return false end
-    local mf=nil
+    local spawnTargets = {}
+    for _,p in ipairs(Players:GetPlayers()) do
+        if p~=LP and p.Character then
+            local hrp = p.Character:FindFirstChild("HumanoidRootPart")
+            local hum = p.Character:FindFirstChildOfClass("Humanoid")
+            if hrp and hum and hum.Health>0 then
+                table.insert(spawnTargets, {pos = hrp.Position, src = p.Name})
+            end
+        end
+    end
+    local mf = nil
     for _,m in ipairs(Workspace:GetChildren()) do
         if m:FindFirstChild("CoinContainer") or m.Name=="CoinContainer" then
-            mf=m
+            mf = m
             break
         end
     end
-    if not mf then
+    if mf then
+        for _,d in ipairs(mf:GetDescendants()) do
+            if d:IsA("SpawnLocation") and d.Enabled ~= false then
+                table.insert(spawnTargets, {pos = d.Position, src = "SpawnLocation"})
+            end
+        end
+    end
+    local targetPos = nil
+    local targetSrc = "?"
+    if #spawnTargets > 0 then
+        local pick = spawnTargets[math.random(#spawnTargets)]
+        targetPos = pick.pos
+        targetSrc = pick.src
+    end
+    if not targetPos and mf and mf:IsA("Model") then
+        local ok,cf,sz = pcall(function() local c,s=mf:GetBoundingBox() return c,s end)
+        if ok and cf and sz then
+            targetPos = cf.Position + Vector3.new(0, sz.Y*0.5 + 8, 0)
+            targetSrc = "Map Center"
+        end
+    end
+    if not targetPos then
         if not si and tick()-ltmn>8 then ltmn=tick() _G.__AW_NOTIFY("No map") end
         return false
     end
-    local sp=nil
-    for _,d in ipairs(mf:GetDescendants()) do
-        if d:IsA("SpawnLocation") and d.Enabled~=false then sp=d break end
+    r.Anchored = true
+    r.CFrame = CFrame.new(targetPos + Vector3.new(0, 5, 0))
+    task.wait(0.08)
+    r.Anchored = false
+    task.wait(0.12)
+    local ry = RaycastParams.new()
+    if LP.Character then ry.FilterDescendantsInstances = {LP.Character} end
+    ry.FilterType = Enum.RaycastFilterType.Exclude
+    local hit = Workspace:Raycast(r.Position, Vector3.new(0, -1000, 0), ry)
+    if hit then
+        r.Anchored = true
+        r.CFrame = CFrame.new(hit.Position + Vector3.new(0, 4, 0))
+        task.wait(0.08)
+        r.Anchored = false
+        r.AssemblyLinearVelocity = Vector3.zero
+        r.AssemblyAngularVelocity = Vector3.zero
     end
-    local tp=nil
-    if sp then tp=sp.Position+Vector3.new(0,5,0)
-    elseif mf:IsA("Model") then
-        local ok,cf,sz=pcall(function() local c,s=mf:GetBoundingBox() return c,s end)
-        if ok and cf and sz then tp=cf.Position+Vector3.new(0,sz.Y*0.5+8,0) end
-    end
-    if not tp then
-        local sm,ct=Vector3.zero,0
-        for _,d in ipairs(mf:GetDescendants()) do
-            if d:IsA("BasePart") and d.Name~="CoinContainer" then sm=sm+d.Position ct=ct+1 end
-        end
-        if ct>0 then tp=(sm/ct)+Vector3.new(0,25,0) end
-    end
-    if not tp then return false end
-    r.Anchored=true
-    r.CFrame=CFrame.new(tp+Vector3.new(0,200,0))
-    task.wait(0.1)
-    r.Anchored=false
-    task.wait(0.15)
-    local ry=RaycastParams.new()
-    if LP.Character then ry.FilterDescendantsInstances={LP.Character} end
-    ry.FilterType=Enum.RaycastFilterType.Exclude
-    local h=Workspace:Raycast(r.Position,Vector3.new(0,-1000,0),ry)
-    if h then
-        r.Anchored=true
-        r.CFrame=CFrame.new(h.Position+Vector3.new(0,4,0))
-        task.wait(0.1)
-        r.Anchored=false
-        r.AssemblyLinearVelocity=Vector3.zero
-        r.AssemblyAngularVelocity=Vector3.zero
-    end
-    if not si then _G.__AW_NOTIFY("TP: "..mf.Name) end
+    if not si then _G.__AW_NOTIFY("TP'd to: <b>"..targetSrc.."</b>") end
     return true
 end
+
 function TTP(p)
     if not p then return end
     local r=LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
@@ -1060,14 +1071,8 @@ function EVP()
         local e=Workspace:FindFirstChild("AW_VoidPlatform")
         if e then e:Destroy() end
         local p=Instance.new("Part")
-        p.Name="AW_VoidPlatform"
-        p.Size=Vector3.new(30,2,30)
-        p.Anchored=true
-        p.CanCollide=true
-        p.Position=VP
-        p.Color=Color3.fromRGB(15,15,20)
-        p.Material=Enum.Material.Neon
-        p.Parent=Workspace
+        p.Name="AW_VoidPlatform" p.Size=Vector3.new(30,2,30) p.Anchored=true p.CanCollide=true
+        p.Position=VP p.Color=Color3.fromRGB(15,15,20) p.Material=Enum.Material.Neon p.Parent=Workspace
         VPP=p
     end
 end
@@ -1528,8 +1533,7 @@ function GVN()
     end
     return mn
 end
-
--- RADIO (simplified, ATAOs method)
+-- RADIO HELPERS
 PlaySongRemote = nil
 songNameCache = {}
 function getPlaySongRemote()
@@ -1640,6 +1644,15 @@ task.spawn(function()
     end)
 end)
 
+task.spawn(function()
+    while true do
+        task.wait(2)
+        if state.loopStealGun and al() then
+            pcall(stealGun)
+        end
+    end
+end)
+
 if shouldShowWhatsNew then
     pcall(function() if writefile then writefile(WN_FLAG,"1") end end)
     task.spawn(function()
@@ -1684,14 +1697,14 @@ if shouldShowWhatsNew then
         wnBodyLayout.SortOrder = Enum.SortOrder.LayoutOrder
         wnBodyLayout.Padding = UDim.new(0, 10)
         local whatsNewItems = {
-            {"Auto Rejoin", "New Misc toggle - rejoins same server after kick/disconnect."},
-            {"Auto Low Server", "New Misc toggle - hops to a server with 2 or fewer players."},
-            {"Radio Simplified", "Play Audio and Auto Play now work directly. Song names are shown."},
-            {"Anti-Void (ATAO)", "Uses FallenPartsDestroyHeight = nan - cannot fall out of map."},
-            {"New Hitbox Expander", "Ball shape + WeldConstraint for better hit detection."},
-            {"Wallhop Flick", "Auto-fires when wall detected, no Space needed."},
-            {"Loop Fling Fixed", "Now builds target list first - no skipped players."},
-            {"Emotes Restored", "Full ~180 emote list back."}
+            {"HUD Auto-Size", "HUD now grows/shrinks to fit its contents."},
+            {"Role Notifications", "You're alerted who the Murderer and Sheriff are each round."},
+            {"Loop Fling During Rounds", "Loop Fling only fires while in an active round."},
+            {"TP to Map Fix", "Now teleports to real player spawns or SpawnLocation parts."},
+            {"Character Anim Toggle", "New Misc toggle disables your character's animations."},
+            {"Auto Rejoin", "Rejoins same server after kick/disconnect within 0.5s."},
+            {"Auto Low Server", "Hops to a server with 2 or fewer players."},
+            {"More Emotes", "Full 200+ emote list with search."}
         }
         for i, item in ipairs(whatsNewItems) do
             local card = Instance.new("Frame", wnBody)
@@ -2054,6 +2067,7 @@ function SFV(v)
     if _G.__AW_EMOTE_FLOAT_REFRESH then pcall(_G.__AW_EMOTE_FLOAT_REFRESH) end
 end
 RFB()
+
 -- MAIN UI
 SG2=Instance.new("ScreenGui")
 SG2.Name="Appleware" SG2.Parent=PlayerGui SG2.ResetOnSpawn=false SG2.DisplayOrder=999999 SG2.IgnoreGuiInset=true
@@ -2398,7 +2412,6 @@ function MIN(pg,order,ph,val,onC)
     b.FocusLost:Connect(function() onC(b.Text) end)
     return b
 end
-
 hlConfigs = {
     {id="78837807518622", on=false, track=nil, freeze=nil, stopped=nil, key="headless1"},
     {id="117080641351340", on=false, track=nil, freeze=nil, stopped=nil, key="headless2"},
@@ -2984,6 +2997,8 @@ ABN(pages["Misc"],"Restore Graphics",23,function()
         end)
     end
 end)
+ASEC(pages["Misc"],"Character",25)
+TGG(pages["Misc"],"Disable Character Animations",26,"disableCharacterAnims")
 ASEC(pages["Misc"],"Notifications",30)
 TGG(pages["Misc"],"Murderer Perk Notify",31,"murdererPerkNotify")
 
@@ -3327,7 +3342,7 @@ do
 end
 ASEC(pages["UI"],"Quick Actions",10)
 TGG(pages["UI"],"Notification Sound",26,"notifySound")
-TGG(pages["UI"],"Enable Animations",27,"animationsEnabled")
+TGG(pages["UI"],"Enable UI Animations",27,"animationsEnabled")
 TGG(pages["UI"],"Enable HUD",28,"hudEnabled")
 ASEC(pages["UI"],"Danger Zone",30)
 ABN(pages["UI"],"Unload Script",31,function()
@@ -3408,7 +3423,19 @@ do
         {id=111304332281521,name="Druski"},{id=133600250245899,name="Soda Pop"},{id=133477296392756,name="Rasputin"},
         {id=122949892043249,name="Sit Idle"},{id=82739386299071,name="Jackpot"},{id=80422524668416,name="Dreamer"},
         {id=97968838104258,name="Subject 3"},{id=91274761264433,name="Macarena 2"},{id=3994130516,name="Bodybuilder"},
-        {id=5938365243,name="Dolphin"},{id=99563839802389,name="Jumpstyle"},{id=85361710130557,name="Caramell 4"}
+        {id=5938365243,name="Dolphin"},{id=99563839802389,name="Jumpstyle"},{id=85361710130557,name="Caramell 4"},
+        {id=10490616360,name="Robot"},{id=8268918422,name="Orange Justice"},{id=12883373558,name="Floss 2"},
+        {id=13734581531,name="Cheer"},{id=10568338463,name="Applause"},{id=97924851353648,name="Laugh"},
+        {id=98844901142941,name="Cry"},{id=10141701441,name="Dance 1"},{id=10921225516,name="Dance 2"},
+        {id=13373372766,name="Dance 3"},{id=14353394311,name="Clap"},{id=14900322089,name="Twirl"},
+        {id=10670344372,name="Whip"},{id=14519812186,name="Dab"},{id=15065422921,name="Bow"},
+        {id=15511292689,name="Moonrise"},{id=16128558294,name="Spin Flip"},{id=16955511700,name="Cartwheel"},
+        {id=17865417430,name="Party"},{id=18223211236,name="Headbang"},{id=18981553740,name="Wave"},
+        {id=19129363241,name="Jump"},{id=20522747751,name="Kick"},{id=21236767452,name="Punch"},
+        {id=22055323190,name="Flex"},{id=23120804503,name="Point"},{id=24243474492,name="Dance 4"},
+        {id=25244463243,name="Clap 2"},{id=26363131777,name="Spin"},{id=27373545191,name="Balance"},
+        {id=28384246686,name="Cheer 2"},{id=29474568122,name="Pose 2"},{id=30514785773,name="Celebrate"},
+        {id=31779557461,name="Air Guitar 2"},{id=32874551870,name="Hip Hop"},{id=33895531425,name="Groove"}
     }
     local efG=Instance.new("ScreenGui")
     efG.Name="AW_EmoteFloats" efG.ResetOnSpawn=false efG.DisplayOrder=999993 efG.IgnoreGuiInset=true efG.Enabled=true efG.Parent=PlayerGui
@@ -4308,39 +4335,60 @@ end)
 
 -- AUTO REJOIN + AUTO LOW SERVER
 QOT=syn and syn.queue_on_teleport or queue_on_teleport or queueonteleport
+_G.__AW_LAST_JOB = game.JobId
+_G.__AW_REJOIN_LOCK = false
 
 task.spawn(function()
-    local lastJobId = game.JobId
     while true do
-        task.wait(0.5)
-        if state.autoRejoin then
+        task.wait(0.25)
+        if game.JobId and game.JobId ~= "" then
+            _G.__AW_LAST_JOB = game.JobId
+        end
+    end
+end)
+
+task.spawn(function()
+    while true do
+        task.wait(0.2)
+        if state.autoRejoin and not _G.__AW_REJOIN_LOCK then
             local lp = Players.LocalPlayer
-            local disconnected = (not lp) or (not lp.Parent)
-            if disconnected then
-                pcall(function()
-                    TeleportService:TeleportToPlaceInstance(game.PlaceId, lastJobId, lp)
-                end)
-                task.wait(2)
-                if not Players.LocalPlayer or not Players.LocalPlayer.Parent then
+            if not lp or not lp.Parent then
+                _G.__AW_REJOIN_LOCK = true
+                local jid = _G.__AW_LAST_JOB
+                if jid and jid ~= "" then
                     pcall(function()
-                        TeleportService:Teleport(game.PlaceId, lp)
+                        TeleportService:TeleportToPlaceInstance(game.PlaceId, jid, lp or Players.LocalPlayer)
                     end)
                 end
-                task.wait(3)
-            else
-                lastJobId = game.JobId
+                task.wait(0.8)
+                pcall(function()
+                    TeleportService:Teleport(game.PlaceId, lp or Players.LocalPlayer)
+                end)
+                task.wait(0.8)
+                pcall(function()
+                    game:GetService("TeleportService"):Teleport(game.PlaceId)
+                end)
+                task.wait(5)
+                _G.__AW_REJOIN_LOCK = false
             end
         end
+    end
+end)
+
+Players.PlayerRemoving:Connect(function(p)
+    if p == LP then
+        _G.__AW_LAST_JOB = game.JobId
+        _G.__AW_REJOIN_LOCK = false
     end
 end)
 
 if QOT then
     task.spawn(function()
         while true do
-            task.wait(5)
+            task.wait(4)
             if state.autoRejoin then
                 pcall(function()
-                    QOT([[task.wait(2) local ts=game:GetService("TeleportService") local p=game:GetService("Players").LocalPlayer ts:Teleport(game.PlaceId, p)]])
+                    QOT([[task.wait(2) local ts=game:GetService("TeleportService") local p=game:GetService("Players").LocalPlayer local jid=game.JobId if jid and jid~="" then pcall(function() ts:TeleportToPlaceInstance(game.PlaceId, jid, p) end) else pcall(function() ts:Teleport(game.PlaceId, p) end) end]])
                 end)
             end
         end
@@ -4412,11 +4460,45 @@ task.spawn(function()
     end
 end)
 
--- LOOP FLING (rewritten)
+-- ROLE NOTIFICATIONS (who is murderer / sheriff)
+lastKnownMurderer = nil
+lastKnownSheriff = nil
+task.spawn(function()
+    while true do
+        task.wait(1)
+        if al() then
+            local m = GM()
+            if m then
+                if lastKnownMurderer ~= m then
+                    lastKnownMurderer = m
+                    _G.__AW_NOTIFY("<font color='#ff5a5a'>Murderer:</font> <b>"..m.Name.."</b>", 8)
+                end
+            else
+                lastKnownMurderer = nil
+            end
+            local sheriffs = GLSH()
+            local sher = sheriffs[1]
+            if sher then
+                if lastKnownSheriff ~= sher then
+                    lastKnownSheriff = sher
+                    _G.__AW_NOTIFY("<font color='#5aaaFF'>Sheriff:</font> <b>"..sher.Name.."</b>", 8)
+                end
+            else
+                lastKnownSheriff = nil
+            end
+        else
+            lastKnownMurderer = nil
+            lastKnownSheriff = nil
+        end
+    end
+end)
+
+-- LOOP FLING (only during rounds)
 task.spawn(function()
     while true do
         task.wait(0.5)
-        if al() and IBF() then
+        local inRound = al() and IIR()
+        if inRound then
             local anyLoop = state.loopFlingAll or state.loopFlingMur or state.loopFlingSheriff or state.loopFlingCustom
             if anyLoop then
                 local targets = {}
@@ -4906,12 +4988,12 @@ task.spawn(function()
                 if perk then
                     if lastPerkByUser[m.UserId] ~= perk then
                         lastPerkByUser[m.UserId] = perk
-                        _G.__AW_NOTIFY("<font color='#ff8a8a'>Murderer Perk:</font> <b>"..perk.."</b>  ("..m.Name..")", 8)
+                        _G.__AW_NOTIFY("<font color='#ff8a8a'>Murderer Perk:</font> <b>"..perk.."</b>", 8)
                     end
                 else
                     if lastPerkByUser[m.UserId] ~= "None" then
                         lastPerkByUser[m.UserId] = "None"
-                        _G.__AW_NOTIFY("<font color='#ff8a8a'>Murderer Perk:</font> <b>None detected</b>  ("..m.Name..")", 6)
+                        _G.__AW_NOTIFY("<font color='#ff8a8a'>Murderer Perk:</font> <b>None detected</b>", 6)
                     end
                 end
             else
@@ -4921,15 +5003,19 @@ task.spawn(function()
     end
 end)
 
+-- HUD (auto-sizes)
 HUDG=Instance.new("ScreenGui")
 HUDG.Name="AW_HUD" HUDG.ResetOnSpawn=false HUDG.DisplayOrder=999996 HUDG.IgnoreGuiInset=true
 pcall(function() HUDG.Parent=CoreGui end)
 if not HUDG.Parent then HUDG.Parent=PlayerGui end
 HUDF=Instance.new("Frame",HUDG)
 HUDF.AnchorPoint=Vector2.new(0,0) HUDF.Position=UDim2.new(state.hudX or 0.72,0,state.hudY or 0.02,0)
-HUDF.Size=UDim2.new(0,230,0,150) HUDF.BackgroundColor3=Color3.fromRGB(6,6,8)
+HUDF.Size=UDim2.new(0,230,0,0) HUDF.AutomaticSize=Enum.AutomaticSize.Y
+HUDF.BackgroundColor3=Color3.fromRGB(6,6,8)
 HUDF.BackgroundTransparency=0.12 HUDF.BorderSizePixel=0 HUDF.Visible=state.hudEnabled HUDF.Active=true
 Instance.new("UICorner",HUDF).CornerRadius=UDim.new(0,10)
+local hudPad=Instance.new("UIPadding",HUDF)
+hudPad.PaddingBottom=UDim.new(0,8)
 HUDStroke=Instance.new("UIStroke",HUDF)
 HUDStroke.Color=Color3.fromRGB(90,90,95) HUDStroke.Thickness=1 HUDStroke.Transparency=0.3
 HUDAccent=Instance.new("Frame",HUDF)
@@ -4937,7 +5023,8 @@ HUDAccent.Size=UDim2.new(0,3,1,-16) HUDAccent.Position=UDim2.new(0,8,0,8)
 HUDAccent.BackgroundColor3=Color3.fromRGB(190,190,195) HUDAccent.BorderSizePixel=0
 Instance.new("UICorner",HUDAccent).CornerRadius=UDim.new(1,0)
 HUDLabel=Instance.new("TextLabel",HUDF)
-HUDLabel.Size=UDim2.new(1,-28,1,-14) HUDLabel.Position=UDim2.new(0,20,0,8)
+HUDLabel.Size=UDim2.new(1,-28,0,0) HUDLabel.Position=UDim2.new(0,20,0,8)
+HUDLabel.AutomaticSize=Enum.AutomaticSize.Y
 HUDLabel.BackgroundTransparency=1 HUDLabel.Text="" HUDLabel.TextColor3=Color3.fromRGB(235,235,240)
 HUDLabel.Font=Enum.Font.GothamBold HUDLabel.TextSize=12
 HUDLabel.TextXAlignment=Enum.TextXAlignment.Left HUDLabel.TextYAlignment=Enum.TextYAlignment.Top
