@@ -2394,8 +2394,8 @@ end
 
 function MSL(pg,label,order,iv,mnV,mxV,sK,oCh)
     local row=Instance.new("Frame",pg)
-   ) row.Size=UDim2.new(1,0,0 tr,56) row.LayoutOrder.P=order row.BackositiongroundColor3==cc(SC.cardColor)
-UD    Instance.new("UICorner",row).CornerRadius=UDim.new(0,10)
+    row.Size=UDim2.new(1,0,0,56) row.LayoutOrder=order row.BackgroundColor3=cc(SC.cardColor)
+    Instance.new("UICorner",row).CornerRadius=UDim.new(0,10)
     local lb=Instance.new("TextLabel",row)
     lb.Size=UDim2.new(0.6,0,0,24) lb.Position=UDim2.new(0,14,0,4) lb.BackgroundTransparency=1
     lb.Text=label lb.TextColor3=cc(SC.textColor) lb.Font=Enum.Font.GothamMedium
@@ -2406,7 +2406,7 @@ UD    Instance.new("UICorner",row).CornerRadius=UDim.new(0,10)
     ib.TextColor3=cc(SC.accentColor) ib.Font=Enum.Font.Gotham ib.TextSize=11 ib.ClearTextOnFocus=false
     Instance.new("UICorner",ib).CornerRadius=UDim.new(0,6)
     local tr=Instance.new("Frame",row)
-    tr.Size=UDim2.new(1,-28,0,8im2.new(0,14,1,-18)
+    tr.Size=UDim2.new(1,-28,0,8) tr.Position=UDim2.new(0,14,1,-18)
     tr.BackgroundColor3=cc(SC.borderColor)
     Instance.new("UICorner",tr).CornerRadius=UDim.new(1,0)
     local fl=Instance.new("Frame",tr)
